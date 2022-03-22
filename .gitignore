@@ -1,0 +1,7 @@
+# Terraform ignores
+terraform.tfstate*
+.terraform/
+crds.yml
+
+# downloaded artifacts
+jars
