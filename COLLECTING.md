@@ -8,7 +8,7 @@ The Attribution Reporting API can generate 4 possible types of reports during th
 [Privacy Sandbox Relevance and Measurement origin trials (OT)](https://developer.chrome.com/origintrials/#/view_trial/771241436187197441).
 These reports are sent to predefined endpoints to the domain registered during
 source registration (such as <https://adtech.localhost>).
-See this [demo](goo.gle/attribution-reporting-demo) for examples.
+See this [demo](https://goo.gle/attribution-reporting-demo) for examples.
 
 1. Event-level report
     - Reporting URL: `http://adtech.localhost/.well-known/attribution-reporting/report-event-attribution`
