@@ -356,3 +356,9 @@ This is considered a risk and will be addressed in a future release.
 ## License
 
 Apache 2.0 - See [LICENSE](LICENSE) for more information.
+
+# FAQ
+
+## Where should I post feedbacks/questions, this repo or the Attribution API repo?
+
+This repo hosts an implementation of the [Attribution Reporting API](https://github.com/WICG/attribution-reporting-api). For feedbacks/questions encountered during using this particular aggregation service implementation, please use the support channels provided by this repo. For feedbacks/requests related to the APIs in general, please initiate discussions in the Attribution Reporting API repo.
