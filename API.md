@@ -40,10 +40,6 @@ POST
     "output_domain_bucket_name": <string>,
     // reporting URL
     "attribution_report_to": <string>,
-    // [Optional] privacy budget limit to be enforced.
-    // Used for debugging during the origin trial
-    // 0 < debug_privacy_budget_limit < (2^31)-1
-    "debug_privacy_budget_limit": <integer>,
     // [Optional] differential privacy epsilon value to be used
     // for this job. 0.0 < debug_privacy_epsilon <= 64.0. The
     // value can be varied so that tests with different epsilon
@@ -153,9 +149,6 @@ Not found: 404 Not Found
     "output_domain_bucket_name": <string>,
     // reporting URL
     "attribution_report_to" : <string>,
-    // [Optional] privacy budget limit to be enforced.
-     // Used for debugging during origin trial
-    "debug_privacy_budget_limit": <integer>,
     // [Optional] differential privacy epsilon value to be used
     // for this job. 0.0 < debug_privacy_epsilon <= 64.0. The
     // value can be varied so that tests with different epsilon

@@ -10,7 +10,7 @@ reports click, read the [Aggregation Service proposal](https://github.com/WICG/c
 ## Set up local testing
 
 You can process [aggregatable debug reports](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregatable-reports)
-locally with the [LocalTestingTool.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.1.2/LocalTestingTool_0.1.2.jar)
+locally with the [LocalTestingTool.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/LocalTestingTool_0.2.0.jar)
 into summary reports.
 Learn [how to setup debug reports](https://docs.google.com/document/d/1BXchEk-UMgcr2fpjfXrQ3D8VhTR-COGYS1cwK_nyLfg/edit#heading=h.fvp017tkgw79).
 
@@ -18,10 +18,10 @@ Learn [how to setup debug reports](https://docs.google.com/document/d/1BXchEk-UM
 
 ### Using the local testing tool
 
-[Download the local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.1.2/LocalTestingTool_0.1.2.jar).
+[Download the local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/LocalTestingTool_0.2.0.jar).
 You'll need [Java JRE](https://adoptium.net/) installed to use the tool.
 
-*The `SHA256` of the `LocalTestingTool_{version}.jar` is `4d337c7049de2121df6a856d85981d5f224ff0fd6983975f32f627c2f162b066`
+*The `SHA256` of the `LocalTestingTool_{version}.jar` is `9d9ee93f0bf0750d549728deee30c5e9e353b49ddbae54ed6ac9c5e918bdeb4c`
 obtained with `openssl sha256 <jar>`.*
 
 Follow the instructions on how to [collect and batch aggregatable reports](#collect-and-batch-aggregatable-reports).
@@ -33,13 +33,10 @@ in the same directory where you run the tool, run the following command:
 
 ```sh
 java -jar LocalTestingTool.jar \
---input_data_avro_file $(pwd)/output_debug_reports.avro \
---domain_avro_file $(pwd)/output_domain.avro \
+--input_data_avro_file output_debug_reports.avro \
+--domain_avro_file output_domain.avro \
 --output_directory .
 ```
-
-*Note: The tool expects absolute paths to the input and domain avro
-files.*
 
 To see all supported flags for the local testing tool run
 `java -jar LocalTestingTool.jar --help`, e.g. you can adjust the noising
@@ -47,6 +44,12 @@ epsilon with the `--epsilon` flag or disable noising all together with the
 `--no_noising` flag. [See all flags and descriptions](./API.md#local-testing-tool).
 
 ## Test on AWS with support for encrypted reports
+
+### General Notes
+
+#### Privacy Budget Enforcement
+
+The [`no-duplicate`](https://github.com/WICG/attribution-reporting-api/blob/main/AGGREGATION_SERVICE_TEE.md#no-duplicates-rule) rule for privacy budget is not enforced in the current test version but will be enforced in the future. We recommend you design your systems with the `no-duplicate` rule in consideration.
 
 ### Prerequisites
 
@@ -119,11 +122,11 @@ can download them from the links below. The `sha256` was obtained with
 
 | jar download link | sha256 |
 | -- | -- |
-| [AsgCapacityHandlerLambda_0.1.2.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.1.2/AsgCapacityHandlerLambda_0.1.2.jar) | `40b712ab1c4250b467b4def1781b5240ea18367396bdaa0573e5ac11b058983f` |
-| [AwsChangeHandlerLambda_0.1.2.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.1.2/AwsChangeHandlerLambda_0.1.2.jar) | `ebb2525e5dba6031936b87ae3a786726b835636b5296afc9114ce23974761e0c` |
-| [AwsFrontendCleanupLambda_0.1.2.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.1.2/AwsFrontendCleanupLambda_0.1.2.jar) | `7a8bb21f18e42327f5e00b4cec44eb80bb4a6ba1fa5bdc760b69b603962576fd` |
-| [TerminatedInstanceHandlerLambda_0.1.2.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.1.2/TerminatedInstanceHandlerLambda_0.1.2.jar) | `7543c464be85b29af97967622c929e309697dcd82bf4084a0401c1847908a834` |
-| [aws_apigateway_frontend_0.1.2.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.1.2/aws_apigateway_frontend_0.1.2.jar) | `1c1fb14103e2d6c4d44391773e27fed794580e35f0eb4ea42ce4adfc4b49c0af` |
+| [AsgCapacityHandlerLambda_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/AsgCapacityHandlerLambda_0.2.0.jar) | `be5ed5bca082d9283a495c032d7a13a0df0204808636d4a5049f780ebdfc1cac` |
+| [AwsChangeHandlerLambda_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/AwsChangeHandlerLambda_0.2.0.jar) | `58c31f1435c7c6dc1b2f418d4dbda195d2c5841afbd994a7a72af5320133e4f4` |
+| [AwsFrontendCleanupLambda_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/AwsFrontendCleanupLambda_0.2.0.jar) | `de91b523bffd618465549186a5dfb3c06fd44ae4c3d09c1be09e26d60ce7e3f4` |
+| [TerminatedInstanceHandlerLambda_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/TerminatedInstanceHandlerLambda_0.2.0.jar) | `307beb1128ae61e5cc21b8a29a8a259f04eb29ae7cb653774e1e91fcf0f81035` |
+| [aws_apigateway_frontend_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/aws_apigateway_frontend_0.2.0.jar) | `28e258193b947b227eafe9b6601f346466ee4e1c394e02e3be516c8a9c70efb9` |
 
 ### Set up your deployment environment
 
@@ -240,9 +243,7 @@ you set up the aggregation service.
 `<data_bucket>/input`. To experiment with sample data, you can use our
 [sample batch](./sampledata/output_reports.avro)
 with the corresponding [output domain avro](./sampledata/output_domain.avro).
-Using the sample batch requires overwriting the [privacy budget](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregatable-reports) with
-an additional `job_parameters` parameter `"debug_privacy_budget_limit": 100000`.
-You can set the value up to a value of 2^31. [Detailed API spec](API.md#createjob-endpoint)
+
 1. Create an aggregation job with the `createJob` API.
 
     `POST`
@@ -345,11 +346,11 @@ This address is monitored and only visible to selected support staff.
 
 ## General security notes
 
-- The [VPC subnet property](./terraform/aws/services/worker/network.tf#L51)
+* The [VPC subnet property](./terraform/aws/services/worker/network.tf#L51)
 `map_public_ip_on_launch` is currently set to `true` which assigns a public
 IP address to all instances in the subnet. This allows for easier console
 access, yet is considered a risk and will be addressed in a future release.
-- The worker [VPC security group](./terraform/aws/services/worker/network.tf#L99)
+* The worker [VPC security group](./terraform/aws/services/worker/network.tf#L99)
 currently allows for inbound connections on port 22 from any source IP.
 This is considered a risk and will be addressed in a future release.
 
@@ -357,8 +358,8 @@ This is considered a risk and will be addressed in a future release.
 
 Apache 2.0 - See [LICENSE](LICENSE) for more information.
 
-# FAQ
+## FAQ
 
-## Where should I post feedback/questions, this repo or the Attribution API repo?
+### Where should I post feedback/questions, this repo or the Attribution API repo?
 
 This repo hosts an implementation of the [Attribution Reporting API](https://github.com/WICG/attribution-reporting-api). For feedback/questions encountered during using this particular aggregation service implementation, please use the support channels provided by this repo. For feedback/requests related to the APIs in general, please initiate discussions in the Attribution Reporting API repo.

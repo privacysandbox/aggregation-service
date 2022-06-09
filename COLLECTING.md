@@ -69,7 +69,7 @@ bytes may be represented as ASCII characters, others are unicode escaped.
 
 The [sample report](#aggregatable-report-sample) lists a `debug_cleartext_payload`
 field that is *not* encrypted and can be processed with the
-[local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.1.2/LocalTestingTool_0.1.2.jar).
+[local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/LocalTestingTool_0.2.0.jar).
 
 When testing the aggregation service locally and on Amazon Web Services
 [Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/),
@@ -327,16 +327,19 @@ java -jar avro-tools-1.11.0.jar fromjson \
 
 ### Produce a summary report locally
 
-Using the [local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.1.2/LocalTestingTool_0.1.2.jar),
+Using the [local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/LocalTestingTool_0.2.0.jar),
 you now can generate a summary report. [See all flags and descriptions](./API.md#local-testing-tool)
+
+*Note: The `SHA256` of the `LocalTestingTool_{version}.jar` is `9d9ee93f0bf0750d549728deee30c5e9e353b49ddbae54ed6ac9c5e918bdeb4c`
+obtained with `openssl sha256 <jar>`.*
 
 We will run the tool, without adding noise to the summary report, to receive the
 expected value of `32768` from the [sample aggregatable report](#aggregatable-report-sample).
 
 ```sh
 java -jar LocalRunner_deploy.jar \
---input_data_avro_file `pwd`/output_debug_reports_<timestamp>.avro \
---domain_avro_file `pwd`/output_domain.avro \
+--input_data_avro_file output_debug_reports_<timestamp>.avro \
+--domain_avro_file output_domain.avro \
 --json_output \
 --no_noising
 ```
