@@ -49,7 +49,7 @@ epsilon with the `--epsilon` flag or disable noising all together with the
 
 #### Privacy Budget Enforcement
 
-The privacy budget is not enforced in the current test version but will be enforced in the release. We recommend users design their systems keeping the privacy budget in consideration.
+The [no-duplicate](https://github.com/WICG/attribution-reporting-api/blob/main/AGGREGATION_SERVICE_TEE.md#no-duplicates-rule) rule is not enforced in the current test version but will be enforced in the future. We recommend users design their systems keeping the no-duplicate rule in consideration.
 
 ### Prerequisites
 
