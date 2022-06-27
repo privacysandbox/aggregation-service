@@ -1,5 +1,7 @@
 # Set up Aggregation Service for Aggregatable Reports
 
+**[NOTE] The latest aggregatable reports generated with Chrome version 104+ (currently available in Beta) are not yet compatible with the `LocalTestingTool` or the Aggregation Service running on AWS. We will update both shortly to support the new report format.**
+
 This repository contains instructions and scripts to set up and test
 the Aggregation Service for [Aggregatable Reports](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATION_SERVICE_TEE.md#aggregatable-reports)
 locally and on Amazon Web Services [Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/).
