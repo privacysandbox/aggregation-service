@@ -133,7 +133,6 @@ Not found: 404 Not Found
     "return_message": <string>,
     "finished_at": <timestamp>,
     "error_summary": {
-      "num_reports_with_errors": <int>,
       "error_counts": [
         {
           "category": <string>,

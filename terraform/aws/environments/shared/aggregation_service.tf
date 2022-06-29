@@ -26,7 +26,7 @@ data "local_file" "version" {
   filename = "../../../../VERSION"
 }
 locals {
-  service_version = data.local_file.version.content
+  service_version = chomp(data.local_file.version.content)
 }
 
 module "aggregate_service" {

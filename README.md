@@ -1,6 +1,6 @@
 # Set up Aggregation Service for Aggregatable Reports
 
-**[NOTE] The latest aggregatable reports generated with Chrome version 104+ (currently available in Beta) are not yet compatible with the `LocalTestingTool` or the Aggregation Service running on AWS. We will update both shortly to support the new report format.**
+**[NOTE] The latest aggregatable reports generated with Chrome version 104+ are only supported with version `0.3.0` and later. Please follow the [update instructions](#updating-the-system) for your environment.**
 
 This repository contains instructions and scripts to set up and test
 the Aggregation Service for [Aggregatable Reports](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATION_SERVICE_TEE.md#aggregatable-reports)
@@ -12,7 +12,7 @@ reports click, read the [Aggregation Service proposal](https://github.com/WICG/c
 ## Set up local testing
 
 You can process [aggregatable debug reports](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregatable-reports)
-locally with the [LocalTestingTool.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/LocalTestingTool_0.2.0.jar)
+locally with the [LocalTestingTool.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/LocalTestingTool_0.3.0.jar)
 into summary reports.
 Learn [how to setup debug reports](https://docs.google.com/document/d/1BXchEk-UMgcr2fpjfXrQ3D8VhTR-COGYS1cwK_nyLfg/edit#heading=h.fvp017tkgw79).
 
@@ -20,10 +20,10 @@ Learn [how to setup debug reports](https://docs.google.com/document/d/1BXchEk-UM
 
 ### Using the local testing tool
 
-[Download the local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/LocalTestingTool_0.2.0.jar).
+[Download the local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/LocalTestingTool_0.3.0.jar).
 You'll need [Java JRE](https://adoptium.net/) installed to use the tool.
 
-*The `SHA256` of the `LocalTestingTool_{version}.jar` is `9d9ee93f0bf0750d549728deee30c5e9e353b49ddbae54ed6ac9c5e918bdeb4c`
+*The `SHA256` of the `LocalTestingTool_{version}.jar` is `f3da41b974341863b6d58de37b7eda34f0e9b85fe074ee829d41be2afea5d19a`
 obtained with `openssl sha256 <jar>`.*
 
 Follow the instructions on how to [collect and batch aggregatable reports](#collect-and-batch-aggregatable-reports).
@@ -124,11 +124,11 @@ can download them from the links below. The `sha256` was obtained with
 
 | jar download link | sha256 |
 | -- | -- |
-| [AsgCapacityHandlerLambda_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/AsgCapacityHandlerLambda_0.2.0.jar) | `be5ed5bca082d9283a495c032d7a13a0df0204808636d4a5049f780ebdfc1cac` |
-| [AwsChangeHandlerLambda_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/AwsChangeHandlerLambda_0.2.0.jar) | `58c31f1435c7c6dc1b2f418d4dbda195d2c5841afbd994a7a72af5320133e4f4` |
-| [AwsFrontendCleanupLambda_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/AwsFrontendCleanupLambda_0.2.0.jar) | `de91b523bffd618465549186a5dfb3c06fd44ae4c3d09c1be09e26d60ce7e3f4` |
-| [TerminatedInstanceHandlerLambda_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/TerminatedInstanceHandlerLambda_0.2.0.jar) | `307beb1128ae61e5cc21b8a29a8a259f04eb29ae7cb653774e1e91fcf0f81035` |
-| [aws_apigateway_frontend_0.2.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/aws_apigateway_frontend_0.2.0.jar) | `28e258193b947b227eafe9b6601f346466ee4e1c394e02e3be516c8a9c70efb9` |
+| [AsgCapacityHandlerLambda_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/AsgCapacityHandlerLambda_0.3.0.jar) | `b06feee3fa4a8281d30b7c8f695a5ba6665da67276859a7305e2b2443e84af6b` |
+| [AwsChangeHandlerLambda_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/AwsChangeHandlerLambda_0.3.0.jar) | `398496c30d80915ef1d1f7079f39670fdf57112f0f0528860959ebaf42bdf424` |
+| [AwsFrontendCleanupLambda_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/AwsFrontendCleanupLambda_0.3.0.jar) | `1324679f3b56c40cb574311282e96c57d60878c89c607d09e6e2242fb914b47a` |
+| [TerminatedInstanceHandlerLambda_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/TerminatedInstanceHandlerLambda_0.3.0.jar) | `491bdabc0c8a2249cc6a06d2fe4986c5580ed8466e9d26fd3791ca578e979565` |
+| [aws_apigateway_frontend_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/aws_apigateway_frontend_0.3.0.jar) | `c619da0257f59fba3c3a0520ee8366643b4563ba049f820f621314fb0b516973` |
 
 ### Set up your deployment environment
 
@@ -275,6 +275,32 @@ with the corresponding [output domain avro](./sampledata/output_domain.avro).
     Note: This API requires authentication. Follow the [AWS instructions](https://aws.amazon.com/premiumsupport/knowledge-center/iam-authentication-api-gateway/)
     for sending an authenticated request. [Detailed API spec](API.md#getjob-endpoint)
 
+### Updating the system
+
+If the above setup was followed, you can update your system to the latest version by checking out the latest
+tagged version (currently `v0.3.0`) and running `terraform apply` in your environment folder (e.g. `<repository_root>/terraform/aws/environments/dev`).
+
+Run the following in the `<repository_root>`.
+
+```sh
+git fetch origin && git checkout -b dev-v0.3.0 v0.3.0
+cd terraform/aws/environments/dev
+terraform apply
+```
+
+If your see the following planning output for the update you can go ahead and apply.
+
+```terraform
+...
+
+Plan: 0 to add, 14 to change, 0 to destroy.
+
+Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only 'yes' will be accepted to approve.
+...
+```
+
 ## Collect and batch aggregatable reports
 
 Both the local testing tool and the aggregation service running on AWS Nitro
@@ -333,7 +359,7 @@ If you encounter this situation, run `terraform destroy` to remove your
 deployment and run `terraform apply` again.
 
 ```txt
-Error: Error creating Auto Scaling Group: ValidationError: You must use a valid 
+Error: Error creating Auto Scaling Group: ValidationError: You must use a valid
 fully-formed launch template. Your requested instance type (m5.2xlarge) is not
 supported in your requested Availability Zone (us-east-1e).
 Please retry your request by not specifying an Availability Zone or choosing

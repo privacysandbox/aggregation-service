@@ -69,7 +69,7 @@ bytes may be represented as ASCII characters, others are unicode escaped.
 
 The [sample report](#aggregatable-report-sample) lists a `debug_cleartext_payload`
 field that is *not* encrypted and can be processed with the
-[local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/LocalTestingTool_0.2.0.jar).
+[local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/LocalTestingTool_0.3.0.jar).
 
 When testing the aggregation service locally and on Amazon Web Services
 [Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/),
@@ -327,10 +327,10 @@ java -jar avro-tools-1.11.0.jar fromjson \
 
 ### Produce a summary report locally
 
-Using the [local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.2.0/LocalTestingTool_0.2.0.jar),
+Using the [local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/LocalTestingTool_0.3.0.jar),
 you now can generate a summary report. [See all flags and descriptions](./API.md#local-testing-tool)
 
-*Note: The `SHA256` of the `LocalTestingTool_{version}.jar` is `9d9ee93f0bf0750d549728deee30c5e9e353b49ddbae54ed6ac9c5e918bdeb4c`
+*Note: The `SHA256` of the `LocalTestingTool_{version}.jar` is `f3da41b974341863b6d58de37b7eda34f0e9b85fe074ee829d41be2afea5d19a`
 obtained with `openssl sha256 <jar>`.*
 
 We will run the tool, without adding noise to the summary report, to receive the

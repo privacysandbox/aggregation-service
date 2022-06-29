@@ -14,5 +14,5 @@
  * limitations under the License.
  */
 # AMI tested to work with this release, not recommended to change.
-ami_name = "aggregate-service-enclave_0.2.0"
+ami_name = "aggregate-service-enclave_0.3.0"
 ami_owners = ["123042954941"]
