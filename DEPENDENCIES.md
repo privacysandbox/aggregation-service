@@ -2,7 +2,7 @@
 
 The deployment of the Amazon Web Services [Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/) based Aggregation Service depends on several packaged
 artifacts listed below.
-These artifacts can be downloaded with the [download-dependencies.sh](./download-dependencies.sh)
+These artifacts can be downloaded with the [download-dependencies.sh](./terraform/aws/download-dependencies.sh)
 script.
 
 ## Packaged AWS Lambda Jars
