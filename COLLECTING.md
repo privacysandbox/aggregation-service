@@ -321,7 +321,7 @@ unicode escaped "characters" to encode the byte array bucket value.
 To generate the `output_domain.avro` file use the above JSON file and domain schema file:
 
 ```sh
-java -jar avro-tools-1.11.0.jar fromjson \
+java -jar avro-tools-1.11.1.jar fromjson \
 --schema-file output_domain.avsc output_domain.json > output_domain.avro
 ```
 
