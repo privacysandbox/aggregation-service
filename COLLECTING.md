@@ -305,7 +305,7 @@ in a domain file `output_domain.avro` with the following Avro schema.
 You can use the [Avro Tools](https://www.apache.org/dyn/closer.cgi/avro/) to
 generate a `output_domain.avro` from a JSON input file.
 
-You can download the Avro Tools jar 1.11.0 [here](https://dlcdn.apache.org/avro/avro-1.11.0/java/avro-tools-1.11.0.jar)
+You can download the Avro Tools jar 1.11.1 [here](http://archive.apache.org/dist/avro/avro-1.11.1/java/avro-1.11.1.jar)
 
 We use the following `output_domain.json` input file to generate our
 `output_domain.avro` file. This uses the bucket from the above
