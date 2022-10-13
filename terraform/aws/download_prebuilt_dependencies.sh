@@ -17,6 +17,9 @@
 # bash download_prebuilt_dependencies.sh
 
 SCRIPT_LOCATION=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+# Fetch terraform scripts from control-plane-shared-libraries repository at {VERSION}
+# the current aggregation-service release depends on
 source "${SCRIPT_LOCATION}/fetch_terraform.sh"
 
 # Create folder where we download prebuilt jar artifacts to, ok if already existing
@@ -40,7 +43,3 @@ for jar in "${jars[@]}"; do
   echo "Downloading ${jar}_${VERSION}.jar ..."
   curl -f -o jars/${jar}_$VERSION.jar ${S3_URL}/aggregation-service/${VERSION}/${jar}_${VERSION}.jar
 done
-
-# Fetch terraform scripts from control-plane-shared-libraries repository at {VERSION}
-# the current aggregation-service release depends on
-fetch_release_terraform_scripts
