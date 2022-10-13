@@ -24,7 +24,7 @@ WORK_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # fetch based on tag
 cd $WORK_DIR && git clone https://github.com/privacysandbox/control-plane-shared-libraries || true
-cd control-plane-shared-libraries-private && git checkout ${CONTROL_PLANE_SHARED_LIBRARIES_VERSION} && git clean -df
+cd control-plane-shared-libraries && git checkout ${CONTROL_PLANE_SHARED_LIBRARIES_VERSION} && git clean -df
 cd $WORK_DIR
 
 # remove existing symlinks
@@ -33,10 +33,10 @@ rm $WORK_DIR/applications $WORK_DIR/modules \
 
 # symlink terraform folders
 mkdir -p $WORK_DIR/environments
-ln -s control-plane-shared-libraries-private/operator/terraform/aws/applications $WORK_DIR/applications
-ln -s control-plane-shared-libraries-private/operator/terraform/aws/modules $WORK_DIR/modules
-ln -s ../control-plane-shared-libraries-private/operator/terraform/aws/environments/shared $WORK_DIR/environments/shared
-ln -s ../control-plane-shared-libraries-private/operator/terraform/aws/environments/demo $WORK_DIR/environments/demo
+ln -s control-plane-shared-libraries/operator/terraform/aws/applications $WORK_DIR/applications
+ln -s control-plane-shared-libraries/operator/terraform/aws/modules $WORK_DIR/modules
+ln -s ../control-plane-shared-libraries/operator/terraform/aws/environments/shared $WORK_DIR/environments/shared
+ln -s ../control-plane-shared-libraries/operator/terraform/aws/environments/demo $WORK_DIR/environments/demo
 
 # generate release_params.auto.tfvars to use prebuilt and published AMI for
 # aggregation-service release version and use downloaded versioned prebuilt jars
