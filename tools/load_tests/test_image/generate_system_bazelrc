@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Generate a system bazelrc file
+# Designed to be executed when generating a container image, for example from Dockerfile.
+# For info on bazelrc files, refer to https://bazel.build/run/bazelrc?hl=en.
+
+set -o pipefail
+set -o errexit
+
+function _get_toolchains_hash() {
+    {
+      # emit versions of all tools relevant to builds
+      clang --version
+      /usr/bin/python3 --version
+    } | sha256sum | cut --delimiter=" " --fields=1
+}
+
+readonly BAZELRC="/etc/bazel.bazelrc"
+
+printf "generating %s\n" "${BAZELRC}"
+
+cat <<BAZELRC >"${BAZELRC}"
+# set a variable based on the hash of all build tool dependencies other than bazel itself
+# primarily to avoid spurious cache hits for distinct sets of toolchains
+build --action_env=TOOLCHAINS_HASH=$(_get_toolchains_hash)
+BAZELRC

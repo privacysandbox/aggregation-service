@@ -1,0 +1,6 @@
+# Ignore build rules in top level 'target' folder created by maven builds.
+target
+# Ignore build rules in top level 'out' folder created by IntelliJ.
+out
+
+tools/load_tests/

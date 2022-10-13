@@ -1,0 +1,32 @@
+{
+  "type": "record",
+  "name": "DebugAggregatedFact",
+  "fields": [
+    {
+      "name": "bucket",
+      "type": "bytes",
+      "doc": "Histogram bucket used in aggregation. 128-bit integer encoded as a 16-byte big-endian bytestring. Leading 0-bits will be left out."
+    },
+    {
+      "name": "unnoised_metric",
+      "type": "long",
+      "doc": "Unnoised metric associated with the bucket."
+    },
+    {
+      "name": "noise",
+      "type": "long",
+      "doc": "The noise applied to metric in the regular result."
+    },
+    {
+      "name":"annotations",
+      "type": {
+          "type": "array",
+          "items": {
+             "type":"enum",
+             "name":"bucket_tags",
+             "symbols":["in_domain","in_reports"]
+          }
+      }
+    }
+  ]
+}

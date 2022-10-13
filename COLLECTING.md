@@ -69,7 +69,7 @@ bytes may be represented as ASCII characters, others are unicode escaped.
 
 The [sample report](#aggregatable-report-sample) lists a `debug_cleartext_payload`
 field that is *not* encrypted and can be processed with the
-[local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/LocalTestingTool_0.3.0.jar).
+[local testing tool](https://storage.googleapis.com/control-plane-shared-libraries-public-artifacts/{VERSION}/LocalTestingTool_{VERSION}.jar).
 
 When testing the aggregation service locally and on Amazon Web Services
 [Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/),
@@ -305,7 +305,7 @@ in a domain file `output_domain.avro` with the following Avro schema.
 You can use the [Avro Tools](https://www.apache.org/dyn/closer.cgi/avro/) to
 generate a `output_domain.avro` from a JSON input file.
 
-You can download the Avro Tools jar 1.11.1 [here](http://archive.apache.org/dist/avro/avro-1.11.1/java/avro-tools-1.11.1.jar)
+You can download the Avro Tools jar 1.11.0 [here](https://dlcdn.apache.org/avro/avro-1.11.0/java/avro-tools-1.11.0.jar)
 
 We use the following `output_domain.json` input file to generate our
 `output_domain.avro` file. This uses the bucket from the above
@@ -321,16 +321,16 @@ unicode escaped "characters" to encode the byte array bucket value.
 To generate the `output_domain.avro` file use the above JSON file and domain schema file:
 
 ```sh
-java -jar avro-tools-1.11.1.jar fromjson \
+java -jar avro-tools-1.11.0.jar fromjson \
 --schema-file output_domain.avsc output_domain.json > output_domain.avro
 ```
 
 ### Produce a summary report locally
 
-Using the [local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/LocalTestingTool_0.3.0.jar),
+Using the [local testing tool](https://storage.googleapis.com/control-plane-shared-libraries-public-artifacts/{VERSION}/LocalTestingTool_{VERSION}.jar),
 you now can generate a summary report. [See all flags and descriptions](./API.md#local-testing-tool)
 
-*Note: The `SHA256` of the `LocalTestingTool_{version}.jar` is `f3da41b974341863b6d58de37b7eda34f0e9b85fe074ee829d41be2afea5d19a`
+*Note: The `SHA256` of the `LocalTestingTool_{version}.jar` is `{LocalTestingTool_{version}.jar-SHA}`
 obtained with `openssl sha256 <jar>`.*
 
 We will run the tool, without adding noise to the summary report, to receive the

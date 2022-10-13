@@ -1,0 +1,8 @@
+test --test_output=all --java_runtime_version=remotejdk_11
+build --java_language_version=11
+build --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+# By default the JVM uses a memory-mapped file for the PerfData structure so that tools can easily access the data.
+# It will create issues when JVM unlinks the file at shutdown and may trigger a sandbox fault http://b/205838938.
+# -XX:+PerfDisableSharedMem to force JVM uses regular memory instead.
+# -XX:-UsePerfData to disable /tmp/hsperfdata references.  We don't use the perf data here so we disable it
+build --jvmopt="-XX:-UsePerfData"

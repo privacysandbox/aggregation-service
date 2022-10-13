@@ -12,19 +12,31 @@ reports click, read the [Aggregation Service proposal](https://github.com/WICG/c
 ## Set up local testing
 
 You can process [aggregatable debug reports](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregatable-reports)
-locally with the [LocalTestingTool.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/LocalTestingTool_0.3.0.jar)
-into summary reports.
+locally with the `LocalTestingTool_{VERSION}.jar` into summary reports.
 Learn [how to setup debug reports](https://docs.google.com/document/d/1BXchEk-UMgcr2fpjfXrQ3D8VhTR-COGYS1cwK_nyLfg/edit#heading=h.fvp017tkgw79).
 
 *Disclaimer: encrypted reports can **not** be processed with the local testing tool!*
 
+### Clone the repository
+
+Clone the repository into a local folder `<repostory_root>`:
+
+```sh
+git clone https://github.com/privacysandbox/aggregation-service;
+cd aggregation-service
+```
+
 ### Using the local testing tool
 
-[Download the local testing tool](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/LocalTestingTool_0.3.0.jar).
+Download the local testing tool with the below command. Run this command in the `<repository_root>`
+
+```sh
+VERSION=$(cat VERSION); curl -f -o LocalTestingTool_$VERSION.jar https://aggregation-service-published-artifacts.s3.amazonaws.com/aggregation-service/$VERSION/LocalTestingTool_$VERSION.jar
+```
+
 You'll need [Java JRE](https://adoptium.net/) installed to use the tool.
 
-*The `SHA256` of the `LocalTestingTool_{version}.jar` is `f3da41b974341863b6d58de37b7eda34f0e9b85fe074ee829d41be2afea5d19a`
-obtained with `openssl sha256 <jar>`.*
+*The `SHA256` of the `LocalTestingTool_{version}.jar` can be found on the [releases page](https://github.com/privacysandbox/aggregation-service/releases).*
 
 Follow the instructions on how to [collect and batch aggregatable reports](#collect-and-batch-aggregatable-reports).
 Create an output domain file: `output_domain.avro`. For testing you can use our [sample debug batch](./sampledata/output_debug_reports.avro)
@@ -34,14 +46,14 @@ To aggregate the resulting avro batch `output_debug_reports.avro` file into a su
 in the same directory where you run the tool, run the following command:
 
 ```sh
-java -jar LocalTestingTool.jar \
+java -jar LocalTestingTool_{version}.jar \
 --input_data_avro_file output_debug_reports.avro \
 --domain_avro_file output_domain.avro \
 --output_directory .
 ```
 
 To see all supported flags for the local testing tool run
-`java -jar LocalTestingTool.jar --help`, e.g. you can adjust the noising
+`java -jar LocalTestingTool_{version}.jar --help`, e.g. you can adjust the noising
 epsilon with the `--epsilon` flag or disable noising all together with the
 `--no_noising` flag. [See all flags and descriptions](./API.md#local-testing-tool).
 
@@ -51,7 +63,7 @@ epsilon with the `--epsilon` flag or disable noising all together with the
 
 #### Privacy Budget Enforcement
 
-The [no-duplicate](https://github.com/WICG/attribution-reporting-api/blob/main/AGGREGATION_SERVICE_TEE.md#no-duplicates-rule) rule is not enforced in the current test version but will be enforced in the future. We recommend users design their systems keeping the no-duplicate rule in consideration.
+Aggregation Service enforces the [no-duplicate](https://github.com/WICG/attribution-reporting-api/blob/main/AGGREGATION_SERVICE_TEE.md#no-duplicates-rule) rule. We recommend users design their systems keeping the no-duplicate rule in consideration. We suggest reading the [debugging](./DEBUGGING.md) document for debug aggregation runs.
 
 ### Prerequisites
 
@@ -67,15 +79,6 @@ Once you’ve submitted the onboarding form, we will contact you to verify your 
 
 To set up aggregation service in AWS you'll use [Terraform](https://www.terraform.io/).
 
-### Clone the repository
-
-Clone the repository into a local folder `<repostory_root>`:
-
-```sh
-git clone https://github.com/google/trusted-execution-aggregation-service;
-cd trusted-execution-aggregation-service
-```
-
 ### Set up AWS client
 
 Make sure you [install](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
@@ -84,51 +87,50 @@ the latest AWS client.
 
 ### Set up Terraform
 
-Change into the `<repository_root>/terraform/aws` folder.
+Change into the `<repository_root>/terraform/aws` folder. See [clone the repository](#clone-the-repository) if you have not cloned the repository so far.
 
-The setup scripts require terraform version `1.0.4`.
-You can download Terraform version 1.0.4 from [https://releases.hashicorp.com/terraform/1.0.4/](https://releases.hashicorp.com/terraform/1.0.4/) or
+The setup scripts require terraform version `1.2.3`.
+You can download Terraform version 1.2.3 from [https://releases.hashicorp.com/terraform/1.2.3/](https://releases.hashicorp.com/terraform/1.2.3/) or
 *at your own risk*, you can install and use
 [Terraform version manager](https://github.com/tfutils/tfenv) instead.
 
 If you have the Terraform version manager `tfenv` installed, run the following
-in your `<repository_root>` to set Terraform to version `1.0.4`.
+in your `<repository_root>` to set Terraform to version `1.2.3`.
 
 ```sh
-tfenv install 1.0.4;
-tfenv use 1.0.4
+tfenv install 1.2.3;
+tfenv use 1.2.3
 ```
 
 We recommend you store the [Terraform state](https://www.terraform.io/language/state)
 in a cloud bucket.
 Create a S3 bucket via the console/cli, which we'll reference as
-`tf_state_bucket_name`.
+`tf_state_bucket_name`. Consider enabling `versioning` to preserve, retrieve, and restore previous versions and set appropriate policies for this bucket to prevent accidental changes and deletion.
 
-### Download dependencies
+### Download Terraform scripts and prebuilt dependencies
 
-The Terraform scripts depend on 5 packaged jars for Lambda functions deployment.
-These jars are hosted on Google Cloud Storage (https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/{version}/{jar_file})
-and can be downloaded with the `<repository_root>/terraform/aws/download_dependencies.sh`
-script. The downloaded jars will be stored in `<repository_root>/terraform/aws/jars`.
+*Note: The prebuilt Amazon Machine Image (AMI) for the aggregation service is only available in the `us-east-1` region. If you like to deploy the aggregation service in a different region you need to copy the released AMI to your account or build it using our provided scripts.*
+
+If you like to build the Amazon Machine Image including the enclave container, as well as the Lambda jars in your account, please
+follow the instructions in [build-scripts/aws](build-scripts/aws/README.md). This will skip running `bash download_prebuilt_dependencies.sh` and run `bash fetch_terraform.sh` instead. Continue with the [next deployment step](#set-up-your-deployment-environment) after
+building and downloading your self-build jars.
+
+The Terraform scripts to deploy the aggregation service depend on 5 packaged jars for Lambda functions deployment.
+These jars are hosted on Amazon S3 (https://aggregation-service-published-artifacts.s3.amazonaws.com/aggregation-service/{version}/{jar_file})
+and can be downloaded with the `<repository_root>/terraform/aws/download_prebuilt_dependencies.sh`
+script. The script downloads the terrafrom scripts and jars which will be stored in `<repository_root>/terraform/aws`.
 License information of downloaded dependencies can be found in the [DEPENDENCIES.md](./DEPENDENCIES.md)
 
-Run the following script in the `<repository_root>/terraform/aws` folder.
+Run the following script in the `<repository_root>/terraform/aws` folder to download the prebuilt dependencies.
 
-```sh
-sh ./download_dependencies.sh
+```bash
+bash download_prebuilt_dependencies.sh
 ```
 
-For manual download into the `<repository_root>/terraform/aws/jars` folder you
-can download them from the links below. The `sha256` was obtained with
-`openssl sha256 <jar>`.
+* Note: The above script needs to be run with `bash` and does not support `sh`*
 
-| jar download link | sha256 |
-| -- | -- |
-| [AsgCapacityHandlerLambda_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/AsgCapacityHandlerLambda_0.3.0.jar) | `b06feee3fa4a8281d30b7c8f695a5ba6665da67276859a7305e2b2443e84af6b` |
-| [AwsChangeHandlerLambda_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/AwsChangeHandlerLambda_0.3.0.jar) | `398496c30d80915ef1d1f7079f39670fdf57112f0f0528860959ebaf42bdf424` |
-| [AwsFrontendCleanupLambda_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/AwsFrontendCleanupLambda_0.3.0.jar) | `1324679f3b56c40cb574311282e96c57d60878c89c607d09e6e2242fb914b47a` |
-| [TerminatedInstanceHandlerLambda_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/TerminatedInstanceHandlerLambda_0.3.0.jar) | `491bdabc0c8a2249cc6a06d2fe4986c5580ed8466e9d26fd3791ca578e979565` |
-| [aws_apigateway_frontend_0.3.0.jar](https://storage.googleapis.com/trusted-execution-aggregation-service-public-artifacts/0.3.0/aws_apigateway_frontend_0.3.0.jar) | `c619da0257f59fba3c3a0520ee8366643b4563ba049f820f621314fb0b516973` |
+For manual download into the `<repository_root>/terraform/aws/jars` folder you
+can download them from the links on our [releases page](https://github.com/privacysandbox/aggregation-service/releases).
 
 ### Set up your deployment environment
 
@@ -140,7 +142,8 @@ the following commands from the `<repository_root>/terraform/aws/environments`
 folder:
 
 ```sh
-cp -R demo dev
+mkdir dev
+cp -R demo/* dev
 cd dev
 ```
 
@@ -159,25 +162,45 @@ the values using `<...>`:
     ```
 
 1. Rename `example.auto.tfvars` to `<environment>.auto.tfvars` and
-adjust the values with `<...>` using the information you received in the
-onboarding email.
+add the `...assume_role...` values using the information you received in the
+onboarding email. Delete the line that reads `assume_role_parameter = "arn:aws:iam::example:role/example"`
 Leave all other values as-is for the initial deployment.
 
     ```sh
     environment = "<environment_name>"
     ...
 
-    assume_role_parameter = "<arn:aws:iam::example:role/example>"
-
+    coordinator_a_assume_role_parameter = "<arn:aws:iam::<YourAccountID>:role/a_<CoordinatorAAccountID>_coordinator_assume_role>"
+    coordinator_b_assume_role_parameter = "<arn:aws:iam::<YourAccountID>:role/b_<CoordinatorBAccountID>_coordinator_assume_role>"
     ...
 
     alarm_notification_email = "<noreply@example.com>"
     ```
 
     * environment: name of your environment
-    * assume_role_parameter: IAM role given by us in the onboarding email
+    * coordinator_a_assume_role_parameter: IAM role for Coordinator A given by us in the onboarding or upgrade email
+    * coordinator_b_assume_role_parameter: IAM role for Coordinator B given by us in the onboarding or upgrade email
     * alarm_notification_email: Email to receive alarm notifications. Requires
     confirmation subscription through sign up email sent to this address.
+
+1. **Skip this step if you use our prebuilt AMI and Lambda jars**
+    
+    If you [self-build your AMI and jars](build-scripts/aws/README.md), you need to copy the contents of the `release_params.auto.tfvars` file into a new file `self_build_params.auto.tfvars` remove the `release_params.auto.tfvars` file afterwards.
+
+    To copy without symlink, run the following in the
+`<repository_root>/terraform/aws/environments/dev` folder
+    
+    ```sh
+    cp -L release_params.auto.tfvars self_build_params.auto.tfvars
+    ```
+
+    Then delete the symlinked file:
+
+    ```sh
+    rm release_params.auto.tfvars
+    ```
+
+    And change the line `ami_owners = ["971056657085"]` to `ami_owners = ["self"]` in your `self_build_params.auto.tfvars`.
 
 1. Once you’ve adjusted the configuration, run the following in the
 `<repository_root>/terraform/aws/environments/dev` folder
@@ -198,7 +221,7 @@ Leave all other values as-is for the initial deployment.
 
     ```terraform
     ...
-    Plan: 128 to add, 0 to change, 0 to destroy.
+    Plan: 141 to add, 0 to change, 0 to destroy.
     ```
 
     you can continue to apply the changes (needs confirmation after the
@@ -212,17 +235,17 @@ Leave all other values as-is for the initial deployment.
 
     ```terraform
     ...
-    Apply complete! Resources: 127 added, 0 changed, 0 destroyed.
+    Apply complete! Resources: 141 added, 0 changed, 0 destroyed.
 
     Outputs:
 
-    create_job_endpoint = "POST https://xyz.execute-api.us-east-1.amazonaws.com/stage/v1alpha/createJob"
-    frontend_api_endpoint = "https://xyz.execute-api.us-east-1.amazonaws.com"
     frontend_api_id = "xyz"
-    get_job_endpoint = "GET https://xyz.execute-api.us-east-1.amazonaws.com/stage/v1alpha/getJob"
     ```
 
-    The output has the links to the `createJob` and `getJob` API endpoints.
+    The terraform scripts create `createJob` and `getJob` API endpoints:
+    * Create Job Endpoint: `https://<frontend_api_id>.execute-api.<aws_region>.amazonaws.com/stage/v1alpha/createJob`
+    * Get Job Endpoint: `https://<frontend_api_id>.execute-api.<aws_region>.amazonaws.com/stage/v1alpha/getJob`
+
     These are authenticated endpoints, refer to the
     [Testing the System](#testing-the-system) section to learn how
     to use them.
@@ -237,14 +260,15 @@ To test the system, you'll need encrypted aggregatable reports in avro batch
 format (follow the [collecting and batching instructions](#collect-and-batch-aggregatable-reports))
 accessible by the aggregation service.
 
+If your inputs are larger than a few hundred MB, we suggest sharding the input reports and domain file into smaller shards.
+
 1. Create an S3 bucket for your input and output data, we will refer to it as
 `data_bucket`. This bucket must be created in the same AWS account where
 you set up the aggregation service.
+    * Consider enabling `versioning` to preserve, retrieve, and restore previous versions and set appropriate policies for this bucket to prevent accidental changes and deletion.
 
 1. Copy your reports.avro with batched encrypted aggregatable reports to
-`<data_bucket>/input`. To experiment with sample data, you can use our
-[sample batch](./sampledata/output_reports.avro)
-with the corresponding [output domain avro](./sampledata/output_domain.avro).
+`<data_bucket>/input`. 
 
 1. Create an aggregation job with the `createJob` API.
 
@@ -271,34 +295,22 @@ with the corresponding [output domain avro](./sampledata/output_domain.avro).
 
 1. Check the status of your job with the `getJob` API, replace values in `<...>`
 
-    `GET` `https://<frontend_api_id>.execute-api.us-east-1.amazonaws.com/stage/v1alpha/getJob?job_request_id=test01`
+    `GET` `https://<frontend_api_id>.execute-api.<deployment_aws_region>.amazonaws.com/stage/v1alpha/getJob?job_request_id=test01`
     Note: This API requires authentication. Follow the [AWS instructions](https://aws.amazon.com/premiumsupport/knowledge-center/iam-authentication-api-gateway/)
     for sending an authenticated request. [Detailed API spec](API.md#getjob-endpoint)
 
 ### Updating the system
 
-If the above setup was followed, you can update your system to the latest version by checking out the latest
-tagged version (currently `v0.3.0`) and running `terraform apply` in your environment folder (e.g. `<repository_root>/terraform/aws/environments/dev`).
+If you have deployed the system before, we recommend to run `terraform destroy` in your environment folder (e.g. `<repository_root>/terraform/aws/environments/dev`) when upgrading from `0.3.z` to `0.4.z+` and follow the [setup steps](#set-up-your-deployment-environment) again.
+
+After your upgrade to `0.4.z+` and if you have followed the above setup, next time you can update your system to the latest version by checking out the latest tagged version and running `terraform apply` in your environment folder (e.g. `<repository_root>/terraform/aws/environments/dev`).
 
 Run the following in the `<repository_root>`.
 
 ```sh
-git fetch origin && git checkout -b dev-v0.3.0 v0.3.0
+git fetch origin && git checkout -b dev-v{VERSION} v{VERSION}
 cd terraform/aws/environments/dev
 terraform apply
-```
-
-If your see the following planning output for the update you can go ahead and apply.
-
-```terraform
-...
-
-Plan: 0 to add, 14 to change, 0 to destroy.
-
-Do you want to perform these actions?
-  Terraform will perform the actions described above.
-  Only 'yes' will be accepted to approve.
-...
 ```
 
 ## Collect and batch aggregatable reports
@@ -351,6 +363,11 @@ file won't be aggregated)
 
 [Review code snippets](./COLLECTING.md) which demonstrate how to collect and
 batch aggregatable reports.
+
+## Generate debug summary reports
+
+Please refer to [Debug aggregation runs](./DEBUGGING.md) for more details about
+debugging support in aggregation service.
 
 ## Troubleshooting
 

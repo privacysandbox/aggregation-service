@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "AggregatedFact",
+  "fields": [
+    {
+      "name": "bucket",
+      "type": "bytes",
+      "doc": "Histogram bucket used in aggregation. 128-bit integer encoded as a 16-byte big-endian bytestring. Leading 0-bits will be left out."
+    },
+    {
+      "name": "metric",
+      "type": "long",
+      "doc": "Metric associated with the bucket"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "AggregatableReport",
+  "fields": [
+    {
+      "name": "payload",
+      "type": "bytes"
+    },
+    {
+      "name": "key_id",
+      "type": "string"
+    },
+    {
+      "name": "shared_info",
+      "type": "string"
+    }
+  ]
+}

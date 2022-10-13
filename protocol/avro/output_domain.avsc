@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "AggregationBucket",
+  "fields": [
+    {
+      "name": "bucket",
+      "type": "bytes",
+      "doc": "A single bucket that appears in the aggregation service output. 128-bit integer encoded as a 16-byte big-endian bytestring."
+    }
+  ]
+}

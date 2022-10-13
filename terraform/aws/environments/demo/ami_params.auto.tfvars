@@ -1,1 +1,0 @@
-../shared/ami_params.auto.tfvars

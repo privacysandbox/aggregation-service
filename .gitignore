@@ -1,7 +1,29 @@
-# Terraform ignores
-terraform.tfstate*
-.terraform/
-crds.yml
+bazel-*
+!bazel-buildifier
+.project
+/.ijwb/
+/.aswb/
+/.clwb/
+.vscode
+.idea/
+*.iml
+*~
+.terraform
+# NOTE: .terraform.lock.hcl should be checked into git
+# https://www.terraform.io/docs/language/dependency-lock.html#lock-file-location
 
-# downloaded artifacts
-jars
+# Ignore generated files for eclipse lsp
+/pom.xml
+/.settings
+/.classpath
+/.factorypath
+/target
+/bin
+
+# don't track prebuilt/local-built artifacts and terrafrom release-manged scripts
+/terrafrom/aws/control-plane-shared-libraries
+/terraform/aws/jars
+/terrafrom/aws/environments/applications
+/terrafrom/aws/environments/modules
+/terrafrom/aws/environments/shared
+/terrafrom/aws/environments/demo

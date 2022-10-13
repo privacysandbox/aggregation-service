@@ -1,0 +1,61 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto2";
+
+package aggregate_api_configs;
+
+option java_package = "com.google.aggregate.privacy.noise.proto";
+option java_outer_classname = "Params";
+
+// Config for privacy parameters
+message PrivacyParameters {
+  // delta must be > 0 and < 1
+  optional double delta = 2;
+
+  // epsilon must be > 0
+  optional double epsilon = 3;
+
+  // l1_sensitivity must be > 0
+  optional int64 l1_sensitivity = 4;
+
+  // The noise distribution should use the following parameters
+  // scale = l1_sensitivity / epsilon
+  // threshold = scale * (epsilon + ln(1/delta))
+  optional NoiseParameters noise_parameters = 1;
+}
+
+message NoiseParameters {
+  enum Distribution { LAPLACE = 1; }
+
+  // Distribution of the noising algo.
+  optional Distribution distribution = 1;  // Required.
+
+  // Privacy loss parameter.
+  // Inversely proportional to amount of noise added.
+  optional double epsilon = 2 [deprecated = true];  // Required.
+
+  // Sensitivity for noising aggregation count.
+  optional NoiseSensitivity count_noise_sensitivity = 4 [deprecated = true];
+
+  // Sensitivity for noising aggregation value.
+  optional NoiseSensitivity value_noise_sensitivity = 5 [deprecated = true];
+}
+
+message NoiseSensitivity {
+  // Maximum sum of contributions a single privacy unit can make for all
+  // partitions (keys). Two values with difference <= l1_sensitivity that are
+  // noised should produce roughly the same distribution. Aka global sensitivity
+  optional int64 l1_sensitivity = 1;
+}

@@ -1,0 +1,19 @@
+[ {
+  "bucket" : "key5",
+  "value" : 2000000
+}, {
+  "bucket" : "key4",
+  "value" : 2000000
+}, {
+  "bucket" : "key6",
+  "value" : 8000000
+}, {
+  "bucket" : "key1",
+  "value" : 12000000
+}, {
+  "bucket" : "key3",
+  "value" : 2000000
+}, {
+  "bucket" : "key2",
+  "value" : 13000000
+} ]

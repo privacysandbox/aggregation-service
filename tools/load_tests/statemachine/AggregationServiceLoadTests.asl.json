@@ -1,0 +1,63 @@
+{
+  "Comment": "Perform load/scale tests on the Aggregation Service. This involves generating synthetic data, which will be stored in S3, and then making requests to the Aggregation Service.",
+  "StartAt": "DataGeneration",
+  "States": {
+    "DataGeneration": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "${DataGenerationArn}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "Next": "LoadTestFanOut"
+    },
+    "LoadTestFanOut": {
+      "Type": "Map",
+      "Iterator": {
+        "StartAt": "TriggerLoadTest",
+        "States": {
+          "TriggerLoadTest": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "OutputPath": "$.Payload",
+            "Parameters": {
+              "Payload.$": "$",
+              "FunctionName": "${TriggerJobsArn}"
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException"
+                ],
+                "IntervalSeconds": 2,
+                "MaxAttempts": 6,
+                "BackoffRate": 2
+              }
+            ],
+            "End": true
+          }
+        }
+      },
+      "Next": "LoadTestsComplete"
+    },
+    "LoadTestsComplete": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}

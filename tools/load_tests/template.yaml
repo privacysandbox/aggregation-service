@@ -1,0 +1,71 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Aggregation Service load testing
+
+Resources:
+  AggregationServiceLoadTestsLogGroup:
+    Type: AWS::Logs::LogGroup
+  AggregationServiceLoadTestsStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachine/AggregationServiceLoadTests.asl.json
+      DefinitionSubstitutions:
+        DataGenerationArn: !GetAtt DataGeneration.Arn
+        TriggerJobsArn: !GetAtt TriggerJobs.Arn
+      Logging:
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt AggregationServiceLoadTestsLogGroup.Arn
+        Level: ALL
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref DataGeneration
+        - LambdaInvokePolicy:
+            FunctionName: !Ref TriggerJobs
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CheckJobsStatus
+        - CloudWatchLogsFullAccess
+
+  DataGeneration:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: data_generation.lambda_handler
+      Runtime: python3.9
+      Timeout: 900
+
+  TriggerJobs:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: trigger_jobs.lambda_handler
+      Runtime: python3.9
+      Timeout: 900
+
+  CheckJobsStatus:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/
+      Handler: check_jobs_status.lambda_handler
+      Runtime: python3.9
+      Timeout: 900
+
+Outputs:
+  AggregationServiceLoadTestsArn:
+    Description: "Load Test state machine ARN"
+    Value: !Ref AggregationServiceLoadTestsStateMachine

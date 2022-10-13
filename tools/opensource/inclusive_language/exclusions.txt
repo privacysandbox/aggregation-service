@@ -1,0 +1,18 @@
+# Violation definition file
+tools/opensource/inclusive_language/
+# Git sample file
+\.git/hooks/post-update.sample
+# Git sample file
+\.git/hooks/pre-rebase.sample
+# Git logs
+\.git/logs/
+# License files (cannot be modified)
+licenses
+# 3rd party deps reference Git repo master
+WORKSPACE
+# Git master branch URL references
+/blob/master/
+# Binary files
+binary file matches
+# Existing violations: masterKeyId, master key
+master\s?key

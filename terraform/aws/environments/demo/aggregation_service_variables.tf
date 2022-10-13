@@ -1,1 +1,0 @@
-../shared/aggregation_service_variables.tf
