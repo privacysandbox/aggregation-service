@@ -170,8 +170,8 @@ Leave all other values as-is for the initial deployment.
     environment = "<environment_name>"
     ...
 
-    coordinator_a_assume_role_parameter = "<arn:aws:iam::<YourAccountID>:role/a_<CoordinatorAAccountID>_coordinator_assume_role>"
-    coordinator_b_assume_role_parameter = "<arn:aws:iam::<YourAccountID>:role/b_<CoordinatorBAccountID>_coordinator_assume_role>"
+    coordinator_a_assume_role_parameter = "arn:aws:iam::<CoordinatorAAccountID>:role/a_<YourAccountID>_coordinator_assume_role"
+    coordinator_b_assume_role_parameter = "arn:aws:iam::<CoordinatorBAccountID>:role/b_<YourAccountID>_coordinator_assume_role"
     ...
 
     alarm_notification_email = "<noreply@example.com>"
