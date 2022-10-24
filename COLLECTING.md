@@ -69,7 +69,7 @@ bytes may be represented as ASCII characters, others are unicode escaped.
 
 The [sample report](#aggregatable-report-sample) lists a `debug_cleartext_payload`
 field that is *not* encrypted and can be processed with the
-[local testing tool](https://storage.googleapis.com/control-plane-shared-libraries-public-artifacts/{VERSION}/LocalTestingTool_{VERSION}.jar).
+[local testing tool](https://aggregation-service-published-artifacts.s3.amazonaws.com/aggregation-service/0.4.0/LocalTestingTool_0.4.0.jar).
 
 When testing the aggregation service locally and on Amazon Web Services
 [Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/),
