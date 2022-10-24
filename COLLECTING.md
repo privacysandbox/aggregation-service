@@ -327,7 +327,7 @@ java -jar avro-tools-1.11.0.jar fromjson \
 
 ### Produce a summary report locally
 
-Using the [local testing tool](https://storage.googleapis.com/control-plane-shared-libraries-public-artifacts/{VERSION}/LocalTestingTool_{VERSION}.jar),
+Using the [local testing tool](https://aggregation-service-published-artifacts.s3.amazonaws.com/aggregation-service/0.4.0/LocalTestingTool_0.4.0.jar),
 you now can generate a summary report. [See all flags and descriptions](./API.md#local-testing-tool)
 
 *Note: The `SHA256` of the `LocalTestingTool_{version}.jar` is `{LocalTestingTool_{version}.jar-SHA}`
