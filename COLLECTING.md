@@ -68,8 +68,10 @@ bytes may be represented as ASCII characters, others are unicode escaped.
 ## Convert the aggregatable report into Avro binary representation
 
 The [sample report](#aggregatable-report-sample) lists a `debug_cleartext_payload`
-field that is *not* encrypted and can be processed with the
-[local testing tool](https://aggregation-service-published-artifacts.s3.amazonaws.com/aggregation-service/0.4.0/LocalTestingTool_0.4.0.jar).
+field that is *not* encrypted and can be processed with the local testing tool.
+
+Follow the instructions in the [README.md#using-the-local-testing-tool](./README.md#using-the-local-testing-tool) 
+to download the local testing tool.
 
 When testing the aggregation service locally and on Amazon Web Services
 [Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/),
@@ -305,7 +307,7 @@ in a domain file `output_domain.avro` with the following Avro schema.
 You can use the [Avro Tools](https://www.apache.org/dyn/closer.cgi/avro/) to
 generate a `output_domain.avro` from a JSON input file.
 
-You can download the Avro Tools jar 1.11.0 [here](https://dlcdn.apache.org/avro/avro-1.11.0/java/avro-tools-1.11.0.jar)
+You can download the Avro Tools jar 1.11.0 [here](http://archive.apache.org/dist/avro/avro-1.11.0/java/avro-tools-1.11.0.jar)
 
 We use the following `output_domain.json` input file to generate our
 `output_domain.avro` file. This uses the bucket from the above
@@ -327,11 +329,10 @@ java -jar avro-tools-1.11.0.jar fromjson \
 
 ### Produce a summary report locally
 
-Using the [local testing tool](https://aggregation-service-published-artifacts.s3.amazonaws.com/aggregation-service/0.4.0/LocalTestingTool_0.4.0.jar),
-you now can generate a summary report. [See all flags and descriptions](./API.md#local-testing-tool)
+Using the local testing tool, you now can generate a summary report. [See all flags and descriptions](./API.md#local-testing-tool)
 
-*Note: The `SHA256` of the `LocalTestingTool_{version}.jar` is `{LocalTestingTool_{version}.jar-SHA}`
-obtained with `openssl sha256 <jar>`.*
+Follow the instructions in the [README.md#using-the-local-testing-tool](./README.md#using-the-local-testing-tool) 
+to download the local testing tool.
 
 We will run the tool, without adding noise to the summary report, to receive the
 expected value of `32768` from the [sample aggregatable report](#aggregatable-report-sample).
