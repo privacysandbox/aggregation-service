@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.aggregate.adtech.worker;
+package com.google.aggregate.shared;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -25,8 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Utility to print all licenses for dependencies on Aggregation Worker Binary. TODO(b/226980133)
- * Add test for this utility if this solution is acceptable
+ * Utility to print all licenses for dependencies. TODO(b/226980133) Add test for this utility if
+ * this solution is acceptable.
  */
 public final class LicenseUtil {
 

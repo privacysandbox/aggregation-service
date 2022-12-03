@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker;
 
 import com.beust.jcommander.JCommander;
+import com.google.aggregate.shared.LicenseUtil;
 import com.google.common.util.concurrent.ServiceManager;
 import java.io.IOException;
 import java.nio.file.Files;

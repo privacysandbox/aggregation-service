@@ -20,7 +20,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 
-import com.google.aggregate.adtech.worker.JobProcessor.AggregationJobProcessException;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
@@ -65,6 +64,6 @@ public class NoopJobProcessorTest {
     Job item = FakeJobGenerator.generate("foo");
     processor.setShouldThrowException(true);
 
-    assertThrows(AggregationJobProcessException.class, () -> processor.process(item));
+    assertThrows(IllegalStateException.class, () -> processor.process(item));
   }
 }

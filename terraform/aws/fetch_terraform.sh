@@ -47,6 +47,10 @@ cat <<EOT >> environments/shared/release_params.auto.tfvars
 ami_name = "aggregation-service-enclave_$VERSION"
 ami_owners = ["971056657085"]
 
+# temp fix for staying within default VPC EIP quota
+vpc_availability_zones = ["a","b","c","d","e"]
+
+# paths to services lambda jar
 change_handler_lambda = "../../jars/AwsChangeHandlerLambda_${VERSION}.jar"
 frontend_lambda = "../../jars/AwsApiGatewayFrontend_${VERSION}.jar"
 sqs_write_failure_cleanup_lambda = "../../jars/AwsFrontendCleanupLambda_${VERSION}.jar"

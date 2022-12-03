@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -25,6 +27,7 @@ java_library(
         "//java/com/google/aggregate/adtech/worker/aggregation/engine",
         "//java/com/google/aggregate/adtech/worker/aggregation/privacy:privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/adtech/worker/decryption",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/adtech/worker/validation",
@@ -43,6 +46,5 @@ java_library(
         "//java/external:scp_shared_proto",
         "//java/external:shared_model",
         "//java/external:slf4j",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/model",
     ],
 )

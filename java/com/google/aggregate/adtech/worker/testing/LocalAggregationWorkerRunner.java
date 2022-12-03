@@ -20,7 +20,7 @@ import com.beust.jcommander.JCommander;
 import com.google.aggregate.adtech.worker.AggregationWorker;
 import com.google.aggregate.adtech.worker.AggregationWorkerArgs;
 import com.google.aggregate.adtech.worker.AggregationWorkerModule;
-import com.google.aggregate.adtech.worker.ResultLogger.ResultLogException;
+import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ServiceManager;

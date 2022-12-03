@@ -18,6 +18,7 @@ package com.google.aggregate.tools.shard;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -44,7 +45,20 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
-/** A tool for sharding Avro report or domain inputs */
+/*
+ * This tool is for sharding Avro report or domain.
+ * The reports can be sharded with:
+ * bazel run //java/com/google/aggregate/tools/shard:AvroShard \
+ *  --input $PWD/20k_reports.avro \
+ *  --output_dir $PWD/20k_shards \
+ *  --num_shards 20
+ * The domain can ba sharded with:
+ * bazel run //java/com/google/aggregate/tools/shard:AvroShard \
+ *  --input $PWD/20k_domain.avro \
+ *  --output_dir $PWD/20k_domain \
+ *  --num_shards 20 \
+ *  --domain
+ */
 final class AvroShard {
 
   static Injector injector = Guice.createInjector(new Env());
@@ -112,7 +126,7 @@ final class AvroShard {
 
     AvroOutputDomainWriterFactory domainWriterFactory =
         injector.getInstance(AvroOutputDomainWriterFactory.class);
-    int runningShard = 0;
+    int runningShard = 1;
     for (List<AvroOutputDomainRecord> shard : Iterables.partition(records, shardSize)) {
       Path shardPath =
           outputDirPath.resolve(
@@ -121,15 +135,11 @@ final class AvroShard {
       System.out.printf(
           "Writing domain shard %d at %s\n", runningShard, shardPath.toAbsolutePath());
 
-      try {
-        if (!Files.exists(outputDirPath)) {
-          Files.createDirectories(outputDirPath);
-        }
-        OutputStream shardStream = Files.newOutputStream(shardPath, CREATE);
-        AvroOutputDomainWriter writer = domainWriterFactory.create(shardStream);
+      Files.createDirectories(outputDirPath);
+
+      try (OutputStream shardStream = Files.newOutputStream(shardPath, CREATE, TRUNCATE_EXISTING);
+          AvroOutputDomainWriter writer = domainWriterFactory.create(shardStream)) {
         writer.writeRecords(/* metadata= */ ImmutableList.of(), ImmutableList.copyOf(shard));
-      } catch (Exception ex) {
-        System.out.println(ex.getMessage());
       }
       System.out.println("Domain shard written");
       runningShard++;
@@ -142,12 +152,15 @@ final class AvroShard {
 
     AvroReportWriterFactory reportWriterFactory =
         injector.getInstance(AvroReportWriterFactory.class);
-    int runningShard = 0;
+    int runningShard = 1;
     for (List<AvroReportRecord> shard : Iterables.partition(records, shardSize)) {
       Path shardPath =
-          outputDirPath.resolve(String.format("shard-%d-of-%d.avro", runningShard, shardNum));
+          outputDirPath.resolve(
+              String.format("shard-report-%d-of-%d.avro", runningShard, shardNum));
 
       System.out.printf("Writing shard %d at %s\n", runningShard, shardPath.toAbsolutePath());
+
+      Files.createDirectories(outputDirPath);
 
       try (OutputStream shardStream = Files.newOutputStream(shardPath, CREATE);
           AvroReportWriter writer = reportWriterFactory.create(shardStream)) {

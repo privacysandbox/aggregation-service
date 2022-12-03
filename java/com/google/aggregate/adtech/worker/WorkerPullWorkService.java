@@ -22,6 +22,7 @@ import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyStri
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.aggregate.adtech.worker.validation.JobValidator;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.StopwatchExporter.StopwatchExportException;
@@ -37,6 +38,7 @@ import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
 import com.google.scp.shared.proto.ProtoUtil;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -44,7 +46,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /** Guava service for repeatedly pulling from the pubsub and processing the request */
-final class WorkerPullWorkService extends AbstractExecutionThreadService {
+public final class WorkerPullWorkService extends AbstractExecutionThreadService {
 
   private static final Logger logger = LoggerFactory.getLogger(WorkerPullWorkService.class);
 
@@ -54,6 +56,7 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
   private final StopwatchRegistry stopwatchRegistry;
   private final StopwatchExporter stopwatchExporter;
   private final boolean benchmarkMode;
+  private final Clock clock;
 
   private final ListeningExecutorService nonBlockingThreadPool;
   private final ListeningExecutorService blockingThreadPool;
@@ -71,6 +74,7 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
       JobClient jobClient,
       JobProcessor jobProcessor,
       MetricClient metricClient,
+      Clock clock,
       StopwatchRegistry stopwatchRegistry,
       StopwatchExporter stopwatchExporter,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
@@ -80,6 +84,7 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
     this.jobProcessor = jobProcessor;
     this.metricClient = metricClient;
     this.moreNewRequests = true;
+    this.clock = clock;
     this.stopwatchRegistry = stopwatchRegistry;
     this.stopwatchExporter = stopwatchExporter;
     this.nonBlockingThreadPool = nonBlockingThreadPool;
@@ -92,10 +97,9 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
     logger.info("Aggregation worker started");
 
     while (moreNewRequests) {
-
+      Optional<Job> job = Optional.empty();
       try {
-        Optional<Job> job = jobClient.getJob();
-
+        job = jobClient.getJob();
         if (job.isEmpty()) {
           logger.info("No job pulled.");
 
@@ -146,11 +150,15 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
 
         jobClient.markJobCompleted(jobResult);
         recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
+      } catch (AggregationJobProcessException e) {
+        processException(e, jobClient, job.get());
+        // TODO(b/197999001) report job with error in some monitoring counter
+        recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
       } catch (Exception e) {
         recordWorkerJobMetric(JOB_ERROR_METRIC_NAME, "JobHandlingError");
-        logger.error("Exception occurred in worker", e);
+        logger.error(
+            String.format("%s caught in WorkerPullWorkService: ", e.getClass().getSimpleName()), e);
       }
-
       // Stopwatches only get exported once this loop exits. When run in benchmark mode (for perf
       // tests), we only expect one worker item.
       if (benchmarkMode) {
@@ -186,6 +194,29 @@ final class WorkerPullWorkService extends AbstractExecutionThreadService {
       metricClient.recordMetric(metric);
     } catch (Exception e) {
       logger.warn(String.format("Could not record job metric %s.\n%s", metricName, e));
+    }
+  }
+
+  private JobResult createErrorJobResult(Job job, String errorCode, String errorMessage) {
+    return JobResult.builder()
+        .setJobKey(job.jobKey())
+        .setResultInfo(
+            ResultInfo.newBuilder()
+                .setReturnMessage(errorMessage)
+                .setReturnCode(errorCode)
+                .setErrorSummary(ErrorSummary.getDefaultInstance())
+                .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
+                .build())
+        .build();
+  }
+
+  private void processException(AggregationJobProcessException e, JobClient jobClient, Job job) {
+    logger.error("Exception while running job :", e);
+    JobResult jobResult = createErrorJobResult(job, e.getCode().name(), e.getMessage());
+    try {
+      jobClient.markJobCompleted(jobResult);
+    } catch (JobClient.JobClientException ex) {
+      logger.error("Marking Job complete failed: ", ex.getMessage());
     }
   }
 }

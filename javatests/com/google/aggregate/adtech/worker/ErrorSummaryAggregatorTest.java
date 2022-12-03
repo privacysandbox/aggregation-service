@@ -62,7 +62,9 @@ public class ErrorSummaryAggregatorTest {
                         .setDetailedErrorMessage("fizz")
                         .build())
                 .build(),
-            DecryptionValidationResult.builder().setReport(FakeReportGenerator.generate(0)).build(),
+            DecryptionValidationResult.builder()
+                .setReport(FakeReportGenerator.generateWithParam(0, /* reportVersion */ ""))
+                .build(),
             DecryptionValidationResult.builder()
                 .addErrorMessage(
                     ErrorMessage.builder()

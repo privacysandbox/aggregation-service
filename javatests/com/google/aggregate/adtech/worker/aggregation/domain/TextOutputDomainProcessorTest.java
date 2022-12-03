@@ -28,7 +28,7 @@ import static org.junit.Assert.assertThrows;
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
-import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor.DomainReadException;
+import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;

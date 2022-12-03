@@ -233,7 +233,7 @@ resource "aws_codebuild_project" "bazel_build_container" {
     buildspec = "build-scripts/aws/build-container/buildspec.yml"
   }
 
-  source_version = var.aggregation_service_github_repo_version == "" ? "v${local.release_version}" : var.aggregation_service_github_repo_version
+  source_version = var.aggregation_service_github_repo_branch == "" ? "v${local.release_version}" : var.aggregation_service_github_repo_branch
 }
 
 

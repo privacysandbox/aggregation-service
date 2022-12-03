@@ -21,7 +21,7 @@ import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingSe
 import com.google.aggregate.adtech.worker.aggregation.privacy.UnlimitedPrivacyBudgetingServiceBridge;
 
 /** CLI enum to select the privacy budgeting bridge */
-enum PrivacyBudgetingSelector {
+public enum PrivacyBudgetingSelector {
   UNLIMITED(UnlimitedPrivacyBudgetingServiceBridge.class),
   HTTP(HttpPrivacyBudgetingServiceBridge.class);
 
@@ -31,7 +31,7 @@ enum PrivacyBudgetingSelector {
     this.bridgeClass = bridgeClass;
   }
 
-  Class<? extends PrivacyBudgetingServiceBridge> getBridge() {
+  public Class<? extends PrivacyBudgetingServiceBridge> getBridge() {
     return bridgeClass;
   }
 }

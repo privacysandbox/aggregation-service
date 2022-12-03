@@ -31,7 +31,7 @@ public enum DecryptionModuleSelector {
     this.decryptionModule = decryptionModule;
   }
 
-  DecryptionModule getDecryptionModule() {
+  public DecryptionModule getDecryptionModule() {
     return decryptionModule;
   }
 }

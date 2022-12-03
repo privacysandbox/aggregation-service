@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker.aggregation.domain;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -133,11 +134,4 @@ public abstract class OutputDomainProcessor {
    * @return the contents of the shard as a {@link ImmutableList}
    */
   protected abstract ImmutableList<BigInteger> readShard(DataLocation shardLocation);
-
-  public final class DomainReadException extends RuntimeException {
-
-    DomainReadException(Throwable cause) {
-      super(cause);
-    }
-  }
 }

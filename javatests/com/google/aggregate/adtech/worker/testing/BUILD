@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_test")
+
 java_test(
     name = "FakeJobResultGeneratorTest",
     srcs = ["FakeJobResultGeneratorTest.java"],
@@ -32,6 +34,7 @@ java_test(
     srcs = ["NoopJobProcessorTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:fake_job_result_generator",
         "//java/com/google/aggregate/adtech/worker/testing:noop_job_processor",
@@ -118,6 +121,7 @@ java_test(
     srcs = ["InMemoryResultLoggerTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:in_memory_logger",
         "//java/external:clients_jobclient_aws",

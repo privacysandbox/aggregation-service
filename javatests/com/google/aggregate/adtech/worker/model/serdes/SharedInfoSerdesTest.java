@@ -363,6 +363,29 @@ public class SharedInfoSerdesTest {
     assertThat(deserialized).hasValue(sharedInfoWithoutDebugMode);
   }
 
+  /**
+   * Test if setting debug_mode false in SharedInfo object doesn't add "debug_mode" string to
+   * serialized SharedInfo string
+   */
+  @Test
+  public void testSerializeSharedInfoDebugModeDisabled() {
+    // No setup
+    SharedInfo sharedInfoDebugModeDisabled =
+        SharedInfo.builder()
+            .setVersion("")
+            .setReportId(SAMPLE_REPORT_ID)
+            .setScheduledReportTime(FIXED_TIME)
+            .setReportingOrigin("bar.com")
+            .setPrivacyBudgetKey("foo")
+            .setReportDebugMode(false)
+            .build();
+
+    String serialized =
+        sharedInfoSerdes.reverse().convert(Optional.ofNullable(sharedInfoDebugModeDisabled));
+
+    assertFalse(serialized.contains("debug_mode"));
+  }
+
   /** Serialize share-info for simulation. Check @JsonIgnore and @JsonProperty setting correctly */
   @Test
   public void testSerializeSharedInfoIgnoreField() {

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_test")
+
 java_test(
     name = "NumericConversionsTest",
     srcs = ["NumericConversionsTest.java"],
@@ -34,7 +36,6 @@ java_test(
         "//java/external:google_truth",
         "//java/external:operator_protos",
         "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/jobclient:model",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/model",
         "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/model",
     ],
 )

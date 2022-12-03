@@ -1,0 +1,183 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+exclude: (?x)^(
+             bazel-(bin|out|testlogs|workspace)/.*|
+             .bazel_output/.*|
+             javatests/testData/.*|
+             version.txt
+         )$
+
+fail_fast: true
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.3.0
+  hooks:
+  - id: end-of-file-fixer
+  - id: fix-byte-order-marker
+  - id: mixed-line-ending
+  - id: trailing-whitespace
+  - id: check-case-conflict
+  - id: check-merge-conflict
+  - id: check-yaml
+    exclude: (?x)^(
+      tools/load_tests/template.yaml
+      )$
+  - id: check-json
+  - id: check-symlinks
+    files: ^$
+  - id: check-added-large-files
+  - id: check-vcs-permalinks
+  - id: check-executables-have-shebangs
+  - id: detect-private-key
+
+- repo: https://github.com/jumanjihouse/pre-commit-hooks
+  rev: 3.0.0
+  hooks:
+  - id: git-check
+    files: ^$
+  - id: script-must-not-have-extension
+    files: ^$
+    exclude: '^google_internal/.*/kokoro_(presubmit|continuous).sh$'
+  - id: script-must-have-extension
+  - id: require-ascii
+  - id: shellcheck
+    files: ^$
+    exclude: '^(production|tools|google_internal|builders/images)/.*$'
+
+- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+  rev: v2.4.0
+  hooks:
+  - id: pretty-format-java
+    name: Google Java Formatter
+    args: [--autofix]
+    files: ^$
+
+- repo: local
+  hooks:
+  - id: addlicense
+    name: addlicense
+    language: golang
+    additional_dependencies:
+    - github.com/google/addlicense@v1.1.0
+    always_run: false
+    pass_filenames: true
+    types_or:
+    - text
+    entry: addlicense -v
+    exclude: &addlicense-ignores (?x)^(
+        adtech/.*|
+        coordinator/.*|
+        deploy-testenv/.*|
+        java/com/google/aggregate/adtech/worker/gcp/.*|
+        java/com/google/aggregate/simulation/.*|
+        java/com/google/experimental/.*|
+        javatests/com/google/aggregate/adtech/worker/e2e/.*|
+        javatests/com/google/aggregate/simulation/.*|
+        kokoro/.*|
+        .*gcp.*|
+        release/.*|
+        release/aws/.*|
+        .*/.terraform.lock.hcl|
+        tools/opensource/.*|
+        version.adtech|
+        version.coordinator|
+        worker/aws/testing/.*|
+        worker/testing/data/1k/BUILD|
+        WORKSPACE
+      )$
+
+  - id: addlicense-check
+    name: addlicense check
+    language: golang
+    additional_dependencies:
+    - github.com/google/addlicense@v1.1.0
+    always_run: false
+    pass_filenames: true
+    types_or:
+    - text
+    entry: addlicense -check
+    exclude: *addlicense-ignores
+
+  - id: inclusive-language
+    name: inclusive language check
+    language: script
+    pass_filenames: true
+    entry: tools/opensource/inclusive_language/inclusive-language-check
+    types_or:
+    - text
+    exclude: (?x)^(
+        WORKSPACE|
+        tools/opensource/inclusive_language/.*|
+        licenses/.*
+      )$
+
+  - id: terraform-fmt
+    name: terraform fmt
+    description: Run terraform via docker to format Terraform files
+    language: script
+    pass_filenames: false
+    entry: builders/tools/terraform fmt -write=true -recursive
+    types_or:
+    - terraform
+    files: ^$
+
+  - id: hadolint
+    name: Lint Dockerfiles
+    description: Run hadolint via docker to lint Dockerfiles
+    language: script
+    types_or:
+    - dockerfile
+    entry: builders/tools/hadolint
+    files: ^$
+
+- repo: https://github.com/pre-commit/mirrors-prettier
+  rev: v2.7.1
+  hooks:
+  - id: prettier
+    name: prettier markdown
+    types_or:
+    - markdown
+
+- repo: https://github.com/DavidAnson/markdownlint-cli2
+  rev: v0.5.1
+  hooks:
+  - id: markdownlint-cli2
+    name: lint markdown
+
+- repo: local
+  hooks:
+  - id: buildifier
+    name: buildifier
+    description: Format bazel WORKSPACE, BUILD and .bzl files with a standard convention.
+    language: golang
+    additional_dependencies:
+      - github.com/bazelbuild/buildtools/buildifier@5.1.0
+    always_run: true
+    pass_filenames: true
+    types_or:
+    - bazel
+    entry: buildifier
+    args:
+    - -lint=fix
+    - -mode=fix
+    - -warnings=all
+
+- repo: https://github.com/psf/black
+  rev: 22.8.0
+  hooks:
+  - id: black
+    name: black python formatter

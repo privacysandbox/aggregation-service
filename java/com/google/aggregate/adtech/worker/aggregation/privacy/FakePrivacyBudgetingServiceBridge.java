@@ -34,7 +34,6 @@ public final class FakePrivacyBudgetingServiceBridge implements PrivacyBudgeting
   private boolean shouldThrow;
   private Optional<ImmutableList<PrivacyBudgetUnit>> lastBudgetsToConsumeSent = Optional.empty();
   private Optional<String> lastAttributionReportToSent = Optional.empty();
-  private Optional<Integer> lastDebugPrivacyBudgetLimitSent = Optional.empty();
 
   private final HashMap<PrivacyBudgetUnit, Integer> privacyBudgets;
 
@@ -53,17 +52,14 @@ public final class FakePrivacyBudgetingServiceBridge implements PrivacyBudgeting
 
   @Override
   public ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
-      ImmutableList<PrivacyBudgetUnit> budgetsToConsume,
-      String attributionReportTo,
-      Optional<Integer> debugPrivacyBudgetLimit)
+      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo)
       throws PrivacyBudgetingServiceBridgeException {
     if (shouldThrow) {
-      throw new PrivacyBudgetingServiceBridgeException(new IllegalStateException("Set to throw"));
+      throw new PrivacyBudgetingServiceBridgeException();
     }
 
     lastBudgetsToConsumeSent = Optional.of(budgetsToConsume);
     lastAttributionReportToSent = Optional.of(attributionReportTo);
-    lastDebugPrivacyBudgetLimitSent = debugPrivacyBudgetLimit;
 
     ImmutableList<PrivacyBudgetUnit> insufficientPrivacyBudgetUnits =
         budgetsToConsume.stream()
@@ -83,10 +79,6 @@ public final class FakePrivacyBudgetingServiceBridge implements PrivacyBudgeting
 
   public Optional<String> getLastAttributionReportToSent() {
     return lastAttributionReportToSent;
-  }
-
-  public Optional<Integer> getLastDebugPrivacyBudgetLimitSent() {
-    return lastDebugPrivacyBudgetLimitSent;
   }
 
   public Optional<ImmutableList<PrivacyBudgetUnit>> getLastBudgetsToConsumeSent() {

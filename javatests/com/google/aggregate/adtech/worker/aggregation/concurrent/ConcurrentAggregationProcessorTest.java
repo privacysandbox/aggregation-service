@@ -16,12 +16,13 @@
 
 package com.google.aggregate.adtech.worker.aggregation.concurrent;
 
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INPUT_DATA_READ_FAILED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INVALID_JOB;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PERMISSION_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_LOGGING_ERROR;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_ATTRIBUTION_REPORT_TO;
-import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_PRIVACY_EPSILON;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_RUN;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
@@ -34,8 +35,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory.GENERAL_ERROR;
-import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.INPUT_DATA_READ_FAILED;
-import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.OUTPUT_DATAWRITE_FAILED;
 import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.SUCCESS;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -51,7 +50,6 @@ import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.FailJobOnPbsException;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.ResultLogger;
-import com.google.aggregate.adtech.worker.ResultLogger.ResultLogException;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.TextOutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
@@ -67,6 +65,8 @@ import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.Nois
 import com.google.aggregate.adtech.worker.decryption.DeserializingReportDecrypter;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionModule;
+import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
+import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.AvroRecordEncryptedReportConverter;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
@@ -140,7 +140,6 @@ import org.junit.runners.JUnit4;
 public class ConcurrentAggregationProcessorTest {
 
   private static final Instant FIXED_TIME = Instant.parse("2021-01-01T00:00:00Z");
-  private static final Integer DEBUG_PRIVACY_BUDGET_LIMIT = 5;
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
   @Rule public final TemporaryFolder testWorkingDir = new TemporaryFolder();
@@ -189,7 +188,7 @@ public class ConcurrentAggregationProcessorTest {
 
   private EncryptedReport generateEncryptedReport(int param) {
     String keyId = UUID.randomUUID().toString();
-    Report report = FakeReportGenerator.generate(param);
+    Report report = FakeReportGenerator.generateWithParam(param, /* reportVersion */ "");
     String sharedInfoString1 = sharedInfoSerdes.reverse().convert(Optional.of(report.sharedInfo()));
     try {
       ByteSource firstReportBytes =
@@ -225,12 +224,7 @@ public class ConcurrentAggregationProcessorTest {
     RequestInfo requestInfo = ctx.requestInfo();
     RequestInfo newRequestInfo =
         requestInfo.toBuilder()
-            .putAllJobParameters(
-                combineJobParams(
-                    requestInfo.getJobParameters(),
-                    ImmutableMap.of(
-                        JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT,
-                        DEBUG_PRIVACY_BUDGET_LIMIT.toString())))
+            .putAllJobParameters(requestInfo.getJobParameters())
             // Simulating 2 shards of input.
             .setInputDataBucketName(reportsDirectory.toAbsolutePath().toString())
             .setInputDataBlobPrefix("")
@@ -423,9 +417,9 @@ public class ConcurrentAggregationProcessorTest {
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
-    JobResult jobResultProcessor = processor.process(ctx);
-
-    assertThat(jobResultProcessor.resultInfo().getReturnCode()).isEqualTo(INVALID_JOB.toString());
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(INVALID_JOB);
   }
 
   @Test
@@ -678,17 +672,10 @@ public class ConcurrentAggregationProcessorTest {
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
 
-    JobResult jobResultProcessor = processor.process(ctx);
-
-    JobResult expectedJobResult =
-        this.expectedJobResult.toBuilder()
-            .setResultInfo(
-                resultInfoBuilder
-                    .setReturnCode(INPUT_DATA_READ_FAILED.name())
-                    .setReturnMessage("")
-                    .build())
-            .build();
-    assertJobResultsEqualsIgnoreReturnMessage(jobResultProcessor, expectedJobResult);
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
+    assertThat(ex.getMessage()).contains("Exception while reading domain input data.");
   }
 
   @Test
@@ -786,18 +773,10 @@ public class ConcurrentAggregationProcessorTest {
     Path badDataShard = reportsDirectory.resolve("reports_bad.avro");
     Files.writeString(badDataShard, "Bad data", US_ASCII, WRITE, CREATE);
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
-
-    JobResult jobResultProcessor = processor.process(ctx);
-
-    JobResult expectedJobResult =
-        this.expectedJobResult.toBuilder()
-            .setResultInfo(
-                resultInfoBuilder
-                    .setReturnCode(INPUT_DATA_READ_FAILED.name())
-                    .setReturnMessage("")
-                    .build())
-            .build();
-    assertJobResultsEqualsIgnoreReturnMessage(jobResultProcessor, expectedJobResult);
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
+    assertThat(ex.getMessage()).contains("Exception while reading reports input data.");
   }
 
   @Test
@@ -805,18 +784,9 @@ public class ConcurrentAggregationProcessorTest {
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
     resultLogger.setShouldThrow(true);
-
-    JobResult jobResultProcessor = processor.process(ctx);
-
-    JobResult expectedJobResult =
-        this.expectedJobResult.toBuilder()
-            .setResultInfo(
-                resultInfoBuilder
-                    .setReturnCode(OUTPUT_DATAWRITE_FAILED.name())
-                    .setReturnMessage("")
-                    .build())
-            .build();
-    assertJobResultsEqualsIgnoreReturnMessage(jobResultProcessor, expectedJobResult);
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(RESULT_LOGGING_ERROR);
   }
 
   @Test
@@ -824,18 +794,9 @@ public class ConcurrentAggregationProcessorTest {
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
     fakeDecryptionKeyService.setShouldThrowPermissionException(true);
-
-    JobResult actualJobResult = processor.process(ctx);
-
-    JobResult expectedJobResult =
-        this.expectedJobResult.toBuilder()
-            .setResultInfo(
-                resultInfoBuilder
-                    .setReturnCode(PERMISSION_ERROR.name())
-                    .setReturnMessage("")
-                    .build())
-            .build();
-    assertJobResultsEqualsReturnCode(actualJobResult, expectedJobResult);
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(PERMISSION_ERROR);
   }
 
   @Test
@@ -854,30 +815,10 @@ public class ConcurrentAggregationProcessorTest {
     assertJobResultsEqualsReturnCode(actualJobResult, expectedJobResult);
   }
 
-  /**
-   * Test to ensure that if a job is reprocessed by the same worker then no errors should occur.
-   * This scenario can when exceptions occur in processing, preventing the stopwatch from being
-   * stopped.
-   */
-  @Test
-  public void process_moreThanOnceShouldNotCauseError() throws Exception {
-    // Create an error on the first run, starting a stopwatch but not stopping it
-    Path badDataShard = reportsDirectory.resolve("reports_bad.avro");
-    Files.writeString(badDataShard, "Bad data", US_ASCII, WRITE, CREATE);
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
-    processor.process(ctx);
-
-    // No exception should be thrown when the job is processed again
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
-    processor.process(ctx);
-
-    // Test passes if no exception is thrown
-  }
-
   @Test
   public void processingWithWrongSharedInfo() throws Exception {
     String keyId = UUID.randomUUID().toString();
-    Report report = FakeReportGenerator.generate(1);
+    Report report = FakeReportGenerator.generateWithParam(1, /* reportVersion */ "");
     // Encrypt with a different sharedInfo than what is provided with the report so that decryption
     // fails
     String sharedInfoForEncryption = "foobarbaz";
@@ -934,23 +875,9 @@ public class ConcurrentAggregationProcessorTest {
         fakePrivacyBudgetingServiceBridge);
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
-
-    JobResult jobResultProcessor = processor.process(ctx);
-
-    JobResult expectedJobResult =
-        this.expectedJobResult.toBuilder()
-            .setResultInfo(
-                resultInfoBuilder
-                    .setReturnCode(PRIVACY_BUDGET_EXHAUSTED.name())
-                    .setReturnMessage(
-                        "Insufficient privacy budget for "
-                            + "one or more aggregatable reports."
-                            + " No aggregatable report can"
-                            + " appear in more than one batch or "
-                            + "contribute to more than one summary report.")
-                    .build())
-            .build();
-    assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(PRIVACY_BUDGET_EXHAUSTED);
   }
 
   @Test
@@ -978,8 +905,6 @@ public class ConcurrentAggregationProcessorTest {
     // Check that the right attributionReportTo and debugPrivacyBudgetLimit were sent to the bridge
     assertThat(fakePrivacyBudgetingServiceBridge.getLastAttributionReportToSent())
         .hasValue(ctx.requestInfo().getJobParameters().get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
-    assertThat(fakePrivacyBudgetingServiceBridge.getLastDebugPrivacyBudgetLimitSent())
-        .hasValue(DEBUG_PRIVACY_BUDGET_LIMIT);
   }
 
   /**
@@ -996,13 +921,9 @@ public class ConcurrentAggregationProcessorTest {
         fakePrivacyBudgetingServiceBridge);
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
-
-    JobResult jobResultProcessor = processor.process(ctx);
-
-    assertThat(jobResultProcessor.resultInfo().getReturnCode())
-        .isEqualTo(PRIVACY_BUDGET_ERROR.name());
-    assertThat(jobResultProcessor.resultInfo().getReturnMessage())
-        .contains("Exception while consuming privacy budget:");
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(PRIVACY_BUDGET_ERROR);
   }
 
   @Test
@@ -1016,23 +937,52 @@ public class ConcurrentAggregationProcessorTest {
         fakePrivacyBudgetingServiceBridge);
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(PRIVACY_BUDGET_EXHAUSTED);
+  }
 
-    JobResult jobResultProcessor = processor.process(ctx);
-
-    JobResult expectedJobResult =
-        this.expectedJobResult.toBuilder()
-            .setResultInfo(
-                resultInfoBuilder
-                    .setReturnCode(PRIVACY_BUDGET_EXHAUSTED.name())
-                    .setReturnMessage(
-                        "Insufficient privacy budget for "
-                            + "one or more aggregatable reports."
-                            + " No aggregatable report can"
-                            + " appear in more than one batch or "
-                            + "contribute to more than one summary report.")
+  /**
+   * Test that the worker fails the job if an exception occurs when the reports bucket is
+   * nonexistent.
+   */
+  @Test
+  public void aggregate_withNonExistentBucket() throws Exception {
+    Path nonExistentReportsDirectory =
+        testWorkingDir.getRoot().toPath().resolve("nonExistentBucket");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .setInputDataBucketName(nonExistentReportsDirectory.toAbsolutePath().toString())
+                    .setInputDataBlobPrefix("")
                     .build())
             .build();
-    assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+    // TODO(b/258078789): Passing nonexistent reports folder should throw
+    // TODO(b/258082317): Add assertion on return message.
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
+  }
+
+  /**
+   * Test that the worker fails the job if an exception occurs when the report file path is
+   * nonexistent.
+   */
+  @Test
+  public void aggregate_withNonExistentReportFile() throws Exception {
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .setInputDataBucketName(reportsDirectory.toAbsolutePath().toString())
+                    .setInputDataBlobPrefix("nonExistentReport.avro")
+                    .build())
+            .build();
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
+    assertThat(ex.getMessage()).contains("No report shards found for location");
   }
 
   private void writeOutputDomain(Path outputDomainPath, String... keys) throws IOException {
@@ -1078,12 +1028,9 @@ public class ConcurrentAggregationProcessorTest {
 
     @Override
     public ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
-        ImmutableList<PrivacyBudgetUnit> budgetsToConsume,
-        String attributionReportTo,
-        Optional<Integer> debugPrivacyBudgetLimit)
+        ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo)
         throws PrivacyBudgetingServiceBridgeException {
-      return wrappedImpl.consumePrivacyBudget(
-          budgetsToConsume, attributionReportTo, debugPrivacyBudgetLimit);
+      return wrappedImpl.consumePrivacyBudget(budgetsToConsume, attributionReportTo);
     }
   }
 

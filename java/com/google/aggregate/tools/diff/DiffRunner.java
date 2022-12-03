@@ -19,7 +19,7 @@ package com.google.aggregate.tools.diff;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.beust.jcommander.JCommander;
-import com.google.aggregate.adtech.worker.ResultLogger.ResultLogException;
+import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
 import com.google.aggregate.adtech.worker.testing.LocalAggregationWorkerRunner;

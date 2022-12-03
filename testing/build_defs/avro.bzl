@@ -25,6 +25,7 @@ def _generate_avro_impl(ctx):
     args.add("--distribution_file_path", ctx.file.human_readable_reports)
     args.add("--asymmetric_key_file_path", ctx.file.key)
     args.add("--generated_report_scheduled_time", ctx.attr.generated_report_scheduled_time)
+    args.add("--domain_overlap", ctx.attr.domain_overlap)
 
     if ctx.attr.generate_output_domain:
         args.add("--generate_output_domain")
@@ -61,6 +62,17 @@ ReportsInfo = provider(
 generate_avro = rule(
     implementation = _generate_avro_impl,
     attrs = {
+        "domain_overlap": attr.string(
+            doc = "Type of overlap domain keys should have with report keys.",
+            default = "FULL",
+        ),
+        "generate_output_domain": attr.bool(
+            doc = "If true, indicates that output domain of results should be generated.",
+        ),
+        "generated_report_scheduled_time": attr.string(
+            doc = "Scheduled time for the generated reports",
+            default = "1970-01-01T00:00:00Z",
+        ),
         "human_readable_reports": attr.label(
             doc = "Text file containing human-readable reports.",
             allow_single_file = True,
@@ -71,24 +83,17 @@ generate_avro = rule(
             allow_single_file = True,
             mandatory = True,
         ),
-        "generated_report_scheduled_time": attr.string(
-            doc = "Scheduled time for the generated reports",
-            default = "1970-01-01T00:00:00Z",
-        ),
         # TODO: remove the attr below, the tool should figure out on its own how
         # many reports are there.
         "num_reports": attr.int(
             doc = "Number of reports that should be generated.",
             mandatory = True,
         ),
-        "generate_output_domain": attr.bool(
-            doc = "If true, indicates that output domain of results should be generated.",
-        ),
         "output_domain_size": attr.int(
             doc = "Number of buckets that should be present in the output domain.",
         ),
         "_simulation": attr.label(
-            default = Label("//java/com/google/aggregate/simulation:SimluationRunner"),
+            default = Label("//java/com/google/aggregate/simulation:SimulationRunner"),
             executable = True,
             cfg = "target",
         ),
@@ -125,10 +130,6 @@ def _shard_avro_impl(ctx):
 shard_avro = rule(
     implementation = _shard_avro_impl,
     attrs = {
-        "reports_path": attr.label(
-            doc = "Path to avro reports file that need to be sharded.",
-            mandatory = False,
-        ),
         "domain_path": attr.label(
             doc = "Path to domain reports file that need to be sharded.",
             mandatory = False,
@@ -136,6 +137,10 @@ shard_avro = rule(
         "num_shards": attr.int(
             doc = "Number of shards to be generated",
             mandatory = True,
+        ),
+        "reports_path": attr.label(
+            doc = "Path to avro reports file that need to be sharded.",
+            mandatory = False,
         ),
         "_shard_tool": attr.label(
             default = Label("//java/com/google/aggregate/tools/shard:AvroShard"),

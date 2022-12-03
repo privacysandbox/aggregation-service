@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -35,6 +37,7 @@ java_library(
     srcs = ["NoopJobProcessor.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:clients_jobclient_model",
     ],
@@ -117,6 +120,7 @@ java_library(
     ],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:clients_blobstorageclient_model",
         "//java/external:clients_jobclient_model",
@@ -152,6 +156,7 @@ java_library(
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker:worker_runner",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:in_memory_logger",
         "//java/external:guava",

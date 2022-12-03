@@ -31,7 +31,8 @@ public class DecryptionValidationResultTest {
   @Test
   public void testValidationCanSetReport() {
     DecryptionValidationResult.Builder resultBuilder =
-        DecryptionValidationResult.builder().setReport(FakeReportGenerator.generate(1));
+        DecryptionValidationResult.builder()
+            .setReport(FakeReportGenerator.generateWithParam(1, /* reportVersion */ ""));
 
     resultBuilder.build();
 
@@ -61,7 +62,7 @@ public class DecryptionValidationResultTest {
   public void testValidationErrorThrownIfBothSet() {
     DecryptionValidationResult.Builder resultBuilder =
         DecryptionValidationResult.builder()
-            .setReport(FakeReportGenerator.generate(1))
+            .setReport(FakeReportGenerator.generateWithParam(1, /* reportVersion */ ""))
             .addErrorMessage(
                 ErrorMessage.builder()
                     .setCategory(GENERAL_ERROR.name())

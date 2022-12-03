@@ -1,14 +1,17 @@
 # Dependencies and Licenses
 
-The deployment of the Amazon Web Services [Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/) based Aggregation Service depends on several packaged
-artifacts listed below.
-These artifacts can be downloaded with the [download_prebuilt_dependencies.sh](./terraform/aws/download_prebuilt_dependencies.sh)
-script. See [README](/README.md#download-terraform-scripts-and-prebuilt-dependencies).
+The deployment of the Amazon Web Services
+[Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/) based Aggregation Service depends
+on several packaged artifacts listed below. These artifacts can be downloaded with the
+[download_prebuilt_dependencies.sh](/terraform/aws/download_prebuilt_dependencies.sh) script. More
+information can be found in the
+[README](/README.md#download-terraform-scripts-and-prebuilt-dependencies).
 
 ## Packaged AWS Lambda Jars
 
-### AwsChangeHandlerLambda_{version}.jar
+### AwsChangeHandlerLambda\_{version}.jar
 
+<!-- prettier-ignore-start -->
 | groupId | artifactId | Version | License | URL |
 |--|--|--|--|--|
 | aopalliance | aopalliance | 1.0 |Public Domain | N/A |
@@ -82,9 +85,11 @@ script. See [README](/README.md#download-terraform-scripts-and-prebuilt-dependen
 | software.amazon.awssdk|url-connection-client|2.16.104|Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.awssdk|utils|2.16.104|Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.eventstream|eventstream|1.0.1|Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
+<!-- prettier-ignore-end -->
 
-### aws_apigateway_frontend_{version}.jar
+### aws_apigateway_frontend\_{version}.jar
 
+<!-- prettier-ignore-start -->
 | groupId | artifactId | Version | License | URL |
 |--|--|--|--|--|
 | aopalliance | aopalliance | 1.0 |Public Domain | N/A |
@@ -158,9 +163,11 @@ script. See [README](/README.md#download-terraform-scripts-and-prebuilt-dependen
 | software.amazon.awssdk|url-connection-client|2.16.104|Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.awssdk|utils|2.16.104|Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.eventstream|eventstream|1.0.1|Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
+<!-- prettier-ignore-end -->
 
-### AwsFrontendCleanupLambda_{version}.jar
+### AwsFrontendCleanupLambda\_{version}.jar
 
+<!-- prettier-ignore-start -->
 | groupId | artifactId | Version | License | URL |
 |--|--|--|--|--|
 | aopalliance | aopalliance | 1.0 |Public Domain | N/A |
@@ -234,9 +241,11 @@ script. See [README](/README.md#download-terraform-scripts-and-prebuilt-dependen
 | software.amazon.awssdk|url-connection-client|2.16.104|Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.awssdk|utils|2.16.104|Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.eventstream|eventstream|1.0.1|Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
+<!-- prettier-ignore-end -->
 
-### AsgCapacityHandlerLambda_{version}.jar
+### AsgCapacityHandlerLambda\_{version}.jar
 
+<!-- prettier-ignore-start -->
 | groupId | artifactId | Version | License | URL |
 |--|--|--|--|--|
 | aopalliance | aopalliance | 1 | Public Domain |
@@ -298,9 +307,11 @@ script. See [README](/README.md#download-terraform-scripts-and-prebuilt-dependen
 | software.amazon.awssdk | url-connection-client | 2.16.104 | Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.awssdk | utils | 2.16.104 | Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.eventstream | eventstream | 1.0.1 | Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
+<!-- prettier-ignore-end -->
 
-### TerminatedInstanceHandlerLambda_{version}.jar
+### TerminatedInstanceHandlerLambda\_{version}.jar
 
+<!-- prettier-ignore-start -->
 | groupId | artifactId | Version | License | URL |
 |--|--|--|--|--|
 | aopalliance | aopalliance | 1 | Public Domain |
@@ -362,6 +373,7 @@ script. See [README](/README.md#download-terraform-scripts-and-prebuilt-dependen
 | software.amazon.awssdk | url-connection-client | 2.16.104 | Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.awssdk | utils | 2.16.104 | Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
 | software.amazon.eventstream | eventstream | 1.0.1 | Apache License, Version 2.0 | <https://aws.amazon.com/apache2.0> |
+<!-- prettier-ignore-end -->
 
 ## License of artifacts in this repository
 

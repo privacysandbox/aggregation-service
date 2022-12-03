@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@com_google_adm_cloud_scp//operator/worker/aws/build_defs:deploy.bzl", "worker_aws_deployment")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
+load("@com_google_adm_cloud_scp//operator/worker/aws/build_defs:deploy.bzl", "worker_aws_deployment")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -51,7 +51,7 @@ DEFAULT_ENCLAVE_ARGS = [
     "--job_client",
     "AWS",
     "--result_logger",
-    "LOCAL_AVRO_TO_S3",
+    "LOCAL_TO_CLOUD",
     # coord-staging environment
     "--private_key_service_base_url",
     "https://il9t0ajpsa.execute-api.us-west-2.amazonaws.com/stage/v1alpha",
@@ -88,7 +88,7 @@ PROD_ENCLAVE_ARGS = [
     "--job_client",
     "AWS",
     "--result_logger",
-    "LOCAL_AVRO_TO_S3",
+    "LOCAL_TO_CLOUD",
     "--decryption_key_service",
     "AWS_ENCLAVE_CLI_DECRYPTION_KEY_SERVICE",
     "--trusted_party_region_override",

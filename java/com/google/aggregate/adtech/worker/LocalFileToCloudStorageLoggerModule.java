@@ -26,7 +26,7 @@ import com.google.aggregate.adtech.worker.writer.avro.LocalAvroResultFileWriter;
  * Module that uses the {@code LocalFileToCloudStorageLogger}, {@code LocalAvroResultFileWriter},
  * and {@code SinglePartAwsS3Writer}
  */
-public final class LocalAvroToS3LoggerModule extends ResultLoggerModule {
+public final class LocalFileToCloudStorageLoggerModule extends ResultLoggerModule {
 
   @Override
   public Class<? extends ResultLogger> getResultLoggerImplementation() {

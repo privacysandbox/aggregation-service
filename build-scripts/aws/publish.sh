@@ -17,7 +17,7 @@
 VERSION=$(cat ../../VERSION)
 
 # build jar artifacts with release version suffix and publish to S3
-# using ENV variables JARS_PUBLISH_BUCKET and JARS_PUBLISH_BUCKET_PATH for publish destination 
+# using ENV variables JARS_PUBLISH_BUCKET and JARS_PUBLISH_BUCKET_PATH for publish destination
 bazel run //terraform/aws:aws_change_handler_lambda_release \
 --//terraform/aws:bucket_flag=$JARS_PUBLISH_BUCKET --//terraform/aws:bucket_path_flag=$JARS_PUBLISH_BUCKET_PATH \
 -- --version=$VERSION

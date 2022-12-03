@@ -46,6 +46,7 @@ public abstract class SharedInfo {
   public static final String VERSION_0_1 = "0.1";
   public static final String LATEST_VERSION = VERSION_0_1;
   public static final boolean DEFAULT_DEBUG_MODE = false;
+  public static final String PRIVACY_BUDGET_KEY_DELIMITER = "-";
 
   public static Builder builder() {
     return new AutoValue_SharedInfo.Builder()
@@ -86,13 +87,14 @@ public abstract class SharedInfo {
   public abstract Optional<String> reportId();
 
   // String Debug mode value for writing json.
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   @JsonProperty("debug_mode")
-  public abstract String reportDebugModeString();
+  public abstract Optional<String> reportDebugModeString();
 
   // Convert the debugMode string field to boolean.
   @JsonIgnore
   public final boolean getReportDebugMode() {
-    return reportDebugModeString().equals("enabled");
+    return reportDebugModeString().isPresent() && reportDebugModeString().get().equals("enabled");
   }
 
   @AutoValue.Builder
@@ -134,15 +136,15 @@ public abstract class SharedInfo {
     public abstract Builder setReportDebugModeString(String value);
 
     /**
-     * Use boolean values for debug mode in the program and convert it to string values (enabled and
-     * disabled) for result json files.
+     * Use boolean values for debug mode in the program and convert it to string value enabled for
+     * result json files.
      */
     @JsonIgnore
     public final Builder setReportDebugMode(Boolean value) {
       if (value) {
         return setReportDebugModeString("enabled");
       }
-      return setReportDebugModeString("disabled");
+      return this;
     }
 
     public abstract SharedInfo build(); // not public
@@ -156,9 +158,13 @@ public abstract class SharedInfo {
     if (version().equals(VERSION_0_1)) {
       String privacyBudgetKeyHashInput =
           api().get()
+              + PRIVACY_BUDGET_KEY_DELIMITER
               + version()
+              + PRIVACY_BUDGET_KEY_DELIMITER
               + reportingOrigin()
+              + PRIVACY_BUDGET_KEY_DELIMITER
               + destination().get()
+              + PRIVACY_BUDGET_KEY_DELIMITER
               + sourceRegistrationTime().get();
       return Hashing.sha256()
           .newHasher()

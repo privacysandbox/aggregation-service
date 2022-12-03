@@ -17,6 +17,7 @@ package com.google.aggregate.adtech.worker.writer.avro;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
@@ -46,7 +47,8 @@ public final class LocalAvroDebugResultFileWriter implements LocalResultFileWrit
   public void writeLocalFile(Stream<AggregatedFact> results, Path resultFilePath)
       throws FileWriteException {
 
-    try (OutputStream outputAvroStream = Files.newOutputStream(resultFilePath, CREATE);
+    try (OutputStream outputAvroStream =
+            Files.newOutputStream(resultFilePath, CREATE, TRUNCATE_EXISTING);
         AvroDebugResultsWriter avroDebugResultsWriter = writerFactory.create(outputAvroStream)) {
       ImmutableList<MetadataElement> metaData = ImmutableList.of();
       Stream<AvroDebugResultsRecord> resultsRecords =

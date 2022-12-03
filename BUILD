@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-package(default_visibility = ["//visibility:public"])
-
 load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
+
+package(default_visibility = ["//visibility:public"])
 
 buildifier(
     name = "buildifier_check",

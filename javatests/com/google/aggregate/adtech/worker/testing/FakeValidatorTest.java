@@ -42,7 +42,7 @@ public class FakeValidatorTest {
 
   @Before
   public void setUp() {
-    report = FakeReportGenerator.generate(1);
+    report = FakeReportGenerator.generateWithParam(1, /* reportVersion */ "");
     ctx = FakeJobGenerator.generate("foo");
 
     fakeValidator = new FakeValidator();

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 load("@pip_deps//:requirements.bzl", "requirement")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 
 py_library(
     name = "aggregation_service_load_tests",

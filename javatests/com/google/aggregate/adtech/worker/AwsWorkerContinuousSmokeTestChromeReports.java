@@ -106,8 +106,7 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
             outputBucket,
             outputKey,
             Optional.of(outputDomainBucket),
-            Optional.of(outputDomainKey),
-            /* debugPrivacyBudgetLimit= */ Optional.of(String.valueOf(Integer.MAX_VALUE)));
+            Optional.of(outputDomainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
@@ -155,8 +154,7 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
             outputKey,
             /* debugRun= */ true,
             Optional.of(outputDomainBucket),
-            Optional.of(outputDomainKey),
-            /* debugPrivacyBudgetLimit= */ Optional.of(String.valueOf(Integer.MAX_VALUE)));
+            Optional.of(outputDomainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());

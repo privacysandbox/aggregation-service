@@ -16,7 +16,10 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
 )
 
-COORDINATOR_VERSION = "v0.30.0"  # latest as of 2022-10-04
+# Declare explicit protobuf version, to override any implicit dependencies.
+PROTOBUF_CORE_VERSION = "3.19.4"
+
+COORDINATOR_VERSION = "v0.39.0"  # latest as of 2022-11-18
 
 JACKSON_VERSION = "2.12.2"
 
@@ -40,6 +43,15 @@ rules_jvm_external_setup()
 
 load("@rules_jvm_external//:defs.bzl", "maven_install")
 
+http_archive(
+    name = "com_google_protobuf",
+    sha256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d2568",
+    strip_prefix = "protobuf-%s" % PROTOBUF_CORE_VERSION,
+    urls = [
+        "https://github.com/protocolbuffers/protobuf/archive/v%s.tar.gz" % PROTOBUF_CORE_VERSION,
+    ],
+)
+
 # Use following instead of git_repository for local development
 #local_repository(
 #    name = "com_google_adm_cloud_scp",
@@ -48,17 +60,11 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 git_repository(
     name = "com_google_adm_cloud_scp",
-    patch_args = [
-        # Needed to import Git-based patches.
-        "-p1",
-    ],
-    patches = ["//build_defs/scp:scp-0.30.0.patch"],
     remote = "https://github.com/privacysandbox/control-plane-shared-libraries",
     tag = COORDINATOR_VERSION,
 )
 
-load("@com_google_adm_cloud_scp//build_defs/tink:tink_defs.bzl", "import_tink_git")
-load("@com_google_adm_cloud_scp//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS")
+load("@com_google_adm_cloud_scp//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS", "import_tink_git")
 
 import_tink_git(repo_name = "@com_google_adm_cloud_scp")
 
@@ -95,6 +101,10 @@ maven_install(
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
         "com.google.http-client:google-http-client-jackson2:1.40.0",
         #"com.google.crypto.tink:tink:" + TINK_VERSION, # Using Tink from github master branch until new version releases
+        "com.google.cloud:google-cloud-monitoring:3.4.1",
+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.4.1",
+        "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
         "com.google.guava:guava:30.1-jre",
         "com.google.guava:guava-testlib:30.1-jre",
         "com.google.inject:guice:4.2.3",
@@ -183,6 +193,14 @@ load("@com_google_differential_privacy//:differential_privacy_deps.bzl", "differ
 
 differential_privacy_deps()
 
+###############
+# Proto rules #
+###############
+
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+
+protobuf_deps()
+
 #############
 # PKG Rules #
 #############
@@ -226,8 +244,8 @@ http_archive(
     ],
 )
 
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
 

@@ -33,7 +33,7 @@ public enum StopwatchExportSelector {
     this.exporterClass = exporterClass;
   }
 
-  Class<? extends StopwatchExporter> getExporterClass() {
+  public Class<? extends StopwatchExporter> getExporterClass() {
     return exporterClass;
   }
 }

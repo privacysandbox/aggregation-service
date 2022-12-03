@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library", "java_plugin")
+
 package(
     default_visibility = ["//visibility:public"],
 )
@@ -411,11 +413,6 @@ alias(
 )
 
 alias(
-    name = "dao_metadatadb_model",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/model",
-)
-
-alias(
     name = "dao_metadatadb_aws_model",
     actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/aws/model",
 )
@@ -443,11 +440,6 @@ alias(
 alias(
     name = "dao_metadatadb_testing_fakemetadatadb",
     actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_metadata_db",
-)
-
-alias(
-    name = "dao_jobqueue_model",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/jobqueue/model",
 )
 
 alias(

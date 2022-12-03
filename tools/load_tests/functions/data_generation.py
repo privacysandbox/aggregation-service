@@ -19,5 +19,5 @@ import json
 
 
 def lambda_handler(event, context):
-  num_of_workers = int(event.get("numWorkers", "1"))
-  return [event for _ in range(num_of_workers)]
+    num_of_workers = int(event.get("numWorkers", "1"))
+    return [event for _ in range(num_of_workers)]

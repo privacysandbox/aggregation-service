@@ -22,7 +22,6 @@ import static com.google.common.truth.Truth8.assertThat;
 import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.common.collect.ImmutableList;
 import java.time.Instant;
-import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,7 +33,6 @@ public class FakePrivacyBudgetingServiceBridgeTest {
   private FakePrivacyBudgetingServiceBridge privacyBudgetingService;
 
   private String attributionReportTo = "foo.com";
-  private Optional<Integer> debugPrivacyBudgetLimit = Optional.of(6); // Not relevant for the test
 
   private final PrivacyBudgetUnit firstId =
       PrivacyBudgetUnit.create("foo", Instant.ofEpochMilli(1000));
@@ -52,13 +50,11 @@ public class FakePrivacyBudgetingServiceBridgeTest {
 
     ImmutableList<PrivacyBudgetUnit> missingBudget =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId), attributionReportTo, debugPrivacyBudgetLimit);
+            ImmutableList.of(firstId), attributionReportTo);
 
     assertThat(missingBudget).containsExactly(firstId);
     assertThat(privacyBudgetingService.getLastAttributionReportToSent())
         .hasValue(attributionReportTo);
-    assertThat(privacyBudgetingService.getLastDebugPrivacyBudgetLimitSent())
-        .isEqualTo(debugPrivacyBudgetLimit);
   }
 
   @Test
@@ -67,13 +63,11 @@ public class FakePrivacyBudgetingServiceBridgeTest {
 
     ImmutableList<PrivacyBudgetUnit> missingBudget =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId), attributionReportTo, debugPrivacyBudgetLimit);
+            ImmutableList.of(firstId, secondId), attributionReportTo);
 
     assertThat(missingBudget).containsExactly(secondId);
     assertThat(privacyBudgetingService.getLastAttributionReportToSent())
         .hasValue(attributionReportTo);
-    assertThat(privacyBudgetingService.getLastDebugPrivacyBudgetLimitSent())
-        .isEqualTo(debugPrivacyBudgetLimit);
   }
 
   @Test
@@ -83,13 +77,11 @@ public class FakePrivacyBudgetingServiceBridgeTest {
 
     ImmutableList<PrivacyBudgetUnit> missingBudget =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId), attributionReportTo, debugPrivacyBudgetLimit);
+            ImmutableList.of(firstId, secondId), attributionReportTo);
 
     assertThat(missingBudget).isEmpty();
     assertThat(privacyBudgetingService.getLastAttributionReportToSent())
         .hasValue(attributionReportTo);
-    assertThat(privacyBudgetingService.getLastDebugPrivacyBudgetLimitSent())
-        .isEqualTo(debugPrivacyBudgetLimit);
   }
 
   @Test
@@ -99,10 +91,10 @@ public class FakePrivacyBudgetingServiceBridgeTest {
 
     ImmutableList<PrivacyBudgetUnit> missingBudgetFirst =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId), attributionReportTo, debugPrivacyBudgetLimit);
+            ImmutableList.of(firstId, secondId), attributionReportTo);
     ImmutableList<PrivacyBudgetUnit> missingBudgetSecond =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId), attributionReportTo, debugPrivacyBudgetLimit);
+            ImmutableList.of(firstId, secondId), attributionReportTo);
 
     assertThat(missingBudgetFirst).isEmpty();
     assertThat(missingBudgetSecond).containsExactly(firstId);
@@ -115,11 +107,11 @@ public class FakePrivacyBudgetingServiceBridgeTest {
 
     ImmutableList<PrivacyBudgetUnit> missingBudgetFirst =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId), attributionReportTo, debugPrivacyBudgetLimit);
+            ImmutableList.of(firstId, secondId), attributionReportTo);
     privacyBudgetingService.setPrivacyBudget(firstId, 1);
     ImmutableList<PrivacyBudgetUnit> missingBudgetSecond =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId), attributionReportTo, debugPrivacyBudgetLimit);
+            ImmutableList.of(firstId, secondId), attributionReportTo);
 
     assertThat(missingBudgetFirst).isEmpty();
     assertThat(missingBudgetFirst).isEmpty();

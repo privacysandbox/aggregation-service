@@ -51,7 +51,7 @@ public class AwsWorkerContinuousPerfTest {
   private static final Path stopwatchWriteLocation = Path.of(System.getenv("STOPWATCH_TEMP_FILE"));
 
   // Input data generated with the following command:
-  // bazel run java/com/google/aggregate/simulation:SimluationRunner -- \
+  // bazel run java/com/google/aggregate/simulation:SimulationRunner -- \
   //   --aggregatable_report_file_path $PWD/1m_staging_2022_05_21.avro \
   //   --num_reports 1000000 \
   //   --num_encryption_keys 3 \
@@ -102,8 +102,7 @@ public class AwsWorkerContinuousPerfTest {
             TESTING_BUCKET,
             outputDataPath,
             /* outputDomainBucketName= */ Optional.of(TESTING_BUCKET),
-            /* outputDomainPrefix= */ Optional.of(OUTPUT_DOMAIN_PREFIX),
-            /* debugPrivacyBudgetLimit= */ Optional.of(String.valueOf(Integer.MAX_VALUE)));
+            /* outputDomainPrefix= */ Optional.of(OUTPUT_DOMAIN_PREFIX));
 
     JsonNode result = submitJobAndWaitForResult(createJobRequest, completionTimeout);
 

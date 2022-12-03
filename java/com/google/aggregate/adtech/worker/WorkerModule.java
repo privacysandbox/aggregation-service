@@ -32,7 +32,7 @@ import java.time.Clock;
 import java.util.function.Supplier;
 import javax.inject.Singleton;
 
-final class WorkerModule extends AbstractModule {
+public final class WorkerModule extends AbstractModule {
 
   @Provides
   @WorkerServiceManager

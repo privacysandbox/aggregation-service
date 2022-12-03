@@ -80,7 +80,14 @@ public class ReportDecrypterAndValidatorTest {
     assertThat(decryptionValidationResult.report())
         .hasValue(
             FakeReportGenerator.generateWithFixedReportId(
-                1, decryptionValidationResult.report().get().sharedInfo().reportId().get()));
+                1,
+                decryptionValidationResult
+                    .report()
+                    .get()
+                    .sharedInfo()
+                    .reportId()
+                    .get(), /* reportVersion */
+                ""));
   }
 
   @Test

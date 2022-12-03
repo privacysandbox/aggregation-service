@@ -14,22 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.aggregate.adtech.worker;
+package com.google.aggregate.adtech.worker.exceptions;
 
-import com.google.auto.value.AutoValue;
+/** Exception caused when result logging fails. */
+public class ResultLogException extends RuntimeException {
 
-@AutoValue
-abstract class DependencyMetadata {
-
-  static DependencyMetadata create(String name, String jarName, String url, String license) {
-    return new AutoValue_DependencyMetadata(name, jarName, url, license);
+  /** Builds a new ResultLogException with cause. */
+  public ResultLogException(Throwable cause) {
+    super(cause);
   }
-
-  abstract String name();
-
-  abstract String jarName();
-
-  abstract String url();
-
-  abstract String license();
 }

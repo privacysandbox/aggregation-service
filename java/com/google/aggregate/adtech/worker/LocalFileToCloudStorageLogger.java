@@ -26,6 +26,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 import com.google.aggregate.adtech.worker.Annotations.DebugWriter;
 import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
+import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
@@ -165,5 +166,5 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  @interface ResultWorkingDirectory {}
+  public @interface ResultWorkingDirectory {}
 }

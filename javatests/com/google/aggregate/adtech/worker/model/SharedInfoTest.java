@@ -21,6 +21,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -53,14 +54,14 @@ public class SharedInfoTest {
    * source_registration_time
    */
   private static final String PRIVACY_BUDGET_KEY_2 =
-      "23f305727d53223a10d0a5a0e2132ea261a5a266524d5c14c4a61bd3f3e60a40";
+      "7b16c743c6ffe44bc559561b4f457fd3dcf91b797446ed6dc6b01d9fb32d3565";
 
   /**
    * Privacy Budget Key generated based on Chrome Golden Report -
    * https://source.chromium.org/chromium/chromium/src/+/main:content/test/data/attribution_reporting/aggregatable_report_goldens/latest/report_1.json
    */
   private static final String PRIVACY_BUDGET_KEY_CHROME_GOLDEN_REPORT =
-      "b8f9b95599410466fb20e1daeb33ac83ffe05450a43c25e1c3ba9857f4d13063";
+      "399bd3cd2282959381e4ad6858c5f434285ec70252b5a446808815780d36140f";
 
   /** Test to verify Privacy Budget Key is pickup correctly from Shared Info */
   @Test
@@ -147,7 +148,7 @@ public class SharedInfoTest {
 
     SharedInfo si = sharedInfoBuilder.build();
 
-    assertEquals(si.reportDebugModeString(), "enabled");
+    assertEquals(si.reportDebugModeString().get(), "enabled");
     assertTrue(si.getReportDebugMode());
   }
 
@@ -164,7 +165,7 @@ public class SharedInfoTest {
 
     SharedInfo si = sharedInfoBuilder.build();
 
-    assertEquals(si.reportDebugModeString(), "disabled");
+    assertEquals(si.reportDebugModeString(), Optional.empty());
     assertFalse(si.getReportDebugMode());
   }
 
@@ -180,7 +181,7 @@ public class SharedInfoTest {
 
     SharedInfo si = sharedInfoBuilder.build();
 
-    assertEquals(si.reportDebugModeString(), "disabled");
+    assertEquals(si.reportDebugModeString(), Optional.empty());
     assertFalse(si.getReportDebugMode());
   }
 
@@ -206,33 +207,6 @@ public class SharedInfoTest {
             .setScheduledReportTime(FIXED_TIME)
             .setReportingOrigin(REPORTING_ORIGIN)
             .setReportDebugMode(true);
-    SharedInfo si2 = sharedInfoBuilder2.build();
-
-    assertEquals(si1, si2);
-  }
-
-  /**
-   * Test to verify setReportDebugModeString has the same result as setReportDebugMode when debug
-   * mode is disabled
-   */
-  @Test
-  public void testSetReportDebugModeDisabledTwoTypes() {
-    SharedInfo.Builder sharedInfoBuilder1 =
-        SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
-            .setScheduledReportTime(FIXED_TIME)
-            .setReportingOrigin(REPORTING_ORIGIN)
-            .setReportDebugModeString("disabled");
-    SharedInfo si1 = sharedInfoBuilder1.build();
-
-    SharedInfo.Builder sharedInfoBuilder2 =
-        SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
-            .setScheduledReportTime(FIXED_TIME)
-            .setReportingOrigin(REPORTING_ORIGIN)
-            .setReportDebugMode(false);
     SharedInfo si2 = sharedInfoBuilder2.build();
 
     assertEquals(si1, si2);

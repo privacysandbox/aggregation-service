@@ -48,7 +48,7 @@ public class AwsWorkerContinuousInvalidCredentialsTest {
   private static final String TESTING_BUCKET = "aggregation-service-testing";
 
   // Input data generated with the following command:
-  // bazel run java/com/google/aggregate/simulation:SimluationRunner -- \
+  // bazel run java/com/google/aggregate/simulation:SimulationRunner -- \
   //   --aggregatable_report_file_path $PWD/10k_staging_2022_05_20.avro \
   //   --num_reports 10000 \
   //   --num_encryption_keys 3 \
@@ -84,8 +84,7 @@ public class AwsWorkerContinuousInvalidCredentialsTest {
             TESTING_BUCKET,
             outputDataPath,
             Optional.of(TESTING_BUCKET),
-            Optional.of(INPUT_DOMAIN_PATH),
-            /* debugPrivacyBudgetLimit= */ Optional.of(String.valueOf(Integer.MAX_VALUE)));
+            Optional.of(INPUT_DOMAIN_PATH));
     JsonNode result =
         submitJob(createJobRequest, completionTimeout, /* waitForCompletion= */ false);
 

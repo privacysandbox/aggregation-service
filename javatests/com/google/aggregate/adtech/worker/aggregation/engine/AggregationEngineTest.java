@@ -47,7 +47,7 @@ public class AggregationEngineTest {
 
   @Test
   public void oneReportOneFact() {
-    Report report = FakeReportGenerator.generate(/* bucket= */ 1);
+    Report report = FakeReportGenerator.generateWithParam(/* bucket= */ 1, /* reportVersion */ "");
 
     engine.accept(report);
     ImmutableMap<BigInteger, AggregatedFact> aggregation = engine.makeAggregation();
@@ -61,8 +61,10 @@ public class AggregationEngineTest {
   @Test
   public void twoReportNoFacts() {
     ImmutableList<Fact> factList = ImmutableList.of();
-    Report firstReport = FakeReportGenerator.generate(/* facts= */ factList);
-    Report secondReport = FakeReportGenerator.generate(/* facts= */ factList);
+    Report firstReport =
+        FakeReportGenerator.generateWithFactList(/* facts= */ factList, /* reportVersion */ "");
+    Report secondReport =
+        FakeReportGenerator.generateWithFactList(/* facts= */ factList, /* reportVersion */ "");
 
     engine.accept(firstReport);
     engine.accept(secondReport);
@@ -76,9 +78,11 @@ public class AggregationEngineTest {
     Fact firstReportFact = FakeFactGenerator.generate(/* bucket= */ 2, /* value= */ 2);
     Fact secondReportFact = FakeFactGenerator.generate(/* bucket= */ 2, /* value= */ 5);
     Report firstReport =
-        FakeReportGenerator.generate(/* facts= */ ImmutableList.of(firstReportFact));
+        FakeReportGenerator.generateWithFactList(
+            /* facts= */ ImmutableList.of(firstReportFact), /* reportVersion */ "");
     Report secondReport =
-        FakeReportGenerator.generate(/* facts= */ ImmutableList.of(secondReportFact));
+        FakeReportGenerator.generateWithFactList(
+            /* facts= */ ImmutableList.of(secondReportFact), /* reportVersion */ "");
 
     engine.accept(firstReport);
     engine.accept(secondReport);
@@ -95,8 +99,9 @@ public class AggregationEngineTest {
     Fact secondFact = FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 5);
     Fact thirdFact = FakeFactGenerator.generate(/* bucket= */ 2, /* value= */ 10);
     Report report =
-        FakeReportGenerator.generate(
-            /* facts= */ ImmutableList.of(firstFact, secondFact, thirdFact));
+        FakeReportGenerator.generateWithFactList(
+            /* facts= */ ImmutableList.of(firstFact, secondFact, thirdFact), /* reportVersion */
+            "");
 
     engine.accept(report);
     ImmutableMap<BigInteger, AggregatedFact> aggregation = engine.makeAggregation();
@@ -116,13 +121,19 @@ public class AggregationEngineTest {
     Fact secondReportSecondFact = FakeFactGenerator.generate(/* bucket= */ 3, /* value= */ 10);
     Fact secondReportThirdFact = FakeFactGenerator.generate(/* bucket= */ 4, /* value= */ 20);
     Report firstReport =
-        FakeReportGenerator.generate(
+        FakeReportGenerator.generateWithFactList(
             /* facts= */ ImmutableList.of(
-                firstReportFirstFact, firstReportSecondFact, firstReportThirdFact));
+                firstReportFirstFact,
+                firstReportSecondFact,
+                firstReportThirdFact), /* reportVersion */
+            "");
     Report secondReport =
-        FakeReportGenerator.generate(
+        FakeReportGenerator.generateWithFactList(
             /* facts= */ ImmutableList.of(
-                secondReportFirstFact, secondReportSecondFact, secondReportThirdFact));
+                secondReportFirstFact,
+                secondReportSecondFact,
+                secondReportThirdFact), /* reportVersion */
+            "");
 
     engine.accept(firstReport);
     engine.accept(secondReport);
@@ -142,10 +153,13 @@ public class AggregationEngineTest {
 
   @Test
   public void privacyBudgetUnits() {
-    Report report = FakeReportGenerator.generate(/* bucket= */ 1);
-    Report reportDuplicate = FakeReportGenerator.generate(/* bucket= */ 1);
-    Report secondReport = FakeReportGenerator.generate(/* bucket= */ 4000);
-    Report thirdReport = FakeReportGenerator.generate(/* bucket= */ 100);
+    Report report = FakeReportGenerator.generateWithParam(/* bucket= */ 1, /* reportVersion */ "");
+    Report reportDuplicate =
+        FakeReportGenerator.generateWithParam(/* bucket= */ 1, /* reportVersion */ "");
+    Report secondReport =
+        FakeReportGenerator.generateWithParam(/* bucket= */ 4000, /* reportVersion */ "");
+    Report thirdReport =
+        FakeReportGenerator.generateWithParam(/* bucket= */ 100, /* reportVersion */ "");
 
     engine.accept(report);
     engine.accept(reportDuplicate);

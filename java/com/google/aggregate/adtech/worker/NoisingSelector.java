@@ -21,7 +21,7 @@ import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule;
 import com.google.inject.Module;
 
 /** CLI enum to select the noising implementation. */
-enum NoisingSelector {
+public enum NoisingSelector {
   DP_NOISING(new DpNoisedAggregationModule()),
   CONSTANT_NOISING(new ConstantNoiseModule());
 
@@ -31,7 +31,7 @@ enum NoisingSelector {
     this.noisingModule = noisingModule;
   }
 
-  Module getNoisingModule() {
+  public Module getNoisingModule() {
     return noisingModule;
   }
 }

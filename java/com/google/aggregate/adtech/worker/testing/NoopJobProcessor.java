@@ -34,9 +34,9 @@ public final class NoopJobProcessor implements JobProcessor {
   }
 
   @Override
-  public JobResult process(Job Job) throws AggregationJobProcessException {
+  public JobResult process(Job Job) throws IllegalStateException {
     if (shouldThrowException) {
-      throw new AggregationJobProcessException(new IllegalStateException("Was set to throw"));
+      throw new IllegalStateException("Was set to throw");
     }
     lastProcessed = Optional.of(Job);
     return jobResultToReturn;

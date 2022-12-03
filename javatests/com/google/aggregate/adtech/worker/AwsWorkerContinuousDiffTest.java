@@ -40,6 +40,7 @@ import java.math.BigInteger;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,81 +55,71 @@ public class AwsWorkerContinuousDiffTest {
 
   private static final Duration completionTimeout = Duration.of(60, ChronoUnit.MINUTES);
 
-  private static final String DATA_BUCKET = "aggregation-service-testing";
+  private static final String DEFAULT_TEST_DATA_BUCKET = "aggregation-service-testing";
 
-  // Input data generated with the following command:
-  // bazel run java/com/google/aggregate/simulation:SimluationRunner -- \
-  //   --aggregatable_report_file_path $PWD/1m_staging_2022_05_21.avro \
-  //   --num_reports 1000000 \
-  //   --num_encryption_keys 3 \
-  //   --encryption_key_service CLOUD \
-  //   --public_key_vending_uri \
-  // https://jykzugjj3g.execute-api.us-west-2.amazonaws.com/stage/v1alpha/publicKeys \
-  //   --distribution FILE \
-  //   --distribution_file_path $PWD/1m_staging_1.txt
-  // Where the distribution file used is
-  //  s3://aggregation-service-testing/testdata/1m_staging_1.txt
-  // Data then sharded with:
-  // Report:
-  // bazel run //java/com/google/aggregate/tools/shard:AvroShard -- \
-  //   --input $PWD/1m_staging_2022_05_21.avro \
-  //   --output_dir $PWD/1m_staging_2022_05_21_sharded \
-  //   --num_shards 20
-  // Domain:
-  // bazel run //java/com/google/aggregate/tools/shard:AvroShard -- \
-  //   --input $PWD/1m_staging_2022_08_08_domain.avro \
-  //   --output_dir $PWD/1m_staging_2022_0808_sharded_domain \
-  //   --num_shards 20 \
-  //   --domain
-
-  private static final String INPUT_DATA_PREFIX = "testdata/1m_staging_2022_05_21_sharded/shard";
-  private static final String OUTPUT_DOMAIN_PREFIX =
-      "testdata/1m_staging_2022_08_08_sharded_domain/shard";
+  // Input data is generated in shared_e2e.sh
+  private static final String inputKey =
+      String.format("%s/test-inputs/10k_diff_test_input_sharded/", KOKORO_BUILD_ID);
+  private static final String domainKey =
+      String.format("%s/test-inputs/diff_test_domain_sharded/", KOKORO_BUILD_ID);
+  private static final String outputKey =
+      String.format("%s/test-outputs/10k_diff_test_output.avro", KOKORO_BUILD_ID);
 
   @Inject S3BlobStorageClient s3BlobStorageClient;
   @Inject AvroResultsFileReader avroResultsFileReader;
 
+  @Before
+  public void checkBuildEnv() {
+    if (KOKORO_BUILD_ID == null) {
+      throw new IllegalStateException("KOKORO_BUILD_ID env var must be set.");
+    }
+  }
+
+  /**
+   * TEST_DATA_BUCKET is used for storing the input data and the output results. If TEST_DATA_BUCKET
+   * is not set in the environment variable, DEFAULT_TEST_DATA_BUCKET is used.
+   */
+  private static String getTestDataBucket() {
+    if (System.getenv("TEST_DATA_BUCKET") != null) {
+      return System.getenv("TEST_DATA_BUCKET");
+    }
+    return DEFAULT_TEST_DATA_BUCKET;
+  }
+
   @Test
   public void e2eDiffTest() throws Exception {
-    // End to end diff testing:
-    //    Starts with a createJob request to API gateway with the test inputs pre-uploaded to s3
-    //    bucket.
-    //    Ends by calling getJob API to retrieve result information.
-    //    Assertions are made on result status (SUCCESS) and result avro comparison with golden
-    //    which sits in the testing bucket.
     // To update golden:
-    //    1. Log onto aws console
+    //    1. Run this test
     //    2. Find the latest test output under
-    // s3://aggregation-service-testing/e2e_test_outputs/<BUILD-ID>/1m_staging_1_sharded.avro.test
+    // s3://aggregation-service-testing/<BUILD-ID>/test-outputs/10k_diff_test_output.avro
     //    3. Copy/Move above file to
-    // s3://aggregation-service-testing/testdata/golden/<TODAY'S-DATE>/1m_staging_1.avro.golden
+    // s3://aggregation-service-testing/testdata/golden/<TODAY'S-DATE>/10k_diff_test.avro.golden
     //    4. Update the value of 'goldenLocation' below to the new path
 
-    // 20 shards test
-    // Golden output is the output from e2e_test_outputs/3a73a3c1a29ea67ed0f89b98669cf399
-    String goldenLocation = "testdata/golden/2022_08_25/1m_staging_1.avro.golden";
-    String outputDataPath =
-        String.format("e2e_test_outputs/%s/%s", KOKORO_BUILD_ID, "1m_staging_1_sharded.avro.test");
+    String goldenLocation = "testdata/golden/2022_10_18/10k_diff_test.avro.golden";
 
     CreateJobRequest createJobRequest =
         createJobRequest(
-            DATA_BUCKET,
-            INPUT_DATA_PREFIX,
-            DATA_BUCKET,
-            outputDataPath,
-            Optional.of(DATA_BUCKET),
-            Optional.of(OUTPUT_DOMAIN_PREFIX),
-            /* debugPrivacyBudgetLimit= */ Optional.of(String.valueOf(Integer.MAX_VALUE)));
+            getTestDataBucket(),
+            inputKey,
+            getTestDataBucket(),
+            outputKey,
+            Optional.of(getTestDataBucket()),
+            Optional.of(domainKey));
 
     JsonNode result = submitJobAndWaitForResult(createJobRequest, completionTimeout);
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
+    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
+        .isTrue();
 
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromS3(s3BlobStorageClient, avroResultsFileReader, DATA_BUCKET, outputDataPath);
+        readResultsFromS3(
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
     ImmutableList<AggregatedFact> goldenAggregatedFacts =
-        readResultsFromS3(s3BlobStorageClient, avroResultsFileReader, DATA_BUCKET, goldenLocation);
+        readResultsFromS3(
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), goldenLocation);
 
     MapDifference<BigInteger, AggregatedFact> diffs =
         ResultDiffer.diffResults(aggregatedFacts.stream(), goldenAggregatedFacts.stream());

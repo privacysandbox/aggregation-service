@@ -28,7 +28,6 @@ import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRe
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient;
 import java.time.Instant;
-import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,9 +57,7 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
 
     ImmutableList<PrivacyBudgetUnit> missingBudget =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId),
-            attributionReportTo,
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            ImmutableList.of(firstId, secondId), attributionReportTo);
 
     assertThat(missingBudget).containsExactly(firstId, secondId);
     assertThat(fakeHttpPrivacyBudgetingServiceClient.lastRequestSent)
@@ -80,9 +77,7 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
 
     ImmutableList<PrivacyBudgetUnit> missingBudget =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId),
-            attributionReportTo,
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            ImmutableList.of(firstId, secondId), attributionReportTo);
 
     assertThat(missingBudget).containsExactly(firstId);
     assertThat(fakeHttpPrivacyBudgetingServiceClient.lastRequestSent)
@@ -101,9 +96,7 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
 
     ImmutableList<PrivacyBudgetUnit> missingBudget =
         privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId),
-            attributionReportTo,
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            ImmutableList.of(firstId, secondId), attributionReportTo);
 
     assertThat(missingBudget).isEmpty();
     assertThat(fakeHttpPrivacyBudgetingServiceClient.lastRequestSent)
@@ -113,26 +106,6 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                     ImmutableList.of(workerToScpUnit(firstId), workerToScpUnit(secondId)))
                 .attributionReportTo(attributionReportTo)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
-                .build());
-  }
-
-  @Test
-  public void usesDebugLimitIfPresent() throws Exception {
-    fakeHttpPrivacyBudgetingServiceClient.setExhaustedUnits(ImmutableList.of());
-    Optional<Integer> debugPrivacyBudgetLimit = Optional.of(5);
-
-    ImmutableList<PrivacyBudgetUnit> missingBudget =
-        privacyBudgetingService.consumePrivacyBudget(
-            ImmutableList.of(firstId, secondId), attributionReportTo, debugPrivacyBudgetLimit);
-
-    assertThat(missingBudget).isEmpty();
-    assertThat(fakeHttpPrivacyBudgetingServiceClient.lastRequestSent)
-        .isEqualTo(
-            ConsumePrivacyBudgetRequest.builder()
-                .privacyBudgetUnits(
-                    ImmutableList.of(workerToScpUnit(firstId), workerToScpUnit(secondId)))
-                .attributionReportTo(attributionReportTo)
-                .privacyBudgetLimit(debugPrivacyBudgetLimit.get())
                 .build());
   }
 

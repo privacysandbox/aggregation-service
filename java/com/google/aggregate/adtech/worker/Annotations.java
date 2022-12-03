@@ -34,13 +34,13 @@ public final class Annotations {
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  @interface WorkerServiceManager {}
+  public @interface WorkerServiceManager {}
 
   /** Annotation for the {@link com.google.common.util.concurrent.Service} doing the work. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  @interface PullWorkService {}
+  public @interface PullWorkService {}
 
   /** Annotation for the thread pool doing the non-blocking work. */
   @BindingAnnotation

@@ -16,18 +16,18 @@
 
 package com.google.aggregate.adtech.worker.aggregation.concurrent;
 
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.DOMAIN_PROCESS_EXCEPTION;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INPUT_DATA_READ_FAILED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INVALID_JOB;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PERMISSION_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
-import static com.google.common.base.Throwables.getStackTraceAsString;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_LOGGING_ERROR;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.SUCCESS;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.whenAllSucceed;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.INPUT_DATA_READ_FAILED;
-import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.OUTPUT_DATAWRITE_FAILED;
-import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.SUCCESS;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
@@ -37,13 +37,16 @@ import com.google.aggregate.adtech.worker.ErrorSummaryAggregator;
 import com.google.aggregate.adtech.worker.JobProcessor;
 import com.google.aggregate.adtech.worker.ReportDecrypterAndValidator;
 import com.google.aggregate.adtech.worker.ResultLogger;
-import com.google.aggregate.adtech.worker.ResultLogger.ResultLogException;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
-import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor.DomainReadException;
 import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
 import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge.PrivacyBudgetingServiceBridgeException;
+import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
+import com.google.aggregate.adtech.worker.exceptions.ConcurrentShardReadException;
+import com.google.aggregate.adtech.worker.exceptions.DomainProcessException;
+import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
+import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.AvroRecordEncryptedReportConverter;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
@@ -104,7 +107,6 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   public static final String JOB_PARAM_ATTRIBUTION_REPORT_TO = "attribution_report_to";
   public static final String JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX = "output_domain_blob_prefix";
   public static final String JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME = "output_domain_bucket_name";
-  public static final String JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT = "debug_privacy_budget_limit";
   // Key to indicate whether this is a debug job
   public static final String JOB_PARAM_DEBUG_RUN = "debug_run";
 
@@ -166,8 +168,19 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     this.domainOptional = domainOptional;
   }
 
+  /**
+   * Processor responsible for performing aggregation. TODO: evaluate throwing unchecked exceptions
+   * here.
+   *
+   * @param job
+   * @return
+   * @throws AggregationJobProcessException
+   * @throws ExecutionException
+   * @throws InterruptedException
+   */
   @Override
-  public JobResult process(Job job) throws AggregationJobProcessException {
+  public JobResult process(Job job)
+      throws ExecutionException, InterruptedException, AggregationJobProcessException {
     Stopwatch processingStopwatch =
         stopwatches.createStopwatch("concurrent-" + toJobKeyString(job.jobKey()));
     processingStopwatch.start();
@@ -176,18 +189,14 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
 
     final Boolean debugRun = DebugSupportHelper.isDebugRun(job);
     final Optional<Double> debugPrivacyEpsilon = getPrivacyEpsilonForJob(job);
-    try {
-      if (debugPrivacyEpsilon.isPresent()) {
-        Double privacyEpsilonForJob = debugPrivacyEpsilon.get();
-        if (!(privacyEpsilonForJob > 0d && privacyEpsilonForJob <= 64d)) {
-          return handleInvalidEpsilon(jobResultBuilder);
-        }
+
+    if (debugPrivacyEpsilon.isPresent()) {
+      Double privacyEpsilonForJob = debugPrivacyEpsilon.get();
+      if (!(privacyEpsilonForJob > 0d && privacyEpsilonForJob <= 64d)) {
+        throw new AggregationJobProcessException(
+            INVALID_JOB,
+            String.format("Failed Parsing Job parameters for %s", JOB_PARAM_DEBUG_PRIVACY_EPSILON));
       }
-    } catch (Exception e) {
-      // TODO cleanup exception handling
-      logger.error(
-          String.format("Failed Parsing Job parameters for %s", JOB_PARAM_DEBUG_PRIVACY_EPSILON),
-          e);
     }
 
     ListenableFuture<ImmutableSet<BigInteger>> outputDomain;
@@ -214,20 +223,22 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       dataShards = findShards(reportsLocation);
 
       if (dataShards.isEmpty()) {
-        throw new ConcurrentShardReadException(
-            new IllegalArgumentException(
-                "No report shards found for location: " + reportsLocation));
+        throw new AggregationJobProcessException(
+            INPUT_DATA_READ_FAILED, "No report shards found for location: " + reportsLocation);
       }
 
       outputDomain =
           outputDomainLocation
               .map(outputDomainProcessor::readAndDedupDomain)
               .orElse(immediateFuture(ImmutableSet.of()));
-    } catch (ConcurrentShardReadException | DomainReadException e) {
-      // Error occurred in data client from the main thread.
-      // TODO(b/197999001) report exception in some monitoring counter
-      return jobResultForDataReadException(jobResultBuilder, e);
+    } catch (ConcurrentShardReadException e) {
+      throw new AggregationJobProcessException(
+          INPUT_DATA_READ_FAILED, "Exception while reading reports input data.", e);
+    } catch (DomainReadException e) {
+      throw new AggregationJobProcessException(
+          INPUT_DATA_READ_FAILED, "Exception while reading domain input data.", e);
     }
+
     try {
       // List of futures, one for each data shard; a shard is read into a list of encrypted reports.
       ImmutableList<ListenableFuture<ImmutableList<EncryptedReport>>> shardReads =
@@ -300,7 +311,6 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       // Create error summary from the list of errors from decryption/validation
       ErrorSummary errorSummary = ErrorSummaryAggregator.createErrorSummary(invalidReports);
 
-      Optional<Integer> debugPrivacyBudgetLimit = getPrivacyBudgetLimitForJob(job);
       ImmutableList<PrivacyBudgetUnit> missingPrivacyBudgetUnits = ImmutableList.of();
 
       // Do not consume any privacy budget for debug-run jobs.
@@ -316,37 +326,16 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
                     /* budgetsToConsume= */ budgetsToConsume,
                     /* attributionReportTo= */ job.requestInfo()
                         .getJobParameters()
-                        .get(JOB_PARAM_ATTRIBUTION_REPORT_TO),
-                    /* debugPrivacyBudgetLimit= */ debugPrivacyBudgetLimit);
+                        .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
           }
         } catch (PrivacyBudgetingServiceBridgeException e) {
-          // Only fail the job if the worker is configured as such. At times during origin trial the
-          // job won't fail if there is an error reaching PBS (but still fails if budget is
-          // exhausted). This is done to lessen the impact of any instability in the privacy budget
-          // service.
-          return jobResultBuilder
-              .setResultInfo(
-                  ResultInfo.newBuilder()
-                      .setReturnCode(PRIVACY_BUDGET_ERROR.name())
-                      .setReturnMessage(
-                          "Exception while consuming privacy budget: " + getStackTraceAsString(e))
-                      .setErrorSummary(ErrorSummary.getDefaultInstance())
-                      .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                      .build())
-              .build();
+          throw new AggregationJobProcessException(
+              PRIVACY_BUDGET_ERROR, "Exception while consuming privacy budget.", e);
         }
 
         if (!missingPrivacyBudgetUnits.isEmpty()) {
-          // Truncate the message in order to not overflow the result table.
-          return jobResultBuilder
-              .setResultInfo(
-                  ResultInfo.newBuilder()
-                      .setReturnCode(PRIVACY_BUDGET_EXHAUSTED.name())
-                      .setReturnMessage(PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE)
-                      .setErrorSummary(ErrorSummary.getDefaultInstance())
-                      .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                      .build())
-              .build();
+          throw new AggregationJobProcessException(
+              PRIVACY_BUDGET_EXHAUSTED, PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE);
         }
       }
 
@@ -371,64 +360,34 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
                   .build())
           .build();
     } catch (ResultLogException e) {
-      // Error occurred in data write
-      // TODO(b/197999001) report exception in some monitoring counter
-      logger.error("Exception occurred during result data write. Reporting processing failure.", e);
-      return jobResultBuilder
-          .setResultInfo(
-              ResultInfo.newBuilder()
-                  .setReturnCode(OUTPUT_DATAWRITE_FAILED.name())
-                  // TODO see if there's a better error message than the stack trace
-                  .setReturnMessage(getStackTraceAsString(e))
-                  .setErrorSummary(ErrorSummary.getDefaultInstance())
-                  .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                  .build())
-          .build();
+      throw new AggregationJobProcessException(
+          RESULT_LOGGING_ERROR, "Result Logging exception.", e);
+    } catch (DomainProcessException e) {
+      throw new AggregationJobProcessException(
+          DOMAIN_PROCESS_EXCEPTION, "Exception in processing domain.", e);
     } catch (AccessControlException e) {
-      return handlePermissionException(e, jobResultBuilder);
+      throw new AggregationJobProcessException(
+          PERMISSION_ERROR, "Exception because of missing permission.", e);
+
     } catch (ExecutionException e) {
-      if ((e.getCause() instanceof ConcurrentShardReadException)
-          || (e.getCause() instanceof DomainReadException)) {
-        // Error occurred in data read
-        // TODO(b/197999001) report exception in some monitoring counter
-        return jobResultForDataReadException(jobResultBuilder, e.getCause());
+      // Error occurred in data read
+      // TODO(b/197999001) report exception in some monitoring counter
+      if ((e.getCause() instanceof ConcurrentShardReadException)) {
+        throw new AggregationJobProcessException(
+            INPUT_DATA_READ_FAILED, "Exception while reading reports input data.", e.getCause());
       }
+      if ((e.getCause() instanceof DomainReadException)) {
+        throw new AggregationJobProcessException(
+            INPUT_DATA_READ_FAILED, "Exception while reading domain input data.", e.getCause());
+      }
+
       if (e.getCause() instanceof AccessControlException) {
-        return handlePermissionException((AccessControlException) e.getCause(), jobResultBuilder);
+        throw new AggregationJobProcessException(
+            PERMISSION_ERROR, "Exception because of missing permission.", e.getCause());
       }
 
-      throw new AggregationJobProcessException(e);
-    } catch (InterruptedException e) {
-      throw new AggregationJobProcessException(e);
+      throw e;
     }
-  }
-
-  private JobResult handleInvalidEpsilon(JobResult.Builder jobResultBuilder) {
-    return jobResultBuilder
-        .setResultInfo(
-            ResultInfo.newBuilder()
-                .setReturnCode(INVALID_JOB.name())
-                .setReturnMessage(
-                    String.format("%s should be > 0 and <= 64", JOB_PARAM_DEBUG_PRIVACY_EPSILON))
-                .setErrorSummary(ErrorSummary.getDefaultInstance())
-                .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                .build())
-        .build();
-  }
-
-  private JobResult handlePermissionException(
-      AccessControlException e, JobResult.Builder jobResultBuilder) {
-    logger.error("Exception occurred due to permission issues: " + e.getMessage());
-    return jobResultBuilder
-        .setResultInfo(
-            ResultInfo.newBuilder()
-                .setReturnCode(PERMISSION_ERROR.name())
-                // TODO see if there's a better error message than the stack trace
-                .setReturnMessage(getStackTraceAsString(e))
-                .setErrorSummary(ErrorSummary.getDefaultInstance())
-                .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                .build())
-        .build();
   }
 
   private ImmutableList<DataLocation> findShards(DataLocation reportsLocation) {
@@ -630,31 +589,6 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     return null;
   }
 
-  private JobResult jobResultForDataReadException(JobResult.Builder jobResultBuilder, Throwable e) {
-    logger.error("Exception occurred during input data read. Reporting processing failure.", e);
-    return jobResultBuilder
-        .setResultInfo(
-            ResultInfo.newBuilder()
-                .setReturnCode(INPUT_DATA_READ_FAILED.name())
-                // TODO see if there's a better error message than the stack trace
-                .setReturnMessage(getStackTraceAsString(e))
-                .setErrorSummary(ErrorSummary.getDefaultInstance())
-                .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                .build())
-        .build();
-  }
-
-  /** Retrieve limit from nested optional fields */
-  private Optional<Integer> getPrivacyBudgetLimitForJob(Job job) {
-    if (job.requestInfo().getJobParameters().containsKey(JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT)) {
-      return Optional.of(
-          Integer.parseInt(
-              job.requestInfo().getJobParameters().get(JOB_PARAM_DEBUG_PRIVACY_BUDGET_LIMIT)));
-    } else {
-      return Optional.empty();
-    }
-  }
-
   /** Retrieve epsilon from nested optional fields */
   private Optional<Double> getPrivacyEpsilonForJob(Job job) {
     Optional<Double> epsilonValueFromJobReq = Optional.empty();
@@ -671,19 +605,5 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
           e);
     }
     return epsilonValueFromJobReq;
-  }
-
-  static final class DomainProcessException extends RuntimeException {
-
-    DomainProcessException(Throwable cause) {
-      super(cause);
-    }
-  }
-
-  static final class ConcurrentShardReadException extends RuntimeException {
-
-    ConcurrentShardReadException(Throwable cause) {
-      super(cause);
-    }
   }
 }

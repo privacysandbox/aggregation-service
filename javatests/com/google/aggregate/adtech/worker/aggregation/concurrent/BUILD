@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_test")
+
 package(default_visibility = ["//visibility:public"])
 
 java_test(
@@ -29,6 +31,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/configs",
         "//java/com/google/aggregate/adtech/worker/decryption",
         "//java/com/google/aggregate/adtech/worker/decryption/hybrid",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model/serdes",
         "//java/com/google/aggregate/adtech/worker/model/serdes/cbor",
@@ -60,6 +63,5 @@ java_test(
         "//java/external:operator_protos",
         "//java/external:scp_shared_proto",
         "//java/external:shared_model",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/model",
     ],
 )

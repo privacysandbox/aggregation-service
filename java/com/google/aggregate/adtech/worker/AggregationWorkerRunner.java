@@ -17,10 +17,16 @@
 package com.google.aggregate.adtech.worker;
 
 import com.beust.jcommander.JCommander;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class AggregationWorkerRunner {
 
+  private static final Logger logger = LoggerFactory.getLogger(AggregationWorkerRunner.class);
+
   public static void main(String[] args) {
+    logger.info("Worker Args: \n" + String.join("\n", args));
+
     AggregationWorkerArgs cliArgs = new AggregationWorkerArgs();
     JCommander.newBuilder().allowParameterOverwriting(true).addObject(cliArgs).build().parse(args);
 

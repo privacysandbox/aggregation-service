@@ -59,7 +59,7 @@ public class CborPayloadSerdesTest {
   public void testDeserializeFromCborBytes_report1() throws Exception {
     Payload expectedPayload =
         Payload.builder()
-            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x4d2)).setValue(5).build())
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
             .build();
 
     readCborBytesFromFileAndAssert(
@@ -70,7 +70,7 @@ public class CborPayloadSerdesTest {
   public void testDeserializeFromCborBytes_report2() throws Exception {
     Payload expectedPayload =
         Payload.builder()
-            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x4d2)).setValue(500).build())
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
             .build();
 
     readCborBytesFromFileAndAssert(
@@ -81,7 +81,8 @@ public class CborPayloadSerdesTest {
   public void testDeserializeFromCborBytes_report3() throws Exception {
     Payload expectedPayload =
         Payload.builder()
-            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x45b352)).setValue(123).build())
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x3)).setValue(4).build())
             .build();
 
     readCborBytesFromFileAndAssert(
@@ -92,11 +93,8 @@ public class CborPayloadSerdesTest {
   public void testDeserializeFromCborBytes_report4() throws Exception {
     Payload expectedPayload =
         Payload.builder()
-            .addFact(
-                Fact.builder()
-                    .setBucket(BigInteger.valueOf(1).shiftLeft(120)) /* = 2^120 */
-                    .setValue(2)
-                    .build())
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x3)).setValue(4).build())
             .build();
 
     readCborBytesFromFileAndAssert(
@@ -113,7 +111,7 @@ public class CborPayloadSerdesTest {
                         BigInteger.valueOf(1)
                             .shiftLeft(128)
                             .subtract(BigInteger.valueOf(1) /* = 2^128-1 */))
-                    .setValue(345)
+                    .setValue(1000)
                     .build())
             .build();
 
@@ -125,7 +123,11 @@ public class CborPayloadSerdesTest {
   public void testDeserializeFromCborBytes_report6() throws Exception {
     Payload expectedPayload =
         Payload.builder()
-            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0)).setValue(345).build())
+            .addFact(
+                Fact.builder()
+                    .setBucket(new BigInteger("340282366920938463463374607431768211455"))
+                    .setValue(1000)
+                    .build())
             .build();
 
     readCborBytesFromFileAndAssert(

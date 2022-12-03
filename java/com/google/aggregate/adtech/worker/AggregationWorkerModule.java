@@ -262,7 +262,7 @@ public final class AggregationWorkerModule extends AbstractModule {
     // result logger
     install(args.resultLoggerModuleSelector().getResultLoggerModule());
     switch (args.resultLoggerModuleSelector()) {
-      case LOCAL_AVRO_TO_S3:
+      case LOCAL_TO_CLOUD:
         bind(Path.class)
             .annotatedWith(ResultWorkingDirectory.class)
             .toInstance(Paths.get(args.getResultWorkingDirectoryPathString()));

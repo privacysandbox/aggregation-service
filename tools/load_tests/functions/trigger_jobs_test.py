@@ -22,98 +22,97 @@ from trigger_jobs import lambda_handler as trigger_jobs_handler
 
 
 class MockTriggerJobSuccessResponse:
-  status = 202
+    status = 202
 
 
 class MockTriggerJobBadRequestResponse:
-  status = 400
-  data = json.dumps({"message": "bad request"}).encode("utf-8")
+    status = 400
+    data = json.dumps({"message": "bad request"}).encode("utf-8")
 
 
 class MockTriggerJobServerErrorResponse:
-  status = 500
-  data = json.dumps({"message": "server error"}).encode("utf-8")
+    status = 500
+    data = json.dumps({"message": "server error"}).encode("utf-8")
 
 
 class TriggerJobsTests(TestCase):
+    def test_trigger_jobs_no_access_key_raises_exception(self):
+        with patch("urllib3.PoolManager.request") as resp:
+            resp.return_value = MockTriggerJobSuccessResponse()
+            event = {
+                "base_url": "foo.bar",
+                "numRequests": 3,
+                "timeBetweenRequests": "0",
+            }
+            with self.assertRaises(Exception):
+                result = trigger_jobs_handler(event, "")
 
-  def test_trigger_jobs_no_access_key_raises_exception(self):
-    with patch("urllib3.PoolManager.request") as resp:
-      resp.return_value = MockTriggerJobSuccessResponse()
-      event = {
-          "base_url": "foo.bar",
-          "numRequests": 3,
-          "timeBetweenRequests": "0",
-      }
-      with self.assertRaises(Exception):
-        result = trigger_jobs_handler(event, "")
+    def test_trigger_jobs_successfully(self):
+        with patch("urllib3.PoolManager.request") as resp:
+            resp.return_value = MockTriggerJobSuccessResponse()
+            event = {
+                "base_url": "foo.bar",
+                "numRequests": 3,
+                "timeBetweenRequests": "0",
+                "access_key": "key",
+                "secret_key": "secret",
+                "host": "host",
+                "debug_run": "false",
+                "attribution_report_to": "a",
+                "input_data_blob_prefix": "a",
+                "input_data_bucket_name": "a",
+                "output_data_blob_prefix": "a",
+                "output_data_bucket_name": "a",
+                "output_domain_bucket_name": "a",
+                "output_domain_blob_prefix": "a",
+            }
+            result = trigger_jobs_handler(event, "")
+        self.assertEqual(result["success"], event["numRequests"])
 
-  def test_trigger_jobs_successfully(self):
-    with patch("urllib3.PoolManager.request") as resp:
-      resp.return_value = MockTriggerJobSuccessResponse()
-      event = {
-          "base_url": "foo.bar",
-          "numRequests": 3,
-          "timeBetweenRequests": "0",
-          "access_key": "key",
-          "secret_key": "secret",
-          "host": "host",
-          "debug_run": "false",
-          "attribution_report_to": "a",
-          "input_data_blob_prefix": "a",
-          "input_data_bucket_name": "a",
-          "output_data_blob_prefix": "a",
-          "output_data_bucket_name": "a",
-          "output_domain_bucket_name": "a",
-          "output_domain_blob_prefix": "a",
-      }
-      result = trigger_jobs_handler(event, "")
-    self.assertEqual(result["success"], event["numRequests"])
+    def test_trigger_jobs_with_bad_request(self):
+        with patch("urllib3.PoolManager.request") as resp:
+            resp.return_value = MockTriggerJobBadRequestResponse()
+            event = {
+                "base_url": "foo.bar",
+                "numRequests": 2,
+                "timeBetweenRequests": "0",
+                "access_key": "key",
+                "secret_key": "secret",
+                "host": "host",
+                "debug_run": "false",
+                "attribution_report_to": "a",
+                "input_data_blob_prefix": "a",
+                "input_data_bucket_name": "a",
+                "output_data_blob_prefix": "a",
+                "output_data_bucket_name": "a",
+                "output_domain_bucket_name": "a",
+                "output_domain_blob_prefix": "a",
+            }
+            result = trigger_jobs_handler(event, "")
+        self.assertEqual(result["failed"], event["numRequests"])
 
-  def test_trigger_jobs_with_bad_request(self):
-    with patch("urllib3.PoolManager.request") as resp:
-      resp.return_value = MockTriggerJobBadRequestResponse()
-      event = {
-          "base_url": "foo.bar",
-          "numRequests": 2,
-          "timeBetweenRequests": "0",
-          "access_key": "key",
-          "secret_key": "secret",
-          "host": "host",
-          "debug_run": "false",
-          "attribution_report_to": "a",
-          "input_data_blob_prefix": "a",
-          "input_data_bucket_name": "a",
-          "output_data_blob_prefix": "a",
-          "output_data_bucket_name": "a",
-          "output_domain_bucket_name": "a",
-          "output_domain_blob_prefix": "a",
-      }
-      result = trigger_jobs_handler(event, "")
-    self.assertEqual(result["failed"], event["numRequests"])
-
-  def test_trigger_jobs_server_error(self):
-    with patch("urllib3.PoolManager.request") as resp:
-      resp.return_value = MockTriggerJobServerErrorResponse()
-      event = {
-          "base_url": "foo.bar",
-          "numRequests": 2,
-          "timeBetweenRequests": "0",
-          "access_key": "key",
-          "secret_key": "secret",
-          "host": "host",
-          "debug_run": "false",
-          "attribution_report_to": "a",
-          "input_data_blob_prefix": "a",
-          "input_data_bucket_name": "a",
-          "output_data_blob_prefix": "a",
-          "output_data_bucket_name": "a",
-          "output_domain_bucket_name": "a",
-          "output_domain_blob_prefix": "a",
-      }
-      result = trigger_jobs_handler(event, "")
-    self.assertEqual(result["failed"], event["numRequests"])
+    def test_trigger_jobs_server_error(self):
+        with patch("urllib3.PoolManager.request") as resp:
+            resp.return_value = MockTriggerJobServerErrorResponse()
+            event = {
+                "base_url": "foo.bar",
+                "numRequests": 2,
+                "timeBetweenRequests": "0",
+                "access_key": "key",
+                "secret_key": "secret",
+                "host": "host",
+                "debug_run": "false",
+                "attribution_report_to": "a",
+                "input_data_blob_prefix": "a",
+                "input_data_bucket_name": "a",
+                "output_data_blob_prefix": "a",
+                "output_data_bucket_name": "a",
+                "output_domain_bucket_name": "a",
+                "output_domain_blob_prefix": "a",
+            }
+            result = trigger_jobs_handler(event, "")
+        self.assertEqual(result["failed"], event["numRequests"])
 
 
 if __name__ == "__main__":
-  unittest_main()
+    unittest_main()

@@ -24,7 +24,7 @@ DEFAULT_ENCLAVE_ARGS = [
     "--job_client",
     "AWS",
     "--result_logger",
-    "LOCAL_AVRO_TO_S3",
+    "LOCAL_TO_CLOUD",
     # coord-staging environment
     "--private_key_service_base_url",
     "https://il9t0ajpsa.execute-api.us-west-2.amazonaws.com/stage/v1alpha",
@@ -48,7 +48,7 @@ RELEASE_ENCLAVE_ARGS = [
     "--job_client",
     "AWS",
     "--result_logger",
-    "LOCAL_AVRO_TO_S3",
+    "LOCAL_TO_CLOUD",
     "--decryption_key_service",
     "AWS_ENCLAVE_CLI_DECRYPTION_KEY_SERVICE",
     "--param_client",
@@ -74,7 +74,6 @@ worker_aws_deployment(
         "0.1",
         "--noising_l1_sensitivity",
         "4",
-        "--domain_optional",  # TODO(b/227210339) remove this and provide the output domain for these tests
         # Ignore privacy budgeting when using single coordinator
         "--privacy_budgeting",
         "UNLIMITED",
@@ -97,7 +96,6 @@ worker_aws_deployment(
         "0.1",
         "--noising_l1_sensitivity",
         "4",
-        "--domain_optional",  # TODO(b/227210339) remove this and provide the output domain for these tests
         # Enforce privacy budgeting
         "--privacy_budgeting",
         "HTTP",
@@ -137,7 +135,6 @@ worker_aws_deployment(
         "0.1",
         "--noising_l1_sensitivity",
         "4",
-        "--domain_optional",  # TODO(b/227210339) remove this and provide the output domain for these tests
         # Enforce privacy budgeting
         "--privacy_budgeting",
         "HTTP",
@@ -243,7 +240,6 @@ worker_aws_deployment(
         "--timer_exporter",
         "AWS",
         "--benchmark",
-        "--domain_optional",  # TODO(b/227210339) remove this and provide the output domain for these tests
     ],
     jar_file = "/WorkerRunner_deploy.jar",
     repo_name = TEE_REPO_NAME,

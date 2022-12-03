@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.testing;
 
 import com.google.aggregate.adtech.worker.ResultLogger;
+import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;

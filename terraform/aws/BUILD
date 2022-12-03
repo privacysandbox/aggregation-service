@@ -1,3 +1,5 @@
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+
 # Copyright 2022 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 load("//build_defs:release.bzl", "s3_jar_release")
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 
 string_flag(
     name = "bucket_flag",

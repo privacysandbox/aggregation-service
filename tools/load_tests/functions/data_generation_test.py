@@ -19,16 +19,15 @@ from data_generation import lambda_handler as data_generation_handler
 
 
 class DataGenerationTests(TestCase):
+    def test_data_generation_defaults(self):
+        self.assertEqual(len(data_generation_handler({}, "")), 1)
 
-  def test_data_generation_defaults(self):
-    self.assertEqual(len(data_generation_handler({}, "")), 1)
-
-  def test_data_generation(self):
-    num_workers = 3
-    self.assertEqual(
-        len(data_generation_handler({"numWorkers": num_workers}, "")),
-        num_workers)
+    def test_data_generation(self):
+        num_workers = 3
+        self.assertEqual(
+            len(data_generation_handler({"numWorkers": num_workers}, "")), num_workers
+        )
 
 
 if __name__ == "__main__":
-  unittest_main()
+    unittest_main()

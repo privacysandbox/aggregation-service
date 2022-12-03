@@ -16,18 +16,14 @@
 
 package com.google.aggregate.adtech.worker;
 
+import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
+import java.util.concurrent.ExecutionException;
 
 /** Interface for consuming jobs pulled from the pubsub */
 public interface JobProcessor {
 
-  JobResult process(Job Job) throws AggregationJobProcessException;
-
-  final class AggregationJobProcessException extends Exception {
-
-    public AggregationJobProcessException(Throwable cause) {
-      super(cause);
-    }
-  }
+  JobResult process(Job Job)
+      throws ExecutionException, InterruptedException, AggregationJobProcessException;
 }

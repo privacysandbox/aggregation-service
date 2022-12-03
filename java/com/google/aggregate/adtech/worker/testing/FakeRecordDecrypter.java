@@ -16,6 +16,8 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
+
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.model.Report;
@@ -44,7 +46,7 @@ public final class FakeRecordDecrypter implements RecordDecrypter {
       throw new DecryptionException(new IllegalStateException("The decrypter was set to throw."));
     }
 
-    return FakeReportGenerator.generate(idToGenerate);
+    return FakeReportGenerator.generateWithParam(idToGenerate, DEFAULT_VERSION);
   }
 
   public void setShouldThrow(boolean shouldThrowOnRead) {

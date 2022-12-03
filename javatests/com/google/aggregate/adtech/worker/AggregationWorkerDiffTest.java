@@ -42,6 +42,11 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+/*
+ * Test aggregation worker generate the same results as local golden reports under specific
+ * condition (noising_epsilon and noising_l1_sensitivity). This test use sharded domain and reports
+ * as input.
+ */
 @RunWith(JUnit4.class)
 public class AggregationWorkerDiffTest {
 
@@ -51,20 +56,25 @@ public class AggregationWorkerDiffTest {
 
   @Inject private AvroResultsFileReader resultsFileReader;
 
-  private Path input;
+  private Path reportPath;
+  private Path domainPath;
   private Path key;
   private Path golden;
   private ImmutableList<AggregatedFact> goldenFacts;
 
-  // Reports directory for the concurrent aggregator: the aggregator takes in all the files in the
-  // directory.
+  // The aggregator takes in all the files in the reportsDirectory for reports input and takes all
+  // the files in domainDirectory for domain input.
   private Path reportsDirectory;
+  private Path domainDirectory;
 
   @Before
   public void setUp() throws Exception {
     reportsDirectory = testWorkingDir.getRoot().toPath().resolve("reports");
+    domainDirectory = testWorkingDir.getRoot().toPath().resolve("domain");
     Files.createDirectory(reportsDirectory);
-    input = reportsDirectory.toAbsolutePath();
+    Files.createDirectory(domainDirectory);
+    reportPath = reportsDirectory.toAbsolutePath();
+    domainPath = domainDirectory.toAbsolutePath();
 
     key = Paths.get("worker/testing/data/encryption_key.pb");
     golden = Paths.get("worker/testing/data/1k/diff_1k_output.golden");
@@ -74,17 +84,17 @@ public class AggregationWorkerDiffTest {
   }
 
   /**
-   * Copy the shards from the provided directory to the reportsDirectory for use with the concurrent
+   * Copy the shards from the provided directory to the target directory for use with the concurrent
    * processor.
    *
    * <p>NOTE: This method assumes there are no subdirectories in the directory provided, only files.
    */
-  public void copyShards(Path directory) throws Exception {
-    Files.list(directory)
+  public void copyShards(Path fromDir, Path toDir) throws Exception {
+    Files.list(fromDir)
         .forEach(
             file -> {
               try {
-                Files.copy(file, reportsDirectory.resolve(file.getFileName()));
+                Files.copy(file, toDir.resolve(file.getFileName()));
               } catch (IOException e) {
                 throw new UncheckedIOException(e);
               }
@@ -92,16 +102,25 @@ public class AggregationWorkerDiffTest {
   }
 
   // To update the golden:
-  // bazel build worker/testing/data/1k:diff_1k java/com/google/aggregate/tools/diff:DiffRunner
-  // bazel-bin/java/com/google/aggregate/tools/diff/DiffRunner \
-  // --test_input bazel-bin/worker/testing/data/1k/diff_1k.avro \
-  // --test_key worker/testing/data/encryption_key.pb \
-  // --test_golden worker/testing/data/1k/diff_1k_output.golden \
+  // bazel build worker/testing/data/1k:diff_1k_cbor
+  // bazel build worker/testing/data/1k/sharded:diff_1k_cbor
+  // bazel build worker/testing/data/1k/sharded:diff_1k_cbor_domain
+  // bazel run java/com/google/aggregate/tools/diff:DiffRunner -- \
+  // --test_input $PWD/bazel-bin/worker/testing/data/1k/sharded/diff_1k_cbor_shards \
+  // --test_output_domain_dir
+  // $PWD/bazel-bin/worker/testing/data/1k/sharded/diff_1k_cbor_domain_shards \
+  // --test_key $PWD/worker/testing/data/encryption_key.pb \
+  // --test_golden $PWD/worker/testing/data/1k/diff_1k_output.golden \
+  // --noising_epsilon 0.1 \
+  // --noising_l1_sensitivity 4 \
   // --update_golden
+  // Note: The domain generated in diff_1k_cbor_domain is fully overlapped with reports keys.
 
   @Test
   public void diffTestConstantNoising() throws Exception {
-    copyShards(Paths.get("worker/testing/data/1k/sharded/diff_1k_cbor_shards/"));
+    copyShards(Paths.get("worker/testing/data/1k/sharded/diff_1k_cbor_shards/"), reportsDirectory);
+    copyShards(
+        Paths.get("worker/testing/data/1k/sharded/diff_1k_cbor_domain_shards/"), domainDirectory);
 
     MapDifference<BigInteger, AggregatedFact> diff = diff();
 
@@ -116,11 +135,11 @@ public class AggregationWorkerDiffTest {
     ImmutableList<AggregatedFact> goldenFacts = resultsFileReader.readAvroResultsFile(golden);
     LocalAggregationWorkerRunner workerRunner =
         LocalAggregationWorkerRunner.create(testWorkingDir.getRoot().toPath());
-    // TODO(b/228085828): Add tests without flag --domain_optional.
+
     workerRunner.updateArgs(
         new String[] {
           "--local_file_single_puller_path",
-          input.toString(),
+          reportPath.toString(),
           "--local_file_decryption_key_path",
           key.toString(),
           // Use noise parameters that match those provided when the golden output were generated
@@ -129,8 +148,7 @@ public class AggregationWorkerDiffTest {
           "--noising_l1_sensitivity",
           "4",
           "--local_output_domain_path",
-          "",
-          "--domain_optional"
+          domainPath.toString(),
         });
 
     workerRunner.run();

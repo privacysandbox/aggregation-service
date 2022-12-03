@@ -30,7 +30,7 @@ public enum DomainFormatSelector {
     this.domainProcessorClass = domainProcessorClass;
   }
 
-  Class<? extends OutputDomainProcessor> getDomainProcessorClass() {
+  public Class<? extends OutputDomainProcessor> getDomainProcessorClass() {
     return domainProcessorClass;
   }
 }

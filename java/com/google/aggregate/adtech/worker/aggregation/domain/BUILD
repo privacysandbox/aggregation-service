@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -20,6 +22,7 @@ java_library(
         "OutputDomainProcessor.java",
     ],
     deps = [
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/perf",
         "//java/external:clients_blobstorageclient",
@@ -35,6 +38,7 @@ java_library(
     deps = [
         ":domain",
         "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/perf",
         "//java/external:clients_blobstorageclient",
@@ -52,6 +56,7 @@ java_library(
     deps = [
         ":domain",
         "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/perf",
         "//java/com/google/aggregate/protocol/avro:avro_output_domain",
         "//java/com/google/aggregate/protocol/avro:avro_record_reader",

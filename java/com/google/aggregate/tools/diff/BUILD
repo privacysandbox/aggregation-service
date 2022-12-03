@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_binary", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -47,6 +49,7 @@ java_library(
         ":result_diff",
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker:worker_runner",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
         "//java/com/google/aggregate/adtech/worker/testing:local_aggregation_worker_runner",

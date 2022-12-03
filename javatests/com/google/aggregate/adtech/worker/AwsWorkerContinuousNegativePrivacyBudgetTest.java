@@ -62,7 +62,7 @@ public class AwsWorkerContinuousNegativePrivacyBudgetTest {
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
   // Input data generated with the following command:
-  // bazel run java/com/google/aggregate/simulation:SimluationRunner -- \
+  // bazel run java/com/google/aggregate/simulation:SimulationRunner -- \
   //   --aggregatable_report_file_path $PWD/10k_staging_2022_05_20.avro \
   //   --num_reports 10000 \
   //   --num_encryption_keys 3 \
@@ -137,8 +137,7 @@ public class AwsWorkerContinuousNegativePrivacyBudgetTest {
             outputBucket,
             outputKey,
             /* outputDomainBucketName= */ Optional.of(domainBucket),
-            /* outputDomainPrefix= */ Optional.of(domainKey),
-            /* debugPrivacyBudgetLimit= */ Optional.of("1"));
+            /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText())

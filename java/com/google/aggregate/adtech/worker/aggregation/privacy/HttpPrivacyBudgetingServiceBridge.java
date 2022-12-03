@@ -24,7 +24,6 @@ import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRe
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetClientException;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetServiceException;
-import java.util.Optional;
 import javax.inject.Inject;
 
 /** HTTP privacy budgeting bridge which consumes privacy budget from an external HTTP service. */
@@ -42,9 +41,7 @@ public final class HttpPrivacyBudgetingServiceBridge implements PrivacyBudgeting
 
   @Override
   public ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
-      ImmutableList<PrivacyBudgetUnit> budgetsToConsume,
-      String attributionReportTo,
-      Optional<Integer> debugPrivacyBudgetLimit)
+      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo)
       throws PrivacyBudgetingServiceBridgeException {
     ConsumePrivacyBudgetRequest consumePrivacyBudgetRequest =
         ConsumePrivacyBudgetRequest.builder()
@@ -53,7 +50,7 @@ public final class HttpPrivacyBudgetingServiceBridge implements PrivacyBudgeting
                 budgetsToConsume.stream()
                     .map(HttpPrivacyBudgetingServiceBridge::scpBudgetUnit)
                     .collect(toImmutableList()))
-            .privacyBudgetLimit(debugPrivacyBudgetLimit.orElse(DEFAULT_PRIVACY_BUDGET_LIMIT))
+            .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
             .build();
 
     try {

@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.protocol.avro.AvroOutputDomainReader;
 import com.google.aggregate.protocol.avro.AvroOutputDomainReaderFactory;

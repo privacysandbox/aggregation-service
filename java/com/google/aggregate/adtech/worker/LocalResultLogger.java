@@ -21,6 +21,7 @@ import static com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.g
 import com.google.aggregate.adtech.worker.Annotations.DebugWriter;
 import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.LibraryAnnotations.LocalOutputDirectory;
+import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;

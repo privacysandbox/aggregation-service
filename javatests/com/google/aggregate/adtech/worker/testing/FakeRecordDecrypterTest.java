@@ -62,6 +62,8 @@ public class FakeRecordDecrypterTest {
     Report report = decrypter.decryptSingleReport(encryptedReport);
 
     assertThat(report)
-        .isEqualTo(generateWithFixedReportId(2, report.sharedInfo().reportId().get()));
+        .isEqualTo(
+            generateWithFixedReportId(
+                2, report.sharedInfo().reportId().get(), /* reportVersion */ ""));
   }
 }

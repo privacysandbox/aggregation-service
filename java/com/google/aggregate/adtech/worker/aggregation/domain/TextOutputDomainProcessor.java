@@ -21,6 +21,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.common.base.Stopwatch;

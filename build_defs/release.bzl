@@ -75,6 +75,9 @@ fi
 s3_jar_release_rule = rule(
     implementation = _s3_jar_release_impl,
     attrs = {
+        "artifact_base_name": attr.string(
+            mandatory = True,
+        ),
         "jar_target": attr.label(
             allow_single_file = True,
             mandatory = True,
@@ -87,9 +90,6 @@ s3_jar_release_rule = rule(
         "release_key": attr.label(
             mandatory = True,
             providers = [BuildSettingInfo],
-        ),
-        "artifact_base_name": attr.string(
-            mandatory = True,
         ),
     },
     executable = True,

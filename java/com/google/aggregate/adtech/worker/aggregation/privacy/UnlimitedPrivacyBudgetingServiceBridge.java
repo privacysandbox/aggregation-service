@@ -17,7 +17,6 @@
 package com.google.aggregate.adtech.worker.aggregation.privacy;
 
 import com.google.common.collect.ImmutableList;
-import java.util.Optional;
 
 /**
  * Privacy budgeting service bridge with unlimited budget
@@ -29,9 +28,7 @@ public final class UnlimitedPrivacyBudgetingServiceBridge implements PrivacyBudg
 
   @Override
   public ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
-      ImmutableList<PrivacyBudgetUnit> budgetsToConsume,
-      String attributionReportTo,
-      Optional<Integer> debugPrivacyBudgetLimit) {
+      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo) {
     return ImmutableList.of();
   }
 }

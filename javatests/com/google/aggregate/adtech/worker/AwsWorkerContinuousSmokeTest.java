@@ -25,8 +25,6 @@ import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.s
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
@@ -66,8 +64,9 @@ import software.amazon.awssdk.services.s3.S3Client;
  *   <li>Multiple report input files with default version of reports. Each file follows the naming
  *       format 10k_test_input_${number}.avro. Each test below that relies on default version
  *       reports is supposed to use one of the above input files each
- *   <li>One report input file with report version 0.1. The file follows the naming format
- *       10k_test_input_v0_1.avro
+ *   <li>One report input file with report version 0.0 which is the report version before 0.1 and
+ *       can be generated with --generated_report_version ""` in SimulationRunner. The file follows
+ *       the naming format 10k_test_input_v0_0.avro
  *   <li>One report input file with default version of reports and debug mode enabled on generated
  *       reports. The file follows the naming format 10k_test_input_debug.avro
  * </ul>
@@ -79,8 +78,8 @@ import software.amazon.awssdk.services.s3.S3Client;
  *   <li>Multiple domain files for default version of reports. Each file follows the naming format
  *       10k_test_domain_${number}.avro. Each test below that relies on default version reports is
  *       supposed to use one of the above domain files each that matches the report input.
- *   <li>One domain file for reports with vesion 0.1. The file follows the naming format
- *       10k_test_domain_v0_1.avro
+ *   <li>One domain file for reports with version 0.0 which is the report version before 0.1. The
+ *       file follows the naming format 10k_test_domain_v0_0.avro
  *   <li>One domain file for reports in default version with debug mode enabled on the reports. The
  *       file follows the naming format 10k_test_domain_debug.avro
  * </ul>
@@ -92,7 +91,7 @@ import software.amazon.awssdk.services.s3.S3Client;
  *
  * <ul>
  *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_${number}.avro"
- *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_v0_1.avro"
+ *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_v0_0.avro"
  *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_debug_nodebug.avro"
  *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_nodebug_nodebug.avro"
  *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_debug_debug.avro"
@@ -150,12 +149,12 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             outputKey,
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey),
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
-    assertTrue(result.get("result_info").get("error_summary").get("error_counts").isEmpty());
+    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
+        .isTrue();
 
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
@@ -168,14 +167,14 @@ public class AwsWorkerContinuousSmokeTest {
   }
 
   @Test
-  public void createJobE2EVersionZeroDotOneTest() throws Exception {
+  public void createJobE2EVersionZeroDotZeroTest() throws Exception {
     // End to end testing:
-    // Follows same idea as createJobE2ETest but uses report with version 0.1 and
-    // new format shared info
+    // Follows same idea as createJobE2ETest but uses report with version 0.0 (the report version
+    // before v0.1) and old format shared info.
 
-    var inputKey = String.format("%s/test-inputs/10k_test_input_v0_1.avro", KOKORO_BUILD_ID);
-    var domainKey = String.format("%s/test-inputs/10k_test_domain_v0_1.avro", KOKORO_BUILD_ID);
-    var outputKey = String.format("%s/test-outputs/10k_test_output_v0_1.avro", KOKORO_BUILD_ID);
+    var inputKey = String.format("%s/test-inputs/10k_test_input_v0_0.avro", KOKORO_BUILD_ID);
+    var domainKey = String.format("%s/test-inputs/10k_test_domain_v0_0.avro", KOKORO_BUILD_ID);
+    var outputKey = String.format("%s/test-outputs/10k_test_output_v0_0.avro", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
         AwsWorkerContinuousTestHelper.createJobRequest(
@@ -184,12 +183,12 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             outputKey,
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey),
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
-    assertTrue(result.get("result_info").get("error_summary").get("error_counts").isEmpty());
+    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
+        .isTrue();
 
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
@@ -220,8 +219,7 @@ public class AwsWorkerContinuousSmokeTest {
             outputKey,
             /* debugRun= */ false,
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey),
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
@@ -238,9 +236,10 @@ public class AwsWorkerContinuousSmokeTest {
     // The "isAtLeast" assert is set here to accommodate both conditions.
     assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
     // The debug file shouldn't exist because it's not debug run
-    assertFalse(
-        AwsWorkerContinuousTestHelper.checkS3FileExists(
-            s3BlobStorageClient, getTestDataBucket(), getDebugFilePrefix(outputKey)));
+    assertThat(
+            AwsWorkerContinuousTestHelper.checkS3FileExists(
+                s3BlobStorageClient, getTestDataBucket(), getDebugFilePrefix(outputKey)))
+        .isFalse();
   }
 
   /** This test includes sending a debug job and aggregatable reports with debug mode enabled. */
@@ -260,8 +259,7 @@ public class AwsWorkerContinuousSmokeTest {
             outputKey,
             /* debugRun= */ true,
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey),
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
@@ -306,8 +304,7 @@ public class AwsWorkerContinuousSmokeTest {
             outputKey,
             /* debugRun= */ true,
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey),
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
@@ -361,12 +358,12 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             outputKey,
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey),
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest1, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
-    assertTrue(result.get("result_info").get("error_summary").get("error_counts").isEmpty());
+    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
+        .isTrue();
 
     CreateJobRequest createJobRequest2 =
         createJobRequest1.toBuilder().setJobRequestId(UUID.randomUUID().toString()).build();
@@ -375,7 +372,8 @@ public class AwsWorkerContinuousSmokeTest {
 
     assertThat(result.get("result_info").get("return_code").asText())
         .isEqualTo(PRIVACY_BUDGET_EXHAUSTED.name());
-    assertTrue(result.get("result_info").get("error_summary").get("error_counts").isEmpty());
+    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
+        .isTrue();
   }
 
   private static class TestEnv extends AbstractModule {

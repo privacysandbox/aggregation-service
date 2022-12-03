@@ -19,7 +19,7 @@ package com.google.aggregate.adtech.worker.testing;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
-import com.google.aggregate.adtech.worker.ResultLogger.ResultLogException;
+import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;

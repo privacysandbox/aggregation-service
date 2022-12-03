@@ -75,7 +75,7 @@ public class DeserializingReportDecrypterTest {
 
   @Before
   public void setUp() throws Exception {
-    report = FakeReportGenerator.generate(1);
+    report = FakeReportGenerator.generateWithParam(1, /* reportVersion */ "");
     sharedInfo = sharedInfoSerdes.reverse().convert(Optional.of(report.sharedInfo()));
     encryptReport();
   }

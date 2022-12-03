@@ -35,6 +35,18 @@ public enum AggregationWorkerReturnCode {
   /** The job had invalid configuration and could not be processed. */
   INVALID_JOB,
 
+  /** Error encountered while logging result. */
+  RESULT_LOGGING_ERROR,
+
+  /** Error encountered while processing domain. */
+  DOMAIN_PROCESS_EXCEPTION,
+
   /** A permission issue occurred and the job couldn't be processed. */
-  PERMISSION_ERROR
+  PERMISSION_ERROR,
+
+  /** Report or Domain input data ead filed. */
+  INPUT_DATA_READ_FAILED,
+
+  /** Aggregation Job completed successfully. */
+  SUCCESS
 }

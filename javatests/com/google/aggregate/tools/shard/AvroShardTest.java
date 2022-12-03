@@ -18,6 +18,7 @@ package com.google.aggregate.tools.shard;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import com.google.aggregate.protocol.avro.AvroOutputDomainReader;
 import com.google.aggregate.protocol.avro.AvroOutputDomainReaderFactory;
@@ -63,22 +64,26 @@ public class AvroShardTest {
   @Test
   public void testReportShard() throws IOException {
     int numShard = 2;
+    Path outputReportShardsDir = outPutDirectory.resolve("reportShards");
     Path reportPath = baseDirectory.resolve("input_set_0/batch.avro");
     List<AvroReportRecord> reportShards = new ArrayList<>();
     String[] cli =
         new String[] {
           "--input", reportPath.toString(),
-          "--output_dir", outPutDirectory.toString(),
+          "--output_dir", outputReportShardsDir.toString(),
           "--num_shards", String.valueOf(numShard)
         };
 
     avroShard.main(cli);
-    List<String> reportShardPaths = Arrays.asList(outPutDirectory.toFile().list());
+
+    assertTrue(Files.exists(outputReportShardsDir));
+
+    List<String> reportShardPaths = Arrays.asList(outputReportShardsDir.toFile().list());
 
     assertEquals(reportShardPaths.size(), numShard);
 
     for (String reportShardPath : reportShardPaths) {
-      reportShards.addAll(readReport(outPutDirectory.resolve(reportShardPath)));
+      reportShards.addAll(readReport(outputReportShardsDir.resolve(reportShardPath)));
     }
 
     assertEquals(reportShards.size(), readReport(reportPath).size());
@@ -87,23 +92,27 @@ public class AvroShardTest {
   @Test
   public void testDomainShard() throws IOException {
     int numShard = 2;
+    Path outputDomainShardsDir = outPutDirectory.resolve("domainShards");
     Path domainPath = baseDirectory.resolve("input_set_0/domain.avro");
     List<AvroOutputDomainRecord> outputDomainShards = new ArrayList<>();
     String[] cli =
         new String[] {
           "--input", domainPath.toString(),
-          "--output_dir", outPutDirectory.toString(),
+          "--output_dir", outputDomainShardsDir.toString(),
           "--num_shards", String.valueOf(numShard),
           "--domain"
         };
 
     avroShard.main(cli);
-    List<String> domainShardPaths = Arrays.asList(outPutDirectory.toFile().list());
+
+    assertTrue(Files.exists(outputDomainShardsDir));
+
+    List<String> domainShardPaths = Arrays.asList(outputDomainShardsDir.toFile().list());
 
     assertEquals(domainShardPaths.size(), numShard);
 
     for (String domainShardPath : domainShardPaths) {
-      outputDomainShards.addAll(readDomain(outPutDirectory.resolve(domainShardPath)));
+      outputDomainShards.addAll(readDomain(outputDomainShardsDir.resolve(domainShardPath)));
     }
 
     assertEquals(outputDomainShards.size(), readDomain(domainPath).size());

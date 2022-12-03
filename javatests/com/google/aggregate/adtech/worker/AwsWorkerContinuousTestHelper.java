@@ -125,13 +125,10 @@ public class AwsWorkerContinuousTestHelper {
       String outputDataBlobBucket,
       String outputDataBlobPrefix,
       Optional<String> outputDomainBucketName,
-      Optional<String> outputDomainPrefix,
-      Optional<String> debugPrivacyBudgetLimit) {
+      Optional<String> outputDomainPrefix) {
     return createDefaultJobRequestBuilder(
             inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
-        .putAllJobParameters(
-            getJobParams(
-                false, outputDomainBucketName, outputDomainPrefix, debugPrivacyBudgetLimit))
+        .putAllJobParameters(getJobParams(false, outputDomainBucketName, outputDomainPrefix))
         .build();
   }
 
@@ -142,13 +139,10 @@ public class AwsWorkerContinuousTestHelper {
       String outputDataBlobPrefix,
       Boolean debugRun,
       Optional<String> outputDomainBucketName,
-      Optional<String> outputDomainPrefix,
-      Optional<String> debugPrivacyBudgetLimit) {
+      Optional<String> outputDomainPrefix) {
     return createDefaultJobRequestBuilder(
             inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
-        .putAllJobParameters(
-            getJobParams(
-                debugRun, outputDomainBucketName, outputDomainPrefix, debugPrivacyBudgetLimit))
+        .putAllJobParameters(getJobParams(debugRun, outputDomainBucketName, outputDomainPrefix))
         .build();
   }
 
@@ -177,16 +171,12 @@ public class AwsWorkerContinuousTestHelper {
   private static ImmutableMap<String, String> getJobParams(
       Boolean debugRun,
       Optional<String> outputDomainBucketName,
-      Optional<String> outputDomainPrefix,
-      Optional<String> debugPrivacyBudgetLimit) {
+      Optional<String> outputDomainPrefix) {
     ImmutableMap.Builder<String, String> jobParams = ImmutableMap.builder();
     jobParams.put("attribution_report_to", getAttributionReportTo());
 
     if (debugRun) {
       jobParams.put("debug_run", "true");
-    }
-    if (debugPrivacyBudgetLimit.isPresent()) {
-      jobParams.put("debug_privacy_budget_limit", debugPrivacyBudgetLimit.get());
     }
     if (outputDomainPrefix.isPresent() && outputDomainBucketName.isPresent()) {
       jobParams.put("output_domain_blob_prefix", outputDomainPrefix.get());

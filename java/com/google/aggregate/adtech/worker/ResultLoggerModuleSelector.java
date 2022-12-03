@@ -21,7 +21,7 @@ import com.google.aggregate.adtech.worker.testing.InMemoryResultLoggerModule;
 /** CLI enum to select a {@code ResultLoggerModule} to use */
 public enum ResultLoggerModuleSelector {
   IN_MEMORY(new InMemoryResultLoggerModule()),
-  LOCAL_AVRO_TO_S3(new LocalAvroToS3LoggerModule());
+  LOCAL_TO_CLOUD(new LocalFileToCloudStorageLoggerModule());
 
   private final ResultLoggerModule resultLoggerModule;
 
@@ -29,7 +29,7 @@ public enum ResultLoggerModuleSelector {
     this.resultLoggerModule = resultLoggerModule;
   }
 
-  ResultLoggerModule getResultLoggerModule() {
+  public ResultLoggerModule getResultLoggerModule() {
     return resultLoggerModule;
   }
 }

@@ -28,7 +28,7 @@ mkdir -p jars
 # URL where prebuilt jar artifacts are published and publicly accessible
 S3_URL="https://aggregation-service-published-artifacts.s3.amazonaws.com"
 
-# Prebuilt jars to download - _{VERSION} will be postfix added 
+# Prebuilt jars to download - _{VERSION} will be postfix added
 jars=(
   "AwsChangeHandlerLambda"
   "AwsApiGatewayFrontend"

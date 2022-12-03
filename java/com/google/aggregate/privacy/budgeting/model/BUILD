@@ -14,6 +14,8 @@
 
 # Exposes the models for interacting with the Privacy Budget Manager.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(

@@ -19,7 +19,6 @@ package com.google.aggregate.adtech.worker.aggregation.privacy;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import java.time.Instant;
-import java.util.Optional;
 
 /** Interface for consuming privacy budgeting. */
 public interface PrivacyBudgetingServiceBridge {
@@ -33,9 +32,7 @@ public interface PrivacyBudgetingServiceBridge {
    * @return First few privacy budgeting units for which budget consumption failed.
    */
   ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
-      ImmutableList<PrivacyBudgetUnit> budgetsToConsume,
-      String attributionReportTo,
-      Optional<Integer> debugPrivacyBudgetLimit)
+      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo)
       throws PrivacyBudgetingServiceBridgeException;
 
   /** Identifier for an individual key of the privacy budget to be consumed. */
@@ -54,6 +51,10 @@ public interface PrivacyBudgetingServiceBridge {
 
   /** Exception that may happen when consuming the privacy budget. */
   final class PrivacyBudgetingServiceBridgeException extends Exception {
+
+    public PrivacyBudgetingServiceBridgeException() {
+      super();
+    }
 
     public PrivacyBudgetingServiceBridgeException(Throwable cause) {
       super(cause);

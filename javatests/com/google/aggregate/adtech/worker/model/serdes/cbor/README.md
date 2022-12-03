@@ -2,16 +2,15 @@
 
 Contains tests and test input files for cbor deserialization & serialization
 
-`report.cbor` is a CBOR serialized report, generated from the contents
-of `report.json` using the `json2cbor.rb` utility
-from https://github.com/cabo/cbor-diag. `report.json` is a JSON representation
-of the reports that Chrome produces.
+Chrome Json reports are picked from
+[here](https://source.chromium.org/chromium/chromium/src/+/main:content/test/data/attribution_reporting/aggregatable_report_goldens/latest/).
 
-Spec is defined
-here: https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregate-attribution-reports
+`report_x_cleartext_payloads.json` has base64 encoded cleartest payload that is passed through
+base64 decoder to get cbor, for example:
 
-If needed, the file can be regenerated with this command:
-
+```sh
+  base64 -d report_1_cleartext_payloads.json > report1.cbor
 ```
- cat report.json | json2cbor.rb > report.cbor
-```
+
+CborPayloadSerdesTest reads the cbor files from reportx.cbor files, deserializes the cbor payload
+and compares it with manually constructed test payload.

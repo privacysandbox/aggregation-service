@@ -19,7 +19,6 @@ package com.google.aggregate.adtech.worker;
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.file.StandardOpenOption.CREATE;
-import static org.junit.Assert.assertThrows;
 
 import com.beust.jcommander.JCommander;
 import com.google.acai.Acai;
@@ -29,6 +28,7 @@ import com.google.aggregate.adtech.worker.testing.InMemoryResultLogger;
 import com.google.aggregate.adtech.worker.testing.MaterializedAggregationResults;
 import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule.ConstantNoiseApplier;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier;
+import com.google.aggregate.protocol.avro.AvroOutputDomainWriterFactory;
 import com.google.aggregate.protocol.avro.AvroRecordWriter.MetadataElement;
 import com.google.aggregate.protocol.avro.AvroReportRecord;
 import com.google.aggregate.protocol.avro.AvroReportWriter;
@@ -62,6 +62,12 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
+/**
+ * AggregationWorkerHermeticTest covers tests with different worker args and noises. The threshold
+ * used in AggregationWorkerHermeticTest is calculated from formula in {@code ThresholdSupplier}.
+ * Given noising_epsilon, noising_delta and noising_l1_sensitivity in provided args, the threshold
+ * is round 4.57 in this test.
+ */
 @RunWith(JUnit4.class)
 public class AggregationWorkerHermeticTest {
 
@@ -88,6 +94,7 @@ public class AggregationWorkerHermeticTest {
   @Rule public final Acai acai = new Acai(TestEnv.class);
 
   @Inject private AvroReportWriterFactory writerFactory;
+  @Inject private AvroOutputDomainWriterFactory domainWriterFactory;
 
   @Before
   public void setUp() throws Exception {
@@ -99,12 +106,25 @@ public class AggregationWorkerHermeticTest {
     resultFile = testWorkingDirPath.resolve("results.json");
     domainAvro = testWorkingDirPath.resolve("domain.avro");
     domainShardsDir = testWorkingDirPath.resolve("domain_shards");
+    // Result of summing the values of the keys: 22:56, 33:33, 44:123, 55:3
+    simulationInputFileLines =
+        ImmutableList.of(
+            "22:1,33:2",
+            "22:10,55:3,33:10",
+            "22:15",
+            "22:10",
+            "22:20,33:15",
+            "44:123,33:5",
+            "33:1");
     metadata =
         ImmutableList.of(
             MetadataElement.create(/* key= */ "foo", /* value= */ "bar"),
             MetadataElement.create(/* key= */ "abc", /* value= */ "xyz"));
-    args = getLocalAggregationWorkerArgs();
-
+    // Set domain_optional arg to true for most test cases in order to bypass creating domain files.
+    // Otherwise, the aggregated result would be empty if domain is required without domain files.
+    args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false, /* outputDomain= */ false, /* domainOptional= */ true);
     Files.createDirectory(reportShardsDir);
     Files.createDirectory(domainShardsDir);
   }
@@ -117,15 +137,6 @@ public class AggregationWorkerHermeticTest {
 
   @Test
   public void localTestNoNoising() throws Exception {
-    simulationInputFileLines =
-        ImmutableList.of(
-            "22:1,33:2",
-            "22:10,55:3,33:10",
-            "22:15",
-            "22:10",
-            "22:20,33:15",
-            "44:123,33:5",
-            "33:1");
     AwsHermeticTestHelper.generateAvroReportsFromTextList(
         SimulationTestParams.builder()
             .setHybridKey(hybridKey)
@@ -153,16 +164,9 @@ public class AggregationWorkerHermeticTest {
 
   @Test
   public void localTestNoNoisingNoEncryption() throws Exception {
-    args = getLocalAggregationWorkerArgs(/* noEncryption= */ true, /* outputDomain= */ false);
-    simulationInputFileLines =
-        ImmutableList.of(
-            "22:1,33:2",
-            "22:10,55:3,33:10",
-            "22:15",
-            "22:10",
-            "22:20,33:15",
-            "44:123,33:5",
-            "33:1");
+    args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ true, /* outputDomain= */ false, /* domainOptional= */ true);
     AwsHermeticTestHelper.generateAvroReportsFromTextList(
         SimulationTestParams.builder()
             .setHybridKey(hybridKey)
@@ -192,15 +196,6 @@ public class AggregationWorkerHermeticTest {
 
   @Test
   public void localTestConstantNoising() throws Exception {
-    simulationInputFileLines =
-        ImmutableList.of(
-            "55:1,66:2",
-            "55:10,77:3,66:10",
-            "55:15",
-            "55:10",
-            "55:20,66:15",
-            "88:123,66:5",
-            "66:1");
     AwsHermeticTestHelper.generateAvroReportsFromTextList(
         SimulationTestParams.builder()
             .setHybridKey(hybridKey)
@@ -220,16 +215,16 @@ public class AggregationWorkerHermeticTest {
     // Nothing gets filtered out now because everything meets the threshold.
     AggregatedFact expectedFact1 =
         AggregatedFact.create(
-            /* key= */ createBucketFromInt(55), /* metric= */ 66, /* unnoisedMetric= */ 56L);
+            /* key= */ createBucketFromInt(22), /* metric= */ 66, /* unnoisedMetric= */ 56L);
     AggregatedFact expectedFact2 =
         AggregatedFact.create(
-            /* key= */ createBucketFromInt(66), /* metric= */ 43, /* unnoisedMetric= */ 33L);
+            /* key= */ createBucketFromInt(33), /* metric= */ 43, /* unnoisedMetric= */ 33L);
     AggregatedFact expectedFact3 =
         AggregatedFact.create(
-            /* key= */ createBucketFromInt(88), /* metric= */ 133, /* unnoisedMetric= */ 123L);
+            /* key= */ createBucketFromInt(44), /* metric= */ 133, /* unnoisedMetric= */ 123L);
     AggregatedFact expectedFact4 =
         AggregatedFact.create(
-            /* key= */ createBucketFromInt(77), /* metric= */ 13, /* unnoisedMetric= */ 3L);
+            /* key= */ createBucketFromInt(55), /* metric= */ 13, /* unnoisedMetric= */ 3L);
     assertThat(factList)
         .containsExactly(expectedFact1, expectedFact2, expectedFact3, expectedFact4);
     // The name of the job is empty on both sides of '|' because this is a fully local job. The
@@ -289,28 +284,20 @@ public class AggregationWorkerHermeticTest {
 
   @Test
   public void localTestConstantNoising_shardedDomain() throws Exception {
-    args = getLocalAggregationWorkerArgs(/* noEncryption= */ false, /* outputDomain= */ true);
-    simulationInputFileLines =
-        ImmutableList.of(
-            "55:1,66:2",
-            "55:10,77:3,66:10",
-            "55:15",
-            "55:10",
-            "55:20,66:15",
-            "88:123,66:5",
-            "66:1");
+    args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false, /* outputDomain= */ true, /* domainOptional= */ true);
     AwsHermeticTestHelper.generateAvroReportsFromTextList(
         SimulationTestParams.builder()
             .setHybridKey(hybridKey)
             .setReportsAvro(reportsAvro)
             .setSimulationInputFileLines(simulationInputFileLines)
-            .setOutputDomainPath(domainAvro)
-            .setWriteOutputDomain(true)
-            .setOutputDomainSize(2)
             .build());
     Files.copy(reportsAvro, reportShardsDir.resolve("shard.avro"));
-    Files.copy(domainAvro, domainShardsDir.resolve("shard_1.avro"));
-    Files.copy(domainAvro, domainShardsDir.resolve("shard_2.avro"));
+    AwsHermeticTestHelper.writeDomainAvroFile(domainWriterFactory, domainAvro, "55");
+    Files.move(domainAvro, domainShardsDir.resolve("shard_1.avro"));
+    AwsHermeticTestHelper.writeDomainAvroFile(domainWriterFactory, domainAvro, "11");
+    Files.move(domainAvro, domainShardsDir.resolve("shard_2.avro"));
 
     setupLocalAggregationWorker(args);
     Injector injector = worker.getInjector();
@@ -324,23 +311,58 @@ public class AggregationWorkerHermeticTest {
     // Nothing gets filtered out now because everything meets the threshold.
     AggregatedFact expectedFact1 =
         AggregatedFact.create(
-            /* key= */ createBucketFromInt(55), /* metric= */ 66, /* unnoisedMetric= */ 56L);
+            /* key= */ createBucketFromInt(22), /* metric= */ 66, /* unnoisedMetric= */ 56L);
     AggregatedFact expectedFact2 =
         AggregatedFact.create(
-            /* key= */ createBucketFromInt(66), /* metric= */ 43, /* unnoisedMetric= */ 33L);
+            /* key= */ createBucketFromInt(33), /* metric= */ 43, /* unnoisedMetric= */ 33L);
     AggregatedFact expectedFact3 =
         AggregatedFact.create(
-            /* key= */ createBucketFromInt(88), /* metric= */ 133, /* unnoisedMetric= */ 123L);
+            /* key= */ createBucketFromInt(44), /* metric= */ 133, /* unnoisedMetric= */ 123L);
     AggregatedFact expectedFact4 =
         AggregatedFact.create(
-            /* key= */ createBucketFromInt(77), /* metric= */ 13, /* unnoisedMetric= */ 3L);
+            /* key= */ createBucketFromInt(55), /* metric= */ 13, /* unnoisedMetric= */ 3L);
+    AggregatedFact expectedFact5 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(11), /* metric= */ 10, /* unnoisedMetric= */ 0L);
 
     assertThat(factList)
-        .containsAtLeastElementsIn(
-            ImmutableList.of(expectedFact1, expectedFact2, expectedFact3, expectedFact4));
-    assertThat(factList.size()).isAtMost(6);
+        .containsExactly(expectedFact1, expectedFact2, expectedFact3, expectedFact4, expectedFact5);
   }
 
+  @Test
+  public void localTestConstantNoising_DomainRequired() throws Exception {
+    args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false, /* outputDomain= */ true, /* domainOptional= */ false);
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard.avro"));
+    AwsHermeticTestHelper.writeDomainAvroFile(domainWriterFactory, domainAvro, "22");
+    Files.copy(domainAvro, domainShardsDir.resolve("shard.avro"));
+
+    setupLocalAggregationWorker(args);
+    Injector injector = worker.getInjector();
+    FakeNoiseApplierSupplier noiserSupplier = injector.getInstance(FakeNoiseApplierSupplier.class);
+    noiserSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(10));
+
+    runWorker();
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    // All values have 10 added due to constant noising.
+    // Only key 22 is in the result because only the key in domain would be output when domain is
+    // required.
+    AggregatedFact expectedFact =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(22), /* metric= */ 66, /* unnoisedMetric= */ 56L);
+
+    assertThat(factList).containsExactly(expectedFact);
+  }
+
+  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingCustomizedAvroReport() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =
@@ -388,6 +410,7 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
+  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingSameKeyAvroReports() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =
@@ -461,6 +484,7 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
+  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingAllEmptyBytesReports() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =
@@ -504,6 +528,7 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
+  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingAvroReportsWithOneKeyEmpty() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =
@@ -549,6 +574,7 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
+  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingAvroReportsWithSpecialBytes() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =
@@ -596,76 +622,52 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
-  @Test
-  public void localTestUsingMalformattedAvroReport() throws Exception {
-    // generate mal-formatted Avro report
-    try (OutputStream outputAvroStream = Files.newOutputStream(reportsAvro, CREATE)) {
-      outputAvroStream.write(new byte[] {0x02, 0x03});
-    }
-    Files.copy(reportsAvro, reportShardsDir.resolve("shard.avro"));
-    setupLocalAggregationWorker(args);
-
-    runWorker();
-
-    assertThrows(TimeoutException.class, () -> waitForAggregation());
-    String actualResultSerialized = Files.readString(resultFile);
-    ResultInfo.Builder builder = ResultInfo.newBuilder();
-    JSON_PARSER.merge(actualResultSerialized, builder);
-    ResultInfo actualResult = builder.build();
-
-    assertThat(actualResult.getReturnCode())
-        .isEqualTo(ReturnCode.INPUT_DATA_READ_FAILED.toString());
-    assertThat(actualResult.getReturnMessage())
-        .contains("java.io.IOException: Not an Avro data file.");
-  }
-
-  private String[] getLocalAggregationWorkerArgs() throws Exception {
-    return getLocalAggregationWorkerArgs(/* noEncryption= */ false, /* outputDomain= */ false);
-  }
-
-  private String[] getLocalAggregationWorkerArgs(boolean noEncryption, boolean outputDomain)
-      throws Exception {
+  private String[] getLocalAggregationWorkerArgs(
+      boolean noEncryption, boolean outputDomain, boolean domainOptional) throws Exception {
     // Create the local key
     HybridConfig.register();
-
-    return new String[] {
-      "--local_file_decryption_key_path",
-      hybridKey.toAbsolutePath().toString(),
-      "--job_client",
-      "LOCAL_FILE",
-      "--blob_storage_client",
-      "LOCAL_FS_CLIENT",
-      "--result_working_directory_path",
-      "/tmp/newton",
-      "--local_file_single_puller_path",
-      reportShardsDir.toAbsolutePath().toString(),
-      "--local_file_job_info_path",
-      resultFile.toAbsolutePath().toString(),
-      "--local_output_domain_path",
-      outputDomain ? domainShardsDir.toAbsolutePath().toString() : "",
-      "--decryption_key_service",
-      "LOCAL_FILE_DECRYPTION_KEY_SERVICE",
-      "--record_reader",
-      "LOCAL_NIO_AVRO",
-      "--decryption",
-      noEncryption ? "NOOP" : "HYBRID",
-      "--result_logger",
-      "IN_MEMORY",
-      "--noising",
-      "CONSTANT_NOISING",
-      "--timer_exporter",
-      "PLAIN_FILE",
-      "--timer_exporter_file_path",
-      stopwatchFile.toAbsolutePath().toString(),
-      "--simulation_inputs",
-      "--noising_epsilon",
-      "64",
-      "--noising_delta",
-      "1e-4",
-      "--noising_l1_sensitivity",
-      "4",
-      "--domain_optional"
-    };
+    ImmutableList.Builder<String> argsBuilder =
+        ImmutableList.<String>builder()
+            .add(
+                "--local_file_decryption_key_path",
+                hybridKey.toAbsolutePath().toString(),
+                "--job_client",
+                "LOCAL_FILE",
+                "--blob_storage_client",
+                "LOCAL_FS_CLIENT",
+                "--result_working_directory_path",
+                "/tmp/newton",
+                "--local_file_single_puller_path",
+                reportShardsDir.toAbsolutePath().toString(),
+                "--local_file_job_info_path",
+                resultFile.toAbsolutePath().toString(),
+                "--local_output_domain_path",
+                outputDomain ? domainShardsDir.toAbsolutePath().toString() : "",
+                "--decryption_key_service",
+                "LOCAL_FILE_DECRYPTION_KEY_SERVICE",
+                "--record_reader",
+                "LOCAL_NIO_AVRO",
+                "--decryption",
+                noEncryption ? "NOOP" : "HYBRID",
+                "--result_logger",
+                "IN_MEMORY",
+                "--noising",
+                "CONSTANT_NOISING",
+                "--timer_exporter",
+                "PLAIN_FILE",
+                "--timer_exporter_file_path",
+                stopwatchFile.toAbsolutePath().toString(),
+                "--simulation_inputs",
+                "--noising_epsilon",
+                "64",
+                "--noising_delta",
+                "1e-4",
+                "--noising_l1_sensitivity",
+                "4");
+    if (domainOptional) {
+      argsBuilder.add("--domain_optional");
+    }
+    return argsBuilder.build().toArray(String[]::new);
   }
 
   private void setupLocalAggregationWorker(String[] args) {

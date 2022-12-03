@@ -59,7 +59,7 @@ Duplicate job (job_request_id already taken): 409 Conflict
 
 #### Success Response Payload
 
-`{​} // Empty object in response body for success`
+`{} // Empty object in response body for success`
 
 #### Error Response body
 
@@ -67,21 +67,23 @@ These match the [Google Cloud Error Model](https://cloud.google.com/apis/design/
 
 ```jsonc
 {
-  "error": {
-    "code": 3,
-    // Corresponds to this
-    "message": "detailed error message string",
-    "status": "INVALID_ARGUMENT",
-    "details": [{
-      "reason": "API_KEY_INVALID",
-      "domain": "foo.com",
-      // might not be present
-      "metadata": {
-        // Map<String, String>, might not be present
-        "service": "translate.googleapis.com"
-      }
-    }]
-  }
+    "error": {
+        "code": 3,
+        // Corresponds to this
+        "message": "detailed error message string",
+        "status": "INVALID_ARGUMENT",
+        "details": [
+            {
+                "reason": "API_KEY_INVALID",
+                "domain": "foo.com",
+                // might not be present
+                "metadata": {
+                    // Map<String, String>, might not be present
+                    "service": "translate.googleapis.com"
+                }
+            }
+        ]
+    }
 }
 ```
 
@@ -138,7 +140,7 @@ Not found: 404 Not Found
           "category": <string>,
           "count": <int>
         },
-        …
+        ...
       ]
     }
   }
@@ -165,21 +167,23 @@ These match the [Google Cloud Error Model](https://cloud.google.com/apis/design/
 
 ```jsonc
 {
-  "error": {
-    "code": 3,
-    // Corresponds to this
-    "message": "detailed error message string",
-    "status": "INVALID_ARGUMENT",
-    "details": [{
-      "reason": "API_KEY_INVALID",
-      "domain": "foo.com",
-      // might not be present
-      "metadata": {
-        // Map<String, String>, might not be present
-        "service": "translate.googleapis.com"
-      }
-    }]
-  }
+    "error": {
+        "code": 3,
+        // Corresponds to this
+        "message": "detailed error message string",
+        "status": "INVALID_ARGUMENT",
+        "details": [
+            {
+                "reason": "API_KEY_INVALID",
+                "domain": "foo.com",
+                // might not be present
+                "metadata": {
+                    // Map<String, String>, might not be present
+                    "service": "translate.googleapis.com"
+                }
+            }
+        ]
+    }
 }
 ```
 

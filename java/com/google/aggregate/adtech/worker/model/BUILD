@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_java//java:defs.bzl", "java_library")
+
 package(default_visibility = ["//visibility:public"])
 
 java_library(
@@ -37,7 +39,6 @@ java_library(
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
         "//java/external:clients_blobstorageclient_model",
-        "//java/external:dao_metadatadb_model",
         "//java/external:guava",
         "//java/external:jackson_annotations",
         "//java/external:jackson_core",

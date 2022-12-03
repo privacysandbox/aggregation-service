@@ -16,8 +16,8 @@
 
 package com.google.aggregate.adtech.worker.writer.avro;
 
-import static java.nio.file.StandardOpenOption.APPEND;
 import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
@@ -65,7 +65,8 @@ public final class LocalAvroResultFileWriter implements LocalResultFileWriter {
     DatumWriter<GenericRecord> datumWriter = new GenericDatumWriter<>(schema);
     DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<>(datumWriter);
     try {
-      dataFileWriter.create(schema, Files.newOutputStream(resultFilePath, CREATE, APPEND));
+      dataFileWriter.create(
+          schema, Files.newOutputStream(resultFilePath, CREATE, TRUNCATE_EXISTING));
 
       // Write all results to an Avro file. .append() call can throw IOExceptions so using an
       // Iterator is cleaner for exception handling.

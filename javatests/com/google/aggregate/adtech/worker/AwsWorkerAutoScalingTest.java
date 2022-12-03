@@ -98,8 +98,7 @@ public class AwsWorkerAutoScalingTest {
             DATA_BUCKET,
             outputDataPath,
             Optional.of(DATA_BUCKET),
-            Optional.of(INPUT_DOMAIN_PATH),
-            /* debugPrivacyBudgetLimit= */ Optional.empty());
+            Optional.of(INPUT_DOMAIN_PATH));
     submitJob(createJobRequest, SUBMIT_JOB_TIMEOUT, false);
     return createJobRequest;
   }
