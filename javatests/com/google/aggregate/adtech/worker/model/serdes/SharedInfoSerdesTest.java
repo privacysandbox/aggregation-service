@@ -431,5 +431,48 @@ public class SharedInfoSerdesTest {
     assertThat(deserialized).hasValue(sharedInfoWithChromeGoldenReport);
   }
 
+  /** Chrome generated fledge and shared storage reports used from here - b/265960702 */
+  @Test
+  public void testDeserializeSharedInfoFromChrome_fledge1() {
+    String sharedInfoJsonString =
+        "{\"api\":\"fledge\",\"debug_mode\":\"enabled\",\"report_id\":\"90bcae5e-224d-47ae-bbd8-b4f2d634e6d1\","
+            + "\"reporting_origin\":\"https://example.com\",\"scheduled_report_time\":\"1674078788\","
+            + "\"version\":\"0.1\"}";
+
+    Optional<SharedInfo> deserialized = sharedInfoSerdes.convert(sharedInfoJsonString);
+
+    assertThat(deserialized)
+        .hasValue(
+            SharedInfo.builder()
+                .setApi("fledge")
+                .setReportDebugModeString("enabled")
+                .setReportId("90bcae5e-224d-47ae-bbd8-b4f2d634e6d1")
+                .setReportingOrigin("https://example.com")
+                .setScheduledReportTime(Instant.ofEpochSecond(1674078788))
+                .setVersion("0.1")
+                .build());
+  }
+
+  @Test
+  public void testDeserializeSharedInfoFromChrome_sharedStorage1() {
+    String sharedInfoJsonString =
+        "{\"api\":\"shared-storage\",\"debug_mode\":\"enabled\",\"report_id\":\"0222ce51-8596-4dec-9994-90df2508ae90\","
+            + "\"reporting_origin\":\"https://example.com\",\"scheduled_report_time\":\"1674079133\","
+            + "\"version\":\"0.1\"}";
+
+    Optional<SharedInfo> deserialized = sharedInfoSerdes.convert(sharedInfoJsonString);
+
+    assertThat(deserialized)
+        .hasValue(
+            SharedInfo.builder()
+                .setApi("shared-storage")
+                .setReportDebugModeString("enabled")
+                .setReportId("0222ce51-8596-4dec-9994-90df2508ae90")
+                .setReportingOrigin("https://example.com")
+                .setScheduledReportTime(Instant.ofEpochSecond(1674079133))
+                .setVersion("0.1")
+                .build());
+  }
+
   private static final class TestEnv extends AbstractModule {}
 }

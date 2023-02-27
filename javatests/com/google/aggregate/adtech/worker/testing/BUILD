@@ -86,7 +86,6 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
         "//java/com/google/aggregate/adtech/worker/util",
-        "//java/com/google/aggregate/privacy/budgeting/model:privacy_budgeting_model",
         "//java/external:google_truth",
     ],
 )

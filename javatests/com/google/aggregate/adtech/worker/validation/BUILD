@@ -22,7 +22,6 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/com/google/aggregate/privacy/budgeting/model:privacy_budgeting_model",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
@@ -37,7 +36,6 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/com/google/aggregate/privacy/budgeting/model:privacy_budgeting_model",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
@@ -52,7 +50,6 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/com/google/aggregate/privacy/budgeting/model:privacy_budgeting_model",
         "//java/external:acai",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
@@ -69,7 +66,6 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/com/google/aggregate/privacy/budgeting/model:privacy_budgeting_model",
         "//java/external:acai",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
@@ -93,6 +89,21 @@ java_test(
         "//java/external:google_truth",
         "//java/external:google_truth8",
         "//java/external:guice",
+        "//java/external:operator_protos",
+        "//java/external:shared_model",
+    ],
+)
+
+java_test(
+    name = "SupportedReportApiTypeValidatorTest",
+    srcs = ["SupportedReportApiTypeValidatorTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/validation",
+        "//java/external:clients_jobclient_aws",
+        "//java/external:clients_jobclient_model",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
         "//java/external:operator_protos",
         "//java/external:shared_model",
     ],

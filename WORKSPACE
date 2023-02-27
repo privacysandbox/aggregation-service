@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v0.39.0"  # latest as of 2022-11-18
+COORDINATOR_VERSION = "v0.51.5"  # version updated on 2023-02-22
 
 JACKSON_VERSION = "2.12.2"
 
@@ -97,6 +97,7 @@ maven_install(
         "com.google.cloud:google-cloud-pubsub:1.114.4",
         "com.google.cloud:google-cloud-storage:1.118.0",
         "com.google.cloud:google-cloud-spanner:6.12.2",
+        "com.google.cloud.functions:functions-framework-api:1.0.4",
         "commons-logging:commons-logging:1.1.1",
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
         "com.google.http-client:google-http-client-jackson2:1.40.0",

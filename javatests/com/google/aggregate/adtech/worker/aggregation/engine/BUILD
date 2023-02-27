@@ -21,10 +21,10 @@ java_test(
     srcs = ["AggregationEngineTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/aggregation/engine",
-        "//java/com/google/aggregate/adtech/worker/aggregation/privacy:privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
         "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
         "//java/external:google_truth",
     ],
 )

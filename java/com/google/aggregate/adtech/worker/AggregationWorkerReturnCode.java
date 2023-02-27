@@ -19,32 +19,44 @@ package com.google.aggregate.adtech.worker;
 /** Return codes for aggregation worker. */
 public enum AggregationWorkerReturnCode {
   /**
-   * Unable to process job because the privacy budget was exhausted.
-   *
-   * <p>Note: this does not mean an error with privacy budget service occurred. The privacy budget
-   * service was able to handle the request but budget was not available.
+   * Unable to process the job because the user exhausted the allocated budget to aggregate the
+   * reports in this batch. This error is not transient and the job cannot be retried.
    */
   PRIVACY_BUDGET_EXHAUSTED,
 
   /**
    * Unable to process the reports because an error with the privacy budget service occurred. Note
-   * that this is different from {@code PRIVACY_BUDGET_EXHAUSTED}.
+   * that this is different from {@code PRIVACY_BUDGET_EXHAUSTED}. The error is not transient if the
+   * failure was due to permission issue.
    */
   PRIVACY_BUDGET_ERROR,
 
-  /** The job had invalid configuration and could not be processed. */
+  /**
+   * The job had invalid configuration and could not be processed. This error is not transient and
+   * job cannot be retried.
+   */
   INVALID_JOB,
 
-  /** Error encountered while logging result. */
-  RESULT_LOGGING_ERROR,
+  /**
+   * The Aggregation Service failed to write the summary report. The job cannot be retried if the
+   * failure was due to permission issue
+   */
+  RESULT_WRITE_ERROR,
 
-  /** Error encountered while processing domain. */
-  DOMAIN_PROCESS_EXCEPTION,
+  /** Internal Error encountered. This error is transient and the job can be retried. */
+  INTERNAL_ERROR,
 
-  /** A permission issue occurred and the job couldn't be processed. */
+  /**
+   * Aggregation service did not have access to storage or other requested resources. This error is
+   * not transient and the job cannot be retried.
+   */
   PERMISSION_ERROR,
 
-  /** Report or Domain input data ead filed. */
+  /**
+   * Aggregation service could not download the job input data from cloud storage, potentially due
+   * to permission or file format issues or file was missing. This error is not transient and the
+   * job cannot be retried.
+   */
   INPUT_DATA_READ_FAILED,
 
   /** Aggregation Job completed successfully. */

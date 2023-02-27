@@ -24,7 +24,6 @@ import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWorkingDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
-import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingEpsilon;
@@ -39,6 +38,7 @@ import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.export.AwsStopwatchExporter.StopwatchBucketName;
 import com.google.aggregate.perf.export.AwsStopwatchExporter.StopwatchKeyName;
 import com.google.aggregate.perf.export.PlainFileStopwatchExporter;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.shared.mapper.TimeObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -63,7 +63,11 @@ import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBEncrypt
 import com.google.scp.operator.cpio.cryptoclient.HttpPrivateKeyFetchingService.PrivateKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.aws.Annotations.KmsEndpointOverride;
 import com.google.scp.operator.cpio.cryptoclient.local.LocalFileDecryptionKeyServiceModule.DecryptionKeyFilePath;
-import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceAuthEndpoint;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceBaseUrl;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorBPrivacyBudgetServiceAuthEndpoint;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorBPrivacyBudgetServiceBaseUrl;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.aws.AwsPbsClientModule;
 import com.google.scp.operator.cpio.jobclient.aws.AwsJobHandlerModule.DdbEndpointOverrideBinding;
 import com.google.scp.operator.cpio.jobclient.aws.AwsJobHandlerModule.SqsEndpointOverrideBinding;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerPath;
@@ -272,12 +276,19 @@ public final class AggregationWorkerModule extends AbstractModule {
     // Privacy budgeting.
     bind(PrivacyBudgetingServiceBridge.class).to(args.getPrivacyBudgeting().getBridge());
     if (args.getPrivacyBudgeting() == PrivacyBudgetingSelector.HTTP) {
-      install(
-          new DistributedPrivacyBudgetClientModule(
-              args.getCoordinatorAPrivacyBudgetingEndpoint(),
-              args.getCoordinatorBPrivacyBudgetingEndpoint(),
-              args.getCoordinatorAPrivacyBudgetServiceAuthEndpoint(),
-              args.getCoordinatorBPrivacyBudgetServiceAuthEndpoint()));
+      bind(String.class)
+          .annotatedWith(CoordinatorAPrivacyBudgetServiceBaseUrl.class)
+          .toInstance(args.getCoordinatorAPrivacyBudgetingEndpoint());
+      bind(String.class)
+          .annotatedWith(CoordinatorBPrivacyBudgetServiceBaseUrl.class)
+          .toInstance(args.getCoordinatorBPrivacyBudgetingEndpoint());
+      bind(String.class)
+          .annotatedWith(CoordinatorAPrivacyBudgetServiceAuthEndpoint.class)
+          .toInstance(args.getCoordinatorAPrivacyBudgetServiceAuthEndpoint());
+      bind(String.class)
+          .annotatedWith(CoordinatorBPrivacyBudgetServiceAuthEndpoint.class)
+          .toInstance(args.getCoordinatorBPrivacyBudgetServiceAuthEndpoint());
+      install(new AwsPbsClientModule());
     }
 
     // Benchmark Mode for Perftests

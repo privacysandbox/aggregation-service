@@ -54,20 +54,20 @@ import software.amazon.awssdk.services.s3.S3Client;
  *
  * <p>The expected input files are of 3 types as detailed below and are located at the S3 prefix
  * "s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-inputs". Currently, there are multiple
- * tests that rely on reports in default report version and hence we generate multiple input report
- * files for default report version. This is necessary because everytime a report file is used, the
- * privacy budget associated with it is consumed and it cannot be reused. Similar technique can be
- * followed to generate multiple report files in other versions as per need. Please see
- * shared_e2e.sh for details:
+ * tests that rely on reports with version 0.1 and hence we generate multiple input report files for
+ * version 0.1. This is necessary because everytime a report file is used, the privacy budget
+ * associated with it is consumed and it cannot be reused. Similar technique can be followed to
+ * generate multiple report files in other versions as per need. Please see shared_e2e.sh for
+ * details:
  *
  * <ul>
- *   <li>Multiple report input files with default version of reports. Each file follows the naming
- *       format 10k_test_input_${number}.avro. Each test below that relies on default version
- *       reports is supposed to use one of the above input files each
+ *   <li>Multiple report input files with version 0.1 of reports. Each file follows the naming
+ *       format 10k_test_input_${number}.avro. Each test below that relies on version 0.1 reports is
+ *       supposed to use one of the above input files each
  *   <li>One report input file with report version 0.0 which is the report version before 0.1 and
  *       can be generated with --generated_report_version ""` in SimulationRunner. The file follows
  *       the naming format 10k_test_input_v0_0.avro
- *   <li>One report input file with default version of reports and debug mode enabled on generated
+ *   <li>One report input file with version 0.1 of reports and debug mode enabled on generated
  *       reports. The file follows the naming format 10k_test_input_debug.avro
  * </ul>
  *
@@ -75,13 +75,13 @@ import software.amazon.awssdk.services.s3.S3Client;
  * "s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-inputs":
  *
  * <ul>
- *   <li>Multiple domain files for default version of reports. Each file follows the naming format
- *       10k_test_domain_${number}.avro. Each test below that relies on default version reports is
+ *   <li>Multiple domain files for version 0.1 of reports. Each file follows the naming format
+ *       10k_test_domain_${number}.avro. Each test below that relies on version 0.1 reports is
  *       supposed to use one of the above domain files each that matches the report input.
  *   <li>One domain file for reports with version 0.0 which is the report version before 0.1. The
  *       file follows the naming format 10k_test_domain_v0_0.avro
- *   <li>One domain file for reports in default version with debug mode enabled on the reports. The
- *       file follows the naming format 10k_test_domain_debug.avro
+ *   <li>One domain file for reports in version 0.1 with debug mode enabled on the reports. The file
+ *       follows the naming format 10k_test_domain_debug.avro
  * </ul>
  *
  * The expected distribution file used can be found at

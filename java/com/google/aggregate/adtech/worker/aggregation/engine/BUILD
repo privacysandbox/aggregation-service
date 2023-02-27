@@ -23,8 +23,9 @@ java_library(
     ],
     deps = [
         ":single_fact_aggregation",
-        "//java/com/google/aggregate/adtech/worker/aggregation/privacy:privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/privacy/budgeting:privacy_budget_key_generator",
+        "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
         "//java/external:guava",
     ],
 )

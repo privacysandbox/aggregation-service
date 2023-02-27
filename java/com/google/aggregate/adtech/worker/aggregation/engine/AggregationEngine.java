@@ -20,14 +20,18 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.Sets.newConcurrentHashSet;
 import static java.time.temporal.ChronoUnit.HOURS;
 
-import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.Fact;
 import com.google.aggregate.adtech.worker.model.Report;
+import com.google.aggregate.adtech.worker.model.SharedInfo;
+import com.google.aggregate.privacy.budgeting.PrivacyBudgetKeyGenerator;
+import com.google.aggregate.privacy.budgeting.PrivacyBudgetKeyGeneratorFactory;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
 import java.math.BigInteger;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -83,13 +87,26 @@ public final class AggregationEngine implements Consumer<Report> {
   public void accept(Report report) {
     if (report.sharedInfo().reportId().isPresent()
         && reportIdSet.add(UUID.fromString(report.sharedInfo().reportId().get()))) {
+      Optional<String> privacyBudgetKey = getPrivacyBudgetKey(report.sharedInfo());
+      if (privacyBudgetKey.isEmpty()) {
+        return;
+      }
       PrivacyBudgetUnit budgetUnitId =
           PrivacyBudgetUnit.create(
-              report.sharedInfo().getPrivacyBudgetKey(),
-              report.sharedInfo().scheduledReportTime().truncatedTo(HOURS));
+              privacyBudgetKey.get(), report.sharedInfo().scheduledReportTime().truncatedTo(HOURS));
       privacyBudgetUnits.add(budgetUnitId);
       report.payload().data().forEach(this::upsertAggregationForFact);
     }
+  }
+
+  // TODO: b/261728313 remove Optional from return type.
+  private Optional<String> getPrivacyBudgetKey(SharedInfo sharedInfo) {
+    Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator =
+        PrivacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo.api());
+    if (privacyBudgetKeyGenerator.isEmpty()) {
+      return Optional.empty();
+    }
+    return privacyBudgetKeyGenerator.get().generatePrivacyBudgetKey(sharedInfo);
   }
 
   /**

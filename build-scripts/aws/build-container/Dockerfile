@@ -16,7 +16,8 @@
 # Keeps GCLIBC at version 2.28 since Golang Apache Beam only supports up to GLIBC version 2.29 in the harnes container as of 2022s0103
 
 
-FROM debian:bullseye-20221004-slim
+# bullseye stable with latest security updates
+FROM debian:bullseye-slim
 
 RUN \
     # This makes add-apt-repository available.

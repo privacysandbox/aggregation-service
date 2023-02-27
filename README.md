@@ -32,6 +32,15 @@ cd aggregation-service
 
 ### Using the local testing tool
 
+The local testing tool can be used to perform aggregation on the following types of unencrypted
+aggregatable reports-
+
+1. [Attribution Reporting](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregatable-reports)
+2. [FLEDGE](https://github.com/patcg-individual-drafts/private-aggregation-api#reports)
+3. [Shared-storage](https://github.com/patcg-individual-drafts/private-aggregation-api#reports)
+
+Simply pass any of the above 3 kinds of reports as `--input_data_avro_file` param.
+
 Download the local testing tool with the below command. Run this command in the `<repository_root>`
 
 ```sh
@@ -150,7 +159,7 @@ dependencies.
 bash download_prebuilt_dependencies.sh
 ```
 
--   Note: The above script needs to be run with `bash` and does not support `sh`\*
+_Note: The above script needs to be run with `bash` and does not support `sh`\*_
 
 For manual download into the `<repository_root>/terraform/aws/jars` folder you can download them
 from the links on our
@@ -249,7 +258,7 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
 
     ```terraform
     ...
-    Plan: 141 to add, 0 to change, 0 to destroy.
+    Plan: 190 to add, 0 to change, 0 to destroy.
     ```
 
     you can continue to apply the changes (needs confirmation after the planning step)
@@ -262,11 +271,12 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
 
     ```terraform
     ...
-    Apply complete! Resources: 141 added, 0 changed, 0 destroyed.
+    Apply complete! Resources: 190 added, 0 changed, 0 destroyed.
 
     Outputs:
-
+    create_job_endpoint = "POST https://<frontend_api_id>.execute-api.<aws_region>.amazonaws.com/stage/v1alpha/createJob"
     frontend_api_id = "xyz"
+    get_job_endpoint = "GET https://<frontend_api_id>.execute-api.<aws_region>.amazonaws.com/stage/v1alpha/getJob"
     ```
 
     The terraform scripts create `createJob` and `getJob` API endpoints:
@@ -317,17 +327,18 @@ file into smaller shards.
     }
     ```
 
-    Note: This API requires authentication. Follow the
+    _Note: This API requires authentication. Follow the
     [AWS instructions](https://aws.amazon.com/premiumsupport/knowledge-center/iam-authentication-api-gateway/)
-    for sending an authenticated request.
+    for sending an authenticated request._
 
 1. Check the status of your job with the `getJob` API, replace values in `<...>`
 
     `GET`
     `https://<frontend_api_id>.execute-api.<deployment_aws_region>.amazonaws.com/stage/v1alpha/getJob?job_request_id=test01`
-    Note: This API requires authentication. Follow the
+
+    _Note: This API requires authentication. Follow the
     [AWS instructions](https://aws.amazon.com/premiumsupport/knowledge-center/iam-authentication-api-gateway/)
-    for sending an authenticated request. [Detailed API spec](/docs/API.md#getjob-endpoint)
+    for sending an authenticated request. [Detailed API spec](/docs/API.md#getjob-endpoint)_
 
 ### Updating the system
 
@@ -344,9 +355,16 @@ Run the following in the `<repository_root>`.
 
 ```sh
 git fetch origin && git checkout -b dev-v{VERSION} v{VERSION}
-cd terraform/aws/environments/dev
+cd terraform/aws
+bash download_prebuilt_dependencies.sh
+cd environments/dev
 terraform apply
 ```
+
+_Note: If you use self-built artifacts described in
+[build-scripts/aws](/build-scripts/aws/README.md), run `bash fetch_terraform.sh` instead of
+`bash download_prebuilt_dependencies.sh` and make sure you updated your dependencies in the `jars`
+folder._
 
 ## Collect and batch aggregatable reports
 

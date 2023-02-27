@@ -41,6 +41,11 @@ DEFAULT_ENCLAVE_ARGS = [
     "CONSTANT_NOISING",
 ]
 
+DEFAULT_JVM_OPTIONS = [
+    # Setting max JVM heap size to 75% of total memory in the enclave.
+    "-XX:MaxRAMPercentage=75",
+]
+
 # Enclave args to be used by e2e tests during release verification process
 RELEASE_ENCLAVE_ARGS = [
     "--client_config_env",
@@ -65,6 +70,7 @@ RELEASE_ENCLAVE_ARGS = [
 worker_aws_deployment(
     name = "worker_aws_continuous",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     # Use noise parameters that match those provided when the golden output were generated
     jar_args = DEFAULT_ENCLAVE_ARGS + [
@@ -79,7 +85,9 @@ worker_aws_deployment(
         "UNLIMITED",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
@@ -87,6 +95,7 @@ worker_aws_deployment(
 worker_aws_deployment(
     name = "worker_aws_continuous_mp",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     # Use noise parameters that match those provided when the golden output were generated
     jar_args = DEFAULT_ENCLAVE_ARGS + [
@@ -105,9 +114,9 @@ worker_aws_deployment(
         "us-east-1",
         # multi-party coordinator staging environment
         "--coordinator_a_encryption_key_service_base_url",
-        "https://dknm5ze899.execute-api.us-east-1.amazonaws.com/stage/v1alpha",
+        "https://16gotxmx3i.execute-api.us-east-1.amazonaws.com/stage/v1alpha",
         "--coordinator_b_encryption_key_service_base_url",
-        "https://8w7hse301m.execute-api.us-east-1.amazonaws.com/stage/v1alpha",
+        "https://4s55w7af1j.execute-api.us-east-1.amazonaws.com/stage/v1alpha",
         "--coordinator_a_privacy_budgeting_endpoint",
         "http://staging-mp-a-google-scp-pbs.eba-ciz8xs3x.us-east-1.elasticbeanstalk.com/v1",
         "--coordinator_a_privacy_budget_service_auth_endpoint",
@@ -118,7 +127,9 @@ worker_aws_deployment(
         "https://uip0fu27i1.execute-api.us-east-1.amazonaws.com/staging-mp-b/auth",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
@@ -126,6 +137,7 @@ worker_aws_deployment(
 worker_aws_deployment(
     name = "worker_aws_release_mp",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     # Use noise parameters that match those provided when the golden output were generated
     jar_args = DEFAULT_ENCLAVE_ARGS + [
@@ -157,7 +169,9 @@ worker_aws_deployment(
         "https://1tb9veg40j.execute-api.us-east-1.amazonaws.com/release-mp-b/auth",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
@@ -165,13 +179,16 @@ worker_aws_deployment(
 worker_aws_deployment(
     name = "worker_aws_e2e_release",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     jar_args = DEFAULT_ENCLAVE_ARGS + [
         "--decryption_key_service",
         "AWS_ENCLAVE_CLI_DECRYPTION_KEY_SERVICE",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
@@ -179,6 +196,7 @@ worker_aws_deployment(
 worker_aws_deployment(
     name = "worker_aws_e2e_coord_tar_release",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     jar_args = RELEASE_ENCLAVE_ARGS + [
         "--private_key_service_base_url",
@@ -187,7 +205,9 @@ worker_aws_deployment(
         "us-east-1",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
@@ -195,6 +215,7 @@ worker_aws_deployment(
 worker_aws_deployment(
     name = "worker_aws_e2e_adtech_release",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     jar_args = RELEASE_ENCLAVE_ARGS + [
         "--private_key_service_base_url",
@@ -203,7 +224,9 @@ worker_aws_deployment(
         "us-east-1",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
@@ -211,6 +234,7 @@ worker_aws_deployment(
 worker_aws_deployment(
     name = "worker_aws_e2e_coordinator_release",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     # Private key url is from environment created using khs-coord-release environment
     # Privacy budget url is from environment created using pbs-coord-release environment
@@ -221,7 +245,9 @@ worker_aws_deployment(
         "us-east-1",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
@@ -229,6 +255,7 @@ worker_aws_deployment(
 worker_aws_deployment(
     name = "worker_aws_continuous_perf",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     jar_args = DEFAULT_ENCLAVE_ARGS + [
         "--decryption_key_service",
@@ -242,7 +269,9 @@ worker_aws_deployment(
         "--benchmark",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
@@ -250,6 +279,7 @@ worker_aws_deployment(
 worker_aws_deployment(
     name = "worker_aws_continuous_invalid_credentials",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     jar_args = DEFAULT_ENCLAVE_ARGS + [
         "--decryption_key_service",
@@ -258,7 +288,9 @@ worker_aws_deployment(
         "aggregation-service-testing",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
@@ -266,12 +298,15 @@ worker_aws_deployment(
 worker_aws_deployment(
     name = "worker_aws_e2e_xcode",
     ami_name = "//worker/aws:ami_name_flag",
+    aws_region = "//worker/aws:aws_region_flag",
     enable_worker_debug_mode = True,
     jar_args = DEFAULT_ENCLAVE_ARGS + [
         "--decryption_key_service",
         "AWS_ENCLAVE_CLI_DECRYPTION_KEY_SERVICE",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     repo_name = TEE_REPO_NAME,
+    subnet_id = "//worker/aws:subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )

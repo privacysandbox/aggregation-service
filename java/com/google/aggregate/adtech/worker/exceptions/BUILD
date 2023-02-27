@@ -18,13 +18,7 @@ package(default_visibility = ["//visibility:public"])
 
 java_library(
     name = "exceptions",
-    srcs = [
-        "AggregationJobProcessException.java",
-        "ConcurrentShardReadException.java",
-        "DomainProcessException.java",
-        "DomainReadException.java",
-        "ResultLogException.java",
-    ],
+    srcs = glob(["*.java"]),
     deps = [
         "//java/com/google/aggregate/adtech/worker:return_code",
     ],

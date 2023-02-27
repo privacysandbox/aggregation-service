@@ -16,13 +16,13 @@
 
 package com.google.aggregate.adtech.worker.aggregation.concurrent;
 
-import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.DOMAIN_PROCESS_EXCEPTION;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INPUT_DATA_READ_FAILED;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INTERNAL_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INVALID_JOB;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PERMISSION_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
-import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_LOGGING_ERROR;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_WRITE_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.SUCCESS;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
@@ -39,9 +39,6 @@ import com.google.aggregate.adtech.worker.ReportDecrypterAndValidator;
 import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
-import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge;
-import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
-import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge.PrivacyBudgetingServiceBridgeException;
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.aggregate.adtech.worker.exceptions.ConcurrentShardReadException;
 import com.google.aggregate.adtech.worker.exceptions.DomainProcessException;
@@ -54,6 +51,9 @@ import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.util.DebugSupportHelper;
 import com.google.aggregate.perf.StopwatchRegistry;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetingServiceBridgeException;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
 import com.google.aggregate.privacy.noise.model.NoisedAggregatedResultSet;
 import com.google.aggregate.privacy.noise.model.NoisedAggregationResult;
@@ -329,8 +329,12 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
                         .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
           }
         } catch (PrivacyBudgetingServiceBridgeException e) {
+          var nestedMessage = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
           throw new AggregationJobProcessException(
-              PRIVACY_BUDGET_ERROR, "Exception while consuming privacy budget.", e);
+              PRIVACY_BUDGET_ERROR,
+              String.format(
+                  "Exception while consuming privacy budget. Exception message: %s",
+                  nestedMessage));
         }
 
         if (!missingPrivacyBudgetUnits.isEmpty()) {
@@ -361,10 +365,10 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
           .build();
     } catch (ResultLogException e) {
       throw new AggregationJobProcessException(
-          RESULT_LOGGING_ERROR, "Result Logging exception.", e);
+          RESULT_WRITE_ERROR, "Exception occured while writing result.", e);
     } catch (DomainProcessException e) {
       throw new AggregationJobProcessException(
-          DOMAIN_PROCESS_EXCEPTION, "Exception in processing domain.", e);
+          INTERNAL_ERROR, "Exception in processing domain.", e);
     } catch (AccessControlException e) {
       throw new AggregationJobProcessException(
           PERMISSION_ERROR, "Exception because of missing permission.", e);

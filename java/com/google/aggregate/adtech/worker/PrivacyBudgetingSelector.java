@@ -16,9 +16,9 @@
 
 package com.google.aggregate.adtech.worker;
 
-import com.google.aggregate.adtech.worker.aggregation.privacy.HttpPrivacyBudgetingServiceBridge;
-import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge;
-import com.google.aggregate.adtech.worker.aggregation.privacy.UnlimitedPrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.bridge.HttpPrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.bridge.UnlimitedPrivacyBudgetingServiceBridge;
 
 /** CLI enum to select the privacy budgeting bridge */
 public enum PrivacyBudgetingSelector {

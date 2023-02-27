@@ -1,15 +1,15 @@
 [ {
-  "bucket" : "key13",
-  "value" : 0
+  "bucket" : "key4",
+  "value" : 2000000
 }, {
-  "bucket" : "key14",
-  "value" : 0
+  "bucket" : "key1",
+  "value" : 12000000
 }, {
-  "bucket" : "key15",
-  "value" : 0
+  "bucket" : "key3",
+  "value" : 2000000
 }, {
-  "bucket" : "key16",
-  "value" : 0
+  "bucket" : "key2",
+  "value" : 13000000
 }, {
   "bucket" : "key11",
   "value" : 0

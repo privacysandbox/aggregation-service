@@ -21,7 +21,7 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INV
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PERMISSION_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
-import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_LOGGING_ERROR;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_WRITE_ERROR;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_ATTRIBUTION_REPORT_TO;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_PRIVACY_EPSILON;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_RUN;
@@ -53,10 +53,6 @@ import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.TextOutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
-import com.google.aggregate.adtech.worker.aggregation.privacy.FakePrivacyBudgetingServiceBridge;
-import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge;
-import com.google.aggregate.adtech.worker.aggregation.privacy.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
-import com.google.aggregate.adtech.worker.aggregation.privacy.UnlimitedPrivacyBudgetingServiceBridge;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
@@ -82,6 +78,10 @@ import com.google.aggregate.adtech.worker.testing.InMemoryResultLogger;
 import com.google.aggregate.adtech.worker.validation.ReportValidator;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
+import com.google.aggregate.privacy.budgeting.bridge.FakePrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
+import com.google.aggregate.privacy.budgeting.bridge.UnlimitedPrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.noise.Annotations.Threshold;
 import com.google.aggregate.privacy.noise.NoiseApplier;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
@@ -786,7 +786,7 @@ public class ConcurrentAggregationProcessorTest {
     resultLogger.setShouldThrow(true);
     AggregationJobProcessException ex =
         assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
-    assertThat(ex.getCode()).isEqualTo(RESULT_LOGGING_ERROR);
+    assertThat(ex.getCode()).isEqualTo(RESULT_WRITE_ERROR);
   }
 
   @Test
@@ -924,6 +924,10 @@ public class ConcurrentAggregationProcessorTest {
     AggregationJobProcessException ex =
         assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
     assertThat(ex.getCode()).isEqualTo(PRIVACY_BUDGET_ERROR);
+    assertThat(ex.getMessage())
+        .isEqualTo(
+            "Exception while consuming privacy budget. Exception message: encountered fake privacy"
+                + " budget exception.");
   }
 
   @Test

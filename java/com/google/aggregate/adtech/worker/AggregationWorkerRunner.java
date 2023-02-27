@@ -26,6 +26,7 @@ final class AggregationWorkerRunner {
 
   public static void main(String[] args) {
     logger.info("Worker Args: \n" + String.join("\n", args));
+    logger.info("Worker Max Heap Size (MiB): " + Runtime.getRuntime().maxMemory() / (1024 * 1024));
 
     AggregationWorkerArgs cliArgs = new AggregationWorkerArgs();
     JCommander.newBuilder().allowParameterOverwriting(true).addObject(cliArgs).build().parse(args);

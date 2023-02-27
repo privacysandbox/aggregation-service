@@ -17,12 +17,16 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(default_visibility = ["//visibility:public"])
 
 java_library(
-    name = "privacy_budget_manager",
+    name = "privacy_budget_key_generator",
     srcs = [
-        "PrivacyBudgetManager.java",
+        "AttributionReportingPrivacyBudgetKeyGenerator.java",
+        "FledgePrivacyBudgetKeyGenerator.java",
+        "PrivacyBudgetKeyGenerator.java",
+        "PrivacyBudgetKeyGeneratorFactory.java",
+        "SharedStoragePrivacyBudgetKeyGenerator.java",
     ],
     deps = [
-        "//java/com/google/aggregate/privacy/budgeting/model:privacy_budgeting_model",
+        "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:guava",
     ],
 )

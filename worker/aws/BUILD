@@ -70,6 +70,11 @@ DEFAULT_ENCLAVE_ARGS = [
     "CONSTANT_NOISING",
 ]
 
+DEFAULT_JVM_OPTIONS = [
+    # Setting max JVM heap size to 75% of total memory in the enclave.
+    "-XX:MaxRAMPercentage=75",
+]
+
 string_flag(
     name = "ami_name_flag",
     build_setting_default = "aggregate-service-enclave",
@@ -80,6 +85,16 @@ string_flag(
     name = "ami_owners_flag",
     build_setting_default = '["self"]',
     visibility = [":__subpackages__"],
+)
+
+string_flag(
+    name = "aws_region_flag",
+    build_setting_default = "us-east-1",
+)
+
+string_flag(
+    name = "subnet_id_flag",
+    build_setting_default = "",
 )
 
 PROD_ENCLAVE_ARGS = [
@@ -105,70 +120,26 @@ PROD_ENCLAVE_ARGS = [
 # Check the documentation for the worker_aws_deployment macro for details on
 # what is available in this package.
 
-# Target to generate AMI for OT production environment.
-worker_aws_deployment(
-    name = "worker_aws_prod",
-    ami_name = ":ami_name_flag",
-    jar_args = PROD_ENCLAVE_ARGS + [
-        "--private_key_service_base_url",
-        "https://privatekeyservice.aws.privacysandboxservices.com/v1alpha",
-    ],
-    jar_file = "/WorkerRunner_deploy.jar",
-    licenses = ":all_licenses",
-    repo_name = TEE_REPO_NAME,
-    worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
-)
-
-# Target to generate AMI for OT pre-prod environment.
-worker_aws_deployment(
-    name = "worker_aws_preprod",
-    ami_name = ":ami_name_flag",
-    jar_args = PROD_ENCLAVE_ARGS + [
-        "--private_key_service_base_url",
-        "https://privatekeyservice-prod-staging.aws-staging.admcstesting.dev/v1alpha",
-    ],
-    jar_file = "/WorkerRunner_deploy.jar",
-    licenses = ":all_licenses",
-    repo_name = TEE_REPO_NAME,
-    worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
-)
-
-worker_aws_deployment(
-    name = "worker_aws",
-    ami_name = ":ami_name_flag",
-    jar_args = DEFAULT_ENCLAVE_ARGS + [
-        "--decryption_key_service",
-        "AWS_ENCLAVE_CLI_DECRYPTION_KEY_SERVICE",
-        "--param_client",
-        "AWS",  # getting parameters from AWS parameter store
-        "--lifecycle_client",
-        "AWS",
-        "--metric_client",
-        "AWS",
-        "--simulation_inputs",  # Note: this should only be used in dev environments.
-    ],
-    jar_file = "/WorkerRunner_deploy.jar",
-    licenses = ":all_licenses",
-    repo_name = TEE_REPO_NAME,
-    worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
-)
-
 # Note: A temporary target for fast staging.
 worker_aws_deployment(
     name = "worker_aws_fast_staging",
     ami_name = ":ami_name_flag",
+    aws_region = ":aws_region_flag",
     enable_worker_debug_mode = True,
     jar_args = DEFAULT_ENCLAVE_ARGS,
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     licenses = ":all_licenses",
     repo_name = TEE_REPO_NAME,
+    subnet_id = ":subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
-# Target to generate AMI for multi coordinators
+# Target to generate AMI for multi-party coordinators.
 worker_aws_deployment(
     name = "worker_mp_aws_prod",
     ami_name = ":ami_name_flag",
+    aws_region = ":aws_region_flag",
     jar_args = PROD_ENCLAVE_ARGS + [
         "--decryption_key_service",
         "AWS_ENCLAVE_CLI_MULTI_PARTY_DECRYPTION_KEY_SERVICE",
@@ -199,15 +170,18 @@ worker_aws_deployment(
         "https://auth.mp-pbs-b.agg-2.aws.privacysandboxservices.com/auth",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     licenses = ":all_licenses",
     repo_name = TEE_REPO_NAME,
+    subnet_id = ":subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )
 
-# Target to generate AMI for multi coordinators
+# Target to generate AMI for multi-party coordinators running against staging.
 worker_aws_deployment(
     name = "worker_mp_aws_preprod",
     ami_name = ":ami_name_flag",
+    aws_region = ":aws_region_flag",
     enable_worker_debug_mode = True,
     jar_args = PROD_ENCLAVE_ARGS + [
         "--decryption_key_service",
@@ -239,7 +213,9 @@ worker_aws_deployment(
         "https://auth.mp-pbs-b.staging-agg-2.aws.privacysandboxservices.com/auth",
     ],
     jar_file = "/WorkerRunner_deploy.jar",
+    jvm_options = DEFAULT_JVM_OPTIONS,
     licenses = ":all_licenses",
     repo_name = TEE_REPO_NAME,
+    subnet_id = ":subnet_id_flag",
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )

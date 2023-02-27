@@ -65,7 +65,7 @@ public class AvroShardTest {
   public void testReportShard() throws IOException {
     int numShard = 2;
     Path outputReportShardsDir = outPutDirectory.resolve("reportShards");
-    Path reportPath = baseDirectory.resolve("input_set_0/batch.avro");
+    Path reportPath = baseDirectory.resolve("input_set_attribution_1/batch.avro");
     List<AvroReportRecord> reportShards = new ArrayList<>();
     String[] cli =
         new String[] {
@@ -93,7 +93,7 @@ public class AvroShardTest {
   public void testDomainShard() throws IOException {
     int numShard = 2;
     Path outputDomainShardsDir = outPutDirectory.resolve("domainShards");
-    Path domainPath = baseDirectory.resolve("input_set_0/domain.avro");
+    Path domainPath = baseDirectory.resolve("input_set_attribution_1/domain.avro");
     List<AvroOutputDomainRecord> outputDomainShards = new ArrayList<>();
     String[] cli =
         new String[] {

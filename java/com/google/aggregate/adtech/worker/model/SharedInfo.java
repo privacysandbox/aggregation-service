@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
-import com.google.common.hash.Hashing;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -46,7 +44,9 @@ public abstract class SharedInfo {
   public static final String VERSION_0_1 = "0.1";
   public static final String LATEST_VERSION = VERSION_0_1;
   public static final boolean DEFAULT_DEBUG_MODE = false;
-  public static final String PRIVACY_BUDGET_KEY_DELIMITER = "-";
+  public static final String ATTRIBUTION_REPORTING_API = "attribution-reporting";
+  public static final String FLEDGE_API = "fledge";
+  public static final String SHARED_STORAGE_API = "shared-storage";
 
   public static Builder builder() {
     return new AutoValue_SharedInfo.Builder()
@@ -54,6 +54,7 @@ public abstract class SharedInfo {
         .setReportDebugMode(DEFAULT_DEBUG_MODE);
   }
 
+  // TODO(b/263901045) : consider moving version to api specific code.
   // Version of the report
   @JsonProperty("version")
   public abstract String version();
@@ -148,34 +149,5 @@ public abstract class SharedInfo {
     }
 
     public abstract SharedInfo build(); // not public
-  }
-  /**
-   * If version is set to "0.1", returns privacy budget key hash using following shared Info fields-
-   * api, version, reporting_origin, destination and source_registration_time. If version is not
-   * "0.1" and Privacy Budget Key is provided, returns Privacy Budget Key as provided.
-   */
-  public String getPrivacyBudgetKey() {
-    if (version().equals(VERSION_0_1)) {
-      String privacyBudgetKeyHashInput =
-          api().get()
-              + PRIVACY_BUDGET_KEY_DELIMITER
-              + version()
-              + PRIVACY_BUDGET_KEY_DELIMITER
-              + reportingOrigin()
-              + PRIVACY_BUDGET_KEY_DELIMITER
-              + destination().get()
-              + PRIVACY_BUDGET_KEY_DELIMITER
-              + sourceRegistrationTime().get();
-      return Hashing.sha256()
-          .newHasher()
-          .putBytes(privacyBudgetKeyHashInput.getBytes(StandardCharsets.UTF_8))
-          .hash()
-          .toString();
-    }
-
-    if (privacyBudgetKey().isPresent()) {
-      return privacyBudgetKey().get();
-    }
-    throw new IllegalStateException("Unable to get Privacy Budget Key");
   }
 }

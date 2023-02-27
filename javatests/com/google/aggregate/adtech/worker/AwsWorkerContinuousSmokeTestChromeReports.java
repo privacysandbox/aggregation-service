@@ -67,17 +67,12 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
   // bazel run //java/com/google/aggregate/tools/generateinputs:GenerateInputs -- \
   //   --reports_dir <reports-dir> \
   //   --output_dir <output-dir>
-  private static String INPUT_DATA_URI =
-      "s3://aggregation-service-testing/testdata/chrome_generated_reports_staging_2022_06_01.avro";
+  private static String INPUT_DATA_URI = System.getenv("INPUT_DATA_URI");
 
   // Output domain contains the buckets in the reports
-  private static String OUPUT_DOMAIN_URI =
-      "s3://aggregation-service-testing/testdata/output_domain_staging_2022_06_01.avro";
+  private static String OUPUT_DOMAIN_URI = System.getenv("OUPUT_DOMAIN_URI");
 
-  private static String OUTPUT_DATA_URI =
-      String.format(
-          "s3://aggregation-service-testing/e2e_test_outputs/%s/%s",
-          KOKORO_BUILD_ID, "chrome_generated.avro.test");
+  private static String OUTPUT_DATA_URI = System.getenv("OUTPUT_DATA_URI");
 
   @Inject S3BlobStorageClient s3BlobStorageClient;
   @Inject AvroResultsFileReader avroResultsFileReader;

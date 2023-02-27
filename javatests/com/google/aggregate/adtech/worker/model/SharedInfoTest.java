@@ -16,12 +16,18 @@
 
 package com.google.aggregate.adtech.worker.model;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.FLEDGE_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -29,111 +35,16 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class SharedInfoTest {
 
-  private static final String DEFAULT_VERSION = "";
-
-  private static final String ATTRIBUTION_REPORTING_API = "attribution-reporting";
-
   private static final String PRIVACY_BUDGET_KEY_1 = "test_privacy_budget_key";
 
   // FIXED_TIME = Jan 01 2021 00:00:00 GMT+0000
   private static final Instant FIXED_TIME = Instant.ofEpochSecond(1609459200);
 
-  private static final String VERSION_ZERO_DOT_ONE = "0.1";
-
-  private static final String DESTINATION = "https://www.destination.com";
-
   private static final String REPORTING_ORIGIN = "https://www.origin.com";
 
-  private static final String DESTINATION_CHROME_GOLDEN_REPORT = "https://conversion.test";
+  private static final String DESTINATION = "dest.com";
 
-  private static final String REPORTING_ORIGIN_CHROME_GOLDEN_REPORT = "https://report.test";
-
-  /**
-   * String representation of sha256 digest generated using UTF-8 representation of key. Key
-   * constructed from shared info fields - api + version + reporting_origin + destination +
-   * source_registration_time
-   */
-  private static final String PRIVACY_BUDGET_KEY_2 =
-      "7b16c743c6ffe44bc559561b4f457fd3dcf91b797446ed6dc6b01d9fb32d3565";
-
-  /**
-   * Privacy Budget Key generated based on Chrome Golden Report -
-   * https://source.chromium.org/chromium/chromium/src/+/main:content/test/data/attribution_reporting/aggregatable_report_goldens/latest/report_1.json
-   */
-  private static final String PRIVACY_BUDGET_KEY_CHROME_GOLDEN_REPORT =
-      "399bd3cd2282959381e4ad6858c5f434285ec70252b5a446808815780d36140f";
-
-  /** Test to verify Privacy Budget Key is pickup correctly from Shared Info */
-  @Test
-  public void testGetPrivacyBudgetKeyWithPBKInSharedInfo() {
-    SharedInfo.Builder sharedInfoBuilder =
-        SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
-            .setScheduledReportTime(FIXED_TIME)
-            .setReportingOrigin(REPORTING_ORIGIN);
-    SharedInfo si = sharedInfoBuilder.build();
-
-    assertEquals(si.getPrivacyBudgetKey(), PRIVACY_BUDGET_KEY_1);
-  }
-
-  /** Test to verify Privacy Budget Key is generated correctly from Shared Info */
-  @Test
-  public void testGetPrivacyBudgetKeyWithoutPBKInSharedInfo() {
-    SharedInfo.Builder sharedInfoBuilder =
-        SharedInfo.builder()
-            .setVersion(VERSION_ZERO_DOT_ONE)
-            .setApi(ATTRIBUTION_REPORTING_API)
-            .setDestination(DESTINATION)
-            .setScheduledReportTime(FIXED_TIME)
-            .setSourceRegistrationTime(FIXED_TIME)
-            .setReportingOrigin(REPORTING_ORIGIN);
-    SharedInfo si = sharedInfoBuilder.build();
-
-    assertEquals(si.getPrivacyBudgetKey(), PRIVACY_BUDGET_KEY_2);
-  }
-
-  /** Test to verify Privacy Budget Key is correctly generated for Chrome Golden Report */
-  @Test
-  public void testGetPrivacyBudgetKeyForChromeGoldenReport() {
-    SharedInfo.Builder sharedInfoBuilder =
-        SharedInfo.builder()
-            .setVersion(VERSION_ZERO_DOT_ONE)
-            .setApi(ATTRIBUTION_REPORTING_API)
-            .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
-            .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
-            .setScheduledReportTime(Instant.ofEpochSecond(1234486400))
-            .setSourceRegistrationTime(Instant.ofEpochSecond(1234483200));
-    SharedInfo si = sharedInfoBuilder.build();
-
-    assertEquals(si.getPrivacyBudgetKey(), PRIVACY_BUDGET_KEY_CHROME_GOLDEN_REPORT);
-  }
-
-  /** Test to verify Privacy Budget Key generated for two SharedInfo with same fields is same */
-  @Test
-  public void testMatchPrivacyBudgetKeyForTwoSharedInfos() {
-    SharedInfo.Builder sharedInfoBuilder1 =
-        SharedInfo.builder()
-            .setVersion(VERSION_ZERO_DOT_ONE)
-            .setApi(ATTRIBUTION_REPORTING_API)
-            .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
-            .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
-            .setScheduledReportTime(Instant.ofEpochSecond(1234486400))
-            .setSourceRegistrationTime(Instant.ofEpochSecond(1234483200));
-    SharedInfo si1 = sharedInfoBuilder1.build();
-
-    SharedInfo.Builder sharedInfoBuilder2 =
-        SharedInfo.builder()
-            .setVersion(VERSION_ZERO_DOT_ONE)
-            .setApi(ATTRIBUTION_REPORTING_API)
-            .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
-            .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
-            .setScheduledReportTime(Instant.ofEpochSecond(1234486400))
-            .setSourceRegistrationTime(Instant.ofEpochSecond(1234483200));
-    SharedInfo si2 = sharedInfoBuilder2.build();
-
-    assertEquals(si1.getPrivacyBudgetKey(), si2.getPrivacyBudgetKey());
-  }
+  private static final String RANDOM_UUID = UUID.randomUUID().toString();
 
   /** Test to verify the correctness of set/getReportDebugMode when debug mode is enabled */
   @Test
@@ -210,5 +121,67 @@ public class SharedInfoTest {
     SharedInfo si2 = sharedInfoBuilder2.build();
 
     assertEquals(si1, si2);
+  }
+
+  /** Tests to verify Attribution reporting API type in SharedInfo */
+  @Test
+  public void testSharedInfoApiTypeAttributionReporting() {
+    SharedInfo.Builder sharedInfoMissingApiBuilder =
+        SharedInfo.builder()
+            .setVersion(DEFAULT_VERSION)
+            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
+            .setScheduledReportTime(FIXED_TIME)
+            .setReportingOrigin(REPORTING_ORIGIN);
+    SharedInfo.Builder sharedInfoAttributionReportingBuilder =
+        SharedInfo.builder()
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setScheduledReportTime(FIXED_TIME)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID);
+
+    SharedInfo sharedInfoMissingApi = sharedInfoMissingApiBuilder.build();
+    SharedInfo sharedInfoAttributionReporting = sharedInfoAttributionReportingBuilder.build();
+
+    assertEquals(sharedInfoMissingApi.api(), Optional.empty());
+    assertEquals(sharedInfoAttributionReporting.api().get(), ATTRIBUTION_REPORTING_API);
+  }
+
+  /** Tests to verify Fledge API type in SharedInfo */
+  @Test
+  public void testSharedInfoApiTypeFledge() {
+    SharedInfo.Builder sharedInfoFledgeBuilder =
+        SharedInfo.builder()
+            .setVersion(VERSION_0_1)
+            .setApi(FLEDGE_API)
+            .setScheduledReportTime(FIXED_TIME)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID);
+
+    SharedInfo sharedInfoFledge = sharedInfoFledgeBuilder.build();
+
+    assertEquals(sharedInfoFledge.api().get(), FLEDGE_API);
+  }
+
+  /** Tests to verify Shared Storage API type in SharedInfo */
+  @Test
+  public void testSharedInfoApiTypeSharedStorage() {
+    SharedInfo.Builder sharedInfoSharedStorageBuilder =
+        SharedInfo.builder()
+            .setVersion(VERSION_0_1)
+            .setApi(SHARED_STORAGE_API)
+            .setScheduledReportTime(FIXED_TIME)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID);
+
+    SharedInfo sharedInfoSharedStorage = sharedInfoSharedStorageBuilder.build();
+
+    assertEquals(sharedInfoSharedStorage.api().get(), SHARED_STORAGE_API);
   }
 }

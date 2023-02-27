@@ -23,22 +23,30 @@ POST
   // Unique identifier. Length must be 128 characters or less.
   // Legal characters are ASCII letters (a-z, A-Z), ASCII
   // numbers (0-9), and the following ASCII punctuation
-  // characters !"#$%&'()*+,-./:;<=>?@[\]^_`{}~
+  // characters !"#$%&'()*+,-./:;<=>?@[\]^_`{}~.
   "job_request_id": <string>,
-  // input file bucket and path in bucket, can be prefix for
-  // sharded inputs
+  // For a single file, it's a file path in the bucket. For multiple input
+  // files, it's a prefix in the file path. For example, inputting
+  // "folder1/shard" would take all files with paths starting with
+  // "folder1/shard" such as "folder1/shard1.avro", "folder1/shard/test1.avro"
+  // and "folder1/shard1/folder2/test1.avro".
   "input_data_blob_prefix": <string>,
+  // Storage bucket for input data.
   "input_data_bucket_name": <string>,
-  // output file bucket and path in bucket, can be prefix for
-  // sharded outputs
+  // The output data path in the bucket. Currently, single output file is
+  // supported.
   "output_data_blob_prefix": <string>,
-  // output data bucket
+  // Storage bucket for output data.
   "output_data_bucket_name": <string>,
   "job_parameters": {
-    // location of pre-listed aggregation buckets
+    // For a single domain file, it's a file path in the bucket. For multiple
+    // domain files, it's a prefix in the file path. For example, inputting
+    // "folder1/shard" would include "folder1/shard/domain1.avro",
+    // "folder1/shard_domain.avro" and "folder1/shard/folder2/domain.avro".
     "output_domain_blob_prefix": <string>,
+    // Domain file bucket.
     "output_domain_bucket_name": <string>,
-    // reporting URL
+    // Reporting URL.
     "attribution_report_to": <string>,
     // [Optional] differential privacy epsilon value to be used
     // for this job. 0.0 < debug_privacy_epsilon <= 64.0. The
@@ -118,11 +126,11 @@ Not found: 404 Not Found
 {
   // Unique identifier
   "job_request_id" : "UNIQUEID12313",
-  // <RECEIVED, IN_PROGRESS, or FINISHED>,
+  // <RECEIVED, IN_PROGRESS, or FINISHED>
   "job_status": <string>,
-  // time req was received
+  // Time request was received
   "request_received_at": <timestamp>,
-  // last update time
+  // Last update time
   "request_updated_at": <timestamp>,
   "input_data_blob_prefix": <string>,
   "input_data_bucket_name": <string>,
@@ -143,12 +151,12 @@ Not found: 404 Not Found
         ...
       ]
     }
-  }
+  },
   "job_parameters": {
-    // location of pre-listed aggregation buckets
+    // Location of pre-listed aggregation buckets
     "output_domain_blob_prefix": <string>,
     "output_domain_bucket_name": <string>,
-    // reporting URL
+    // Reporting URL
     "attribution_report_to" : <string>,
     // [Optional] differential privacy epsilon value to be used
     // for this job. 0.0 < debug_privacy_epsilon <= 64.0. The
@@ -157,9 +165,26 @@ Not found: 404 Not Found
     // epsilon value results in less noise in the output. Default
     // value for epsilon is 10.
     "debug_privacy_epsilon": <floating point, double>
-  }
+  },
+  // The time when worker starts processing request in the latest processing
+  // attempt
+  // If the job_status is set to `FINISHED`, one can calculate the request's
+  // processing time in worker (excludes the time spent waiting in job queue)
+  // as `request_updated_at` minus `request_processing_started_at`.
+  "request_processing_started_at": <timestamp>
 }
 ```
+
+#### Error Response codes
+
+In case of errors in successfully completing the job, the below error response codes would be
+present in the `result_info` section of the GetJob API response body
+
+-   RETRIES_EXHAUSTED: The aggregation request failed because it exhausted the number of retries
+    attempted. This error is transient and the job can be retried.
+
+Note: Additional error response codes can be found in
+[AggregationWorkerReturnCode.java](https://github.com/privacysandbox/aggregation-service/blob/main/java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java)
 
 #### Error Response body
 
@@ -188,6 +213,16 @@ These match the [Google Cloud Error Model](https://cloud.google.com/apis/design/
 ```
 
 ## Local testing tool
+
+The local testing tool can be used to perform aggregation on the following types of unencrypted
+aggregatable reports-
+
+1. [Attribution Reporting](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregatable-reports)
+2. [FLEDGE](https://github.com/patcg-individual-drafts/private-aggregation-api#reports)
+3. [Shared-storage](https://github.com/patcg-individual-drafts/private-aggregation-api#reports)
+
+Aggregatable reports avro file of the above 3 kinds can be passed in as `--input_data_avro_file`
+param.
 
 ```sh
 $ java -jar LocalTestingTool_deploy.jar --help

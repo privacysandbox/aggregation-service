@@ -77,7 +77,6 @@ java_library(
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/util",
-        "//java/com/google/aggregate/privacy/budgeting/model:privacy_budgeting_model",
         "//java/external:guava",
     ],
 )

@@ -408,6 +408,11 @@ alias(
 )
 
 alias(
+    name = "clients_distributed_privacy_budgeting_aws",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/aws:aws_pbs_client_module",
+)
+
+alias(
     name = "model_privacy_budgeting",
     actual = "@com_google_adm_cloud_scp//java/com/google/scp/coordinator/privacy/budgeting/model",
 )
@@ -534,7 +539,7 @@ alias(
 
 alias(
     name = "keymanagement_shared_util",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/coordinator/keymanagement/shared/util",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/util",
 )
 
 alias(

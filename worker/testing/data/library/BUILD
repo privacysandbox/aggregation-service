@@ -15,24 +15,28 @@
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
-    "expected_output_set_0/*",
-    "input_set_0/*",
-    "input_set_1/*",
-    "expected_output_set_2/*",
-    "input_set_2/*",
+    "expected_output_set_1/*",
     "expected_output_set_3/*",
-    "input_set_3/*",
+    "expected_output_set_4/*",
+    "input_set_attribution_1/*",
+    "input_set_attribution_2/*",
+    "input_set_attribution_3/*",
+    "input_set_attribution_4/*",
+    "input_set_fledge_1/*",
+    "input_set_fledge_2/*",
 ])
 
 filegroup(
     name = "test_data",
     srcs = glob([
-        "expected_output_set_2/*",
-        "input_set_2/*",
-        "expected_output_set_0/*",
-        "input_set_0/*",
-        "input_set_1/*",
+        "expected_output_set_1/*",
         "expected_output_set_3/*",
-        "input_set_3/*",
+        "expected_output_set_4/*",
+        "input_set_attribution_1/*",
+        "input_set_attribution_2/*",
+        "input_set_attribution_3/*",
+        "input_set_attribution_4/*",
+        "input_set_fledge_1/*",
+        "input_set_fledge_2/*",
     ]),
 )

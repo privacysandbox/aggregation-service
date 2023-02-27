@@ -4,6 +4,8 @@ This document provides instructions and code snippets on how to collect, transfo
 [Aggregatable Reports](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregatable-reports)
 produced by the
 [Attribution Reporting API](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md)
+and
+[Private Aggregation API](https://github.com/patcg-individual-drafts/private-aggregation-api#reports).
 
 The Attribution Reporting API can generate 4 possible types of reports during the
 [Privacy Sandbox Relevance and Measurement origin trials (OT)](https://developer.chrome.com/origintrials/#/view_trial/771241436187197441).
@@ -305,8 +307,8 @@ To process the above Avro files, you must specify the expected bucket keys in a 
 You can use the [Avro Tools](https://www.apache.org/dyn/closer.cgi/avro/) to generate a
 `output_domain.avro` from a JSON input file.
 
-You can download the Avro Tools jar 1.11.0
-[here](http://archive.apache.org/dist/avro/avro-1.11.0/java/avro-tools-1.11.0.jar)
+You can download the Avro Tools jar 1.11.1
+[here](http://archive.apache.org/dist/avro/avro-1.11.1/java/avro-tools-1.11.1.jar)
 
 We use the following `output_domain.json` input file to generate our `output_domain.avro` file. This
 uses the bucket from the above [sample aggregatable report](#aggregatable-report-sample). The below
@@ -321,7 +323,7 @@ sample uses unicode escaped "characters" to encode the byte array bucket value.
 To generate the `output_domain.avro` file use the above JSON file and domain schema file:
 
 ```sh
-java -jar avro-tools-1.11.0.jar fromjson \
+java -jar avro-tools-1.11.1.jar fromjson \
 --schema-file output_domain.avsc output_domain.json > output_domain.avro
 ```
 
@@ -355,3 +357,9 @@ The output of above tool execution will be in `output.json` with the following c
     }
 ]
 ```
+
+Note: The local testing tool also supports aggregation of
+[FLEDGE](https://github.com/patcg-individual-drafts/private-aggregation-api#reports) and
+[Shared-storage](https://github.com/patcg-individual-drafts/private-aggregation-api#reports)
+reports. Simply pass the batch of FLEDGE or shared-storage unencrypted reports in the
+--input_data_avro_file param.

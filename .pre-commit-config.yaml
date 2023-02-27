@@ -82,15 +82,8 @@ repos:
         adtech/.*|
         coordinator/.*|
         deploy-testenv/.*|
-        java/com/google/aggregate/adtech/worker/gcp/.*|
-        java/com/google/aggregate/simulation/.*|
-        java/com/google/experimental/.*|
-        javatests/com/google/aggregate/adtech/worker/e2e/.*|
-        javatests/com/google/aggregate/simulation/.*|
         kokoro/.*|
         .*gcp.*|
-        release/.*|
-        release/aws/.*|
         .*/.terraform.lock.hcl|
         tools/opensource/.*|
         version.adtech|

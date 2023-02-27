@@ -622,6 +622,90 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
+  @Test
+  public void localTestConstantNoNoising_shardedReport_InvalidAPIType() throws Exception {
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_1.avro"));
+
+    /*
+     * Generate input for second shard with same input file lines but invalid API type in SharedInfo.
+     * The reports in this shard will be ignored in aggregation because of invalid API type.
+     */
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .setApiType("invalid-api")
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_2.avro"));
+
+    setupLocalAggregationWorker(args);
+
+    runWorker();
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(22), /* metric= */ 56, /* unnoisedMetric= */ 56L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(33), /* metric= */ 33, /* unnoisedMetric= */ 33L);
+    AggregatedFact expectedFact3 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(44), /* metric= */ 123, /* unnoisedMetric= */ 123L);
+
+    /** Only reports from shard_1.avro are considered in aggregation. */
+    assertThat(factList).containsExactly(expectedFact1, expectedFact2, expectedFact3);
+  }
+
+  @Test
+  public void localTestConstantNoNoising_shardedReport_InvalidVersion() throws Exception {
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_1.avro"));
+
+    /*
+     * Generate input for second shard with same input file lines but invalid Version in SharedInfo.
+     * The reports in this shard will be ignored in aggregation because of invalid Version.
+     */
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .setVersion("invalid-version")
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_2.avro"));
+
+    setupLocalAggregationWorker(args);
+
+    runWorker();
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(22), /* metric= */ 56, /* unnoisedMetric= */ 56L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(33), /* metric= */ 33, /* unnoisedMetric= */ 33L);
+    AggregatedFact expectedFact3 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(44), /* metric= */ 123, /* unnoisedMetric= */ 123L);
+
+    /** Only reports from shard_1.avro are considered in aggregation. */
+    assertThat(factList).containsExactly(expectedFact1, expectedFact2, expectedFact3);
+  }
+
   private String[] getLocalAggregationWorkerArgs(
       boolean noEncryption, boolean outputDomain, boolean domainOptional) throws Exception {
     // Create the local key

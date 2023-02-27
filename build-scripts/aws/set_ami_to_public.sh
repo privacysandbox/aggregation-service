@@ -14,23 +14,36 @@
 # limitations under the License.
 
 #######################################
-# Set AMI visibility to public.
-# Applies to latest created AMI with given name prefix.
+# Set AMI visibility and Snapshot to public.
+# Applies to latest created AMI with given name prefix and in owner account.
 # Used by Github automated release build
 # Arguments:
 #   $1, AMI name prefix e.g. aggregation-service-enclave_0.1.0
 #   $2, region
+#   #3, AMI owner e.g. "123456789012"
 #######################################
 set_ami_to_public_by_prefix() {
-  ami=$(aws ec2 describe-images --filters \
-  "Name=name,Values=${1}*" --region "$2" \
+  local AMI_ID=$(aws ec2 describe-images --filters \
+  "Name=name,Values=${1}*" --region "$2" --owners "$3" \
   --query "reverse(sort_by(Images, &CreationDate))[:1].{id: ImageId}" \
   --output text)
 
   aws ec2 modify-image-attribute \
-    --image-id ${ami} \
+    --image-id "$AMI_ID" \
     --region "$2" \
     --launch-permission "Add=[{Group=all}]"
+
+  local SNAPSHOT_ID=$(aws ec2 describe-images --filters \
+  "Name=name,Values=${1}*" --region "$2" --owners "$3" \
+  --query "reverse(sort_by(Images, &CreationDate))[:1].{id: BlockDeviceMappings[0].Ebs.SnapshotId}" \
+  --output text)
+
+  aws ec2 modify-snapshot-attribute \
+    --snapshot-id "$SNAPSHOT_ID" \
+    --region "$2" \
+    --attribute createVolumePermission \
+    --operation-type add \
+    --group-names all
 }
 
 "$@"
