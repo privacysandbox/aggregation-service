@@ -50,7 +50,7 @@ VERSION=$(cat VERSION); curl -f -o LocalTestingTool_$VERSION.jar https://aggrega
 You'll need [Java JRE](https://adoptium.net/) installed to use the tool.
 
 _The `SHA256` of the `LocalTestingTool_{version}.jar` can be found on the
-[releases page](https://github.com/privacysandbox/aggregation-service/releases).\_
+[releases page](https://github.com/privacysandbox/aggregation-service/releases)._
 
 Follow the instructions on how to
 [collect and batch aggregatable reports](#collect-and-batch-aggregatable-reports). Create an output
