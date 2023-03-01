@@ -17,7 +17,7 @@
 
 
 # bullseye stable with latest security updates
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 RUN \
     # This makes add-apt-repository available.
