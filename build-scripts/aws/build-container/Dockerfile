@@ -16,7 +16,7 @@
 # Keeps GCLIBC at version 2.28 since Golang Apache Beam only supports up to GLIBC version 2.29 in the harnes container as of 2022s0103
 
 
-# bullseye stable with latest security updates
+# bookworm stable with latest security updates
 FROM debian:bookworm-slim
 
 RUN \
@@ -24,9 +24,7 @@ RUN \
     apt-get update && \
     apt-get -y upgrade && \
     apt-get -y install \
-        python \
         python3 \
-        python-pkg-resources \
         python3-pkg-resources \
         software-properties-common \
         unzip \
@@ -37,7 +35,7 @@ RUN \
 
 RUN \
     # Install OpenJDK
-    apt-get -y install openjdk-11-jdk
+    apt-get -y install openjdk-17-jdk
 RUN \
     # Install bazel 4.2.2 (https://docs.bazel.build/versions/4.2.2/install-ubuntu.html)
     echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
