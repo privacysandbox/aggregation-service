@@ -26,6 +26,8 @@ RUN \
     apt-get -y install \
         python3 \
         python3-pkg-resources \
+        python-is-python3 \
+        2to3 \
         software-properties-common \
         unzip \
         git \
