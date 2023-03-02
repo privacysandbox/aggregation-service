@@ -1,23 +1,21 @@
-# Set up Aggregation Service for Aggregatable Reports
+# Set up Aggregation Service for aggregatable reports
 
 **[NOTE] The latest aggregatable reports generated with Chrome version 104+ are only supported with
-version `0.3.0` and later. Please follow the [update instructions](#updating-the-system) for your
+version `0.3.0` and later. Follow the [update instructions](#updating-the-system) for your
 environment.**
 
 This repository contains instructions and scripts to set up and test the Aggregation Service for
-[Aggregatable Reports](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATION_SERVICE_TEE.md#aggregatable-reports)
-locally and on Amazon Web Services
-[Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/). If you want to learn more about
-the [Privacy Sandbox](https://privacysandbox.com/) Aggregation Service for the Attribution Reporting
-API, aggregatable, and summary reports click, read the
-[Aggregation Service proposal](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATION_SERVICE_TEE.md#aggregatable-reports).
+aggregatable reports locally and on Amazon Web Services
+[Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/).
+
+Learn more about the [Privacy Sandbox](https://privacysandbox.com/), the [Aggregation Service](https://developer.chrome.com/docs/privacy-sandbox/aggregation-service/) for Attribution Reporting and the Private Aggregation API, and [summary reports](https://developer.chrome.com/docs/privacy-sandbox/summary-reports/).
 
 ## Set up local testing
 
 You can process
 [aggregatable debug reports](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregatable-reports)
-locally with the `LocalTestingTool_{VERSION}.jar` into summary reports. Learn
-[how to setup debug reports](https://docs.google.com/document/d/1BXchEk-UMgcr2fpjfXrQ3D8VhTR-COGYS1cwK_nyLfg/edit#heading=h.fvp017tkgw79).
+locally with the `LocalTestingTool_{VERSION}.jar` into summary reports. Learn about Attribution Reporting
+[debug reports](https://developer.chrome.com/docs/privacy-sandbox/attribution-reporting-debugging/).
 
 _Disclaimer: encrypted reports can **not** be processed with the local testing tool!_
 
@@ -33,15 +31,15 @@ cd aggregation-service
 ### Using the local testing tool
 
 The local testing tool can be used to perform aggregation on the following types of unencrypted
-aggregatable reports-
+aggregatable reports:
 
 1. [Attribution Reporting](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATE.md#aggregatable-reports)
-2. [FLEDGE](https://github.com/patcg-individual-drafts/private-aggregation-api#reports)
-3. [Shared-storage](https://github.com/patcg-individual-drafts/private-aggregation-api#reports)
+2. [FLEDGE](https://github.com/patcg-individual-drafts/private-aggregation-api#reports) with the Private Aggregation API
+3. [Shared Storage](https://github.com/patcg-individual-drafts/private-aggregation-api#reports) with the Private Aggregation API
 
-Simply pass any of the above 3 kinds of reports as `--input_data_avro_file` param.
+You can pass any of the above reports as `--input_data_avro_file` param.
 
-Download the local testing tool with the below command. Run this command in the `<repository_root>`
+Download the local testing tool by running the following command in the `<repository_root>`:
 
 ```sh
 VERSION=$(cat VERSION); curl -f -o LocalTestingTool_$VERSION.jar https://aggregation-service-published-artifacts.s3.amazonaws.com/aggregation-service/$VERSION/LocalTestingTool_$VERSION.jar
@@ -75,31 +73,29 @@ To see all supported flags for the local testing tool run
 
 ## Test on AWS with support for encrypted reports
 
-### General Notes
-
-#### Privacy Budget Enforcement
+### No duplicate reports
 
 Aggregation Service enforces the
-[no-duplicate](https://github.com/WICG/attribution-reporting-api/blob/main/AGGREGATION_SERVICE_TEE.md#no-duplicates-rule)
-rule. We recommend users design their systems keeping the no-duplicate rule in consideration. We
-suggest reading the [debugging](/docs/DEBUGGING.md) document for debug aggregation runs.
+[no-duplicates](https://github.com/WICG/attribution-reporting-api/blob/main/AGGREGATION_SERVICE_TEE.md#no-duplicates-rule)
+rule. We recommend users design their systems keeping the no-duplicate rule in consideration.
+We suggest reading the [debugging](/docs/DEBUGGING.md) document for debug aggregation runs.
 
 ### Prerequisites
 
-To test the aggregation service with support for encrypted reports, you need the following:
+To test the Aggregation Service with support for encrypted reports, you need the following:
 
 -   Have an [AWS account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html)
     available to you.
 -   [Register](https://developer.chrome.com/origintrials/#/view_trial/771241436187197441) for the
     Privacy Sandbox Relevance and Measurement origin trial (OT)
--   Complete the aggregation service [onboarding form](https://forms.gle/EHoecersGKhpcLPNA)
+-   Complete the Aggregation Service [onboarding form](https://forms.gle/EHoecersGKhpcLPNA)
 
 Once you've submitted the onboarding form, we will contact you to verify your information. Then,
 we'll send you the remaining instructions and information needed for this setup.</br> _You won't be
 able to successfully setup your AWS system without registering for the origin trial and completing
 the onboarding process!_
 
-To set up aggregation service in AWS you'll use [Terraform](https://www.terraform.io/).
+To set up Aggregation Service in AWS you'll use [Terraform](https://www.terraform.io/).
 
 ### Set up AWS client
 
@@ -133,18 +129,18 @@ appropriate policies for this bucket to prevent accidental changes and deletion.
 
 ### Download Terraform scripts and prebuilt dependencies
 
-_Note: The prebuilt Amazon Machine Image (AMI) for the aggregation service is only available in the
-`us-east-1` region. If you like to deploy the aggregation service in a different region you need to
+_Note: The prebuilt Amazon Machine Image (AMI) for the Aggregation Service is only available in the
+`us-east-1` region. If you like to deploy the Aggregation Service in a different region you need to
 copy the released AMI to your account or build it using our provided scripts._
 
 If you like to build the Amazon Machine Image including the enclave container, as well as the Lambda
-jars in your account, please follow the instructions in
+jars in your account, follow the instructions in
 [build-scripts/aws](/build-scripts/aws/README.md). This will skip running
 `bash download_prebuilt_dependencies.sh` and run `bash fetch_terraform.sh` instead. Continue with
 the [next deployment step](#set-up-your-deployment-environment) after building and downloading your
 self-build jars.
 
-The Terraform scripts to deploy the aggregation service depend on 5 packaged jars for Lambda
+The Terraform scripts to deploy the Aggregation Service depend on 5 packaged jars for Lambda
 functions deployment. These jars are hosted on Amazon S3
 (<https://aggregation-service-published-artifacts.s3.amazonaws.com/aggregation-service/{version}/{jar_file>})
 and can be downloaded with the `<repository_root>/terraform/aws/download_prebuilt_dependencies.sh`
@@ -289,7 +285,7 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
     These are authenticated endpoints, refer to the [Testing the System](#testing-the-system)
     section to learn how to use them.
 
-    _If you run into any issues during deployment of your system, please consult the
+    _If you run into any issues during deployment of your system, consult the
     [Troubleshooting](#troubleshooting) and [Support](#support) sections._
 
 ### Testing the system
@@ -417,8 +413,9 @@ reports.
 
 ## Generate debug summary reports
 
-Please refer to [Debug aggregation runs](/docs/DEBUGGING.md) for more details about debugging
-support in aggregation service.
+Refer to [Debug aggregation runs](/docs/DEBUGGING.md) and
+[Debugging the Attribution Reporting API](https://developer.chrome.com/docs/privacy-sandbox/attribution-reporting-debugging/)
+for more details about debugging support in Aggregation Service.
 
 ## Troubleshooting
 
@@ -467,5 +464,7 @@ Apache 2.0 - See [LICENSE](LICENSE) for more information.
 This repo hosts an implementation of the
 [Attribution Reporting API](https://github.com/WICG/attribution-reporting-api). For
 feedback/questions encountered during using this particular aggregation service implementation,
-please use the support channels provided by this repo. For feedback/requests related to the APIs in
-general, please initiate discussions in the Attribution Reporting API repo.
+use the support channels provided by this repo.
+
+For feedback/requests related to the Privacy Sandbox APIs, ask questions and join discussions
+on the [Privacy Sandbox Developer Support repo](https://github.com/GoogleChromeLabs/privacy-sandbox-dev-support). 
