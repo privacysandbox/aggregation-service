@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v0.51.5"  # version updated on 2023-02-22
+COORDINATOR_VERSION = "v0.51.6"  # version updated on 2023-03-02
 
 JACKSON_VERSION = "2.12.2"
 
@@ -72,7 +72,7 @@ maven_install(
     artifacts = [
         "com.amazonaws:aws-lambda-java-core:1.2.1",
         "com.amazonaws:aws-lambda-java-events:3.8.0",
-        "com.amazonaws:aws-lambda-java-events-sdk-transformer:3.0.4",
+        "com.amazonaws:aws-lambda-java-events-sdk-transformer:3.1.0",
         "com.amazonaws:aws-java-sdk-sqs:1.11.860",
         "com.amazonaws:aws-java-sdk-s3:1.11.860",
         "com.amazonaws:aws-java-sdk-kms:1.11.860",

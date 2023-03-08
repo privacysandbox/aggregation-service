@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/privacysandbox/aggregation-service/compare/v0.6.0...v0.7.0) (2023-03-07)
+
+### Changes
+
+-   Added error messages in Job result info returned as part of getJob API when uncaught exceptions
+    happen and trigger job retries.
+
 ## [0.6.0](https://github.com/privacysandbox/aggregation-service/compare/v0.5.0...v0.6.0) (2023-02-23)
 
 ### Changes

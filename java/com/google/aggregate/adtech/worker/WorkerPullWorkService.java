@@ -92,6 +92,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     this.benchmarkMode = benchmarkMode;
   }
 
+  // TODO(b/271323750) Implement unit tests
   @Override
   protected void run() {
     logger.info("Aggregation worker started");
@@ -151,13 +152,9 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
         jobClient.markJobCompleted(jobResult);
         recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
       } catch (AggregationJobProcessException e) {
-        processException(e, jobClient, job.get());
-        // TODO(b/197999001) report job with error in some monitoring counter
-        recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
+        processAggregationJobProcessException(e, jobClient, job.get());
       } catch (Exception e) {
-        recordWorkerJobMetric(JOB_ERROR_METRIC_NAME, "JobHandlingError");
-        logger.error(
-            String.format("%s caught in WorkerPullWorkService: ", e.getClass().getSimpleName()), e);
+        processException(e, jobClient, job.orElse(null));
       }
       // Stopwatches only get exported once this loop exits. When run in benchmark mode (for perf
       // tests), we only expect one worker item.
@@ -210,13 +207,39 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
         .build();
   }
 
-  private void processException(AggregationJobProcessException e, JobClient jobClient, Job job) {
+  private void processAggregationJobProcessException(
+      AggregationJobProcessException e, JobClient jobClient, Job job) {
     logger.error("Exception while running job :", e);
-    JobResult jobResult = createErrorJobResult(job, e.getCode().name(), e.getMessage());
     try {
+      JobResult jobResult = createErrorJobResult(job, e.getCode().name(), e.getMessage());
       jobClient.markJobCompleted(jobResult);
-    } catch (JobClient.JobClientException ex) {
-      logger.error("Marking Job complete failed: ", ex.getMessage());
+      recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
+    } catch (Exception ex) {
+      logger.error("Exception while processing AggregationJobProcessException :", ex.getMessage());
+      processException(ex, jobClient, job);
+    }
+  }
+
+  /**
+   * Called when an unexpected exception occurs during job processing. Adds the exception's message
+   * to the job.
+   *
+   * @param e Unexpected exception whose message is to be saved
+   * @param jobClient JobClient that processed the job
+   * @param job Job that threw the exception when run
+   */
+  private void processException(Exception e, JobClient jobClient, Job job) {
+    logger.error(
+        String.format("%s caught in WorkerPullWorkService: ", e.getClass().getSimpleName()), e);
+    try {
+      recordWorkerJobMetric(JOB_ERROR_METRIC_NAME, "JobHandlingError");
+      jobClient.appendJobErrorMessage(job.jobKey(), e.getMessage());
+    } catch (Exception ex) {
+      logger.error(
+          String.format(
+              "%s caught in WorkerPullWorkService when processing an exception: ",
+              ex.getClass().getSimpleName()),
+          ex);
     }
   }
 }

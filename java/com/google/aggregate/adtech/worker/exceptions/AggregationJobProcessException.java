@@ -23,6 +23,7 @@ public class AggregationJobProcessException extends Exception {
 
   private AggregationWorkerReturnCode code;
 
+  // TODO(b/271904348) Remove this constructor
   /** Builds a new AggregationJobProcessException with cause. */
   public AggregationJobProcessException(Throwable cause) {
     super(cause);
