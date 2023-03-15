@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.0](https://github.com/privacysandbox/aggregation-service/compare/v0.7.0...v0.8.0) (2023-03-15)
+
+### Changes
+
+-   Fix Local testing tool when using --skip_domain flag to skip specifying domain input file.
+-   Fix to exit Aggregation worker when going out of memory. Enclave gets restarted automatically
+    and continues to pick new jobs.
+-   Fix to mitigate enclave restart failure issue. EC2 instance will get marked unhealthy if not
+    able to start the enclave. Autoscaling group will replace the instance accordingly.
+
 ## [0.7.0](https://github.com/privacysandbox/aggregation-service/compare/v0.6.0...v0.7.0) (2023-03-07)
 
 ### Changes

@@ -144,7 +144,7 @@ public class LocalWorkerArgs {
                   + " in batch format.",
               "--input_data_avro_file"));
     }
-    if (domainAvroFile == null || domainAvroFile.isBlank()) {
+    if (!skip_domain && (domainAvroFile == null || domainAvroFile.isBlank())) {
       throw new ParameterException(
           String.format(
               "Required Parameter %s missing, should be a valid avro file path containing"

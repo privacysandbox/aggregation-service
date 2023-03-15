@@ -205,7 +205,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     if (jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME)
         && jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX)
         && (!jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME).isEmpty()
-            || !jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX).isEmpty())) {
+        || !jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX).isEmpty())) {
       outputDomainLocation =
           Optional.of(
               BlobStorageClient.getDataLocation(
@@ -255,9 +255,9 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
 
       ImmutableList<ListenableFuture<ImmutableList<DecryptionValidationResult>>>
           invalidReportsPerShards =
-              decryptedShards.stream()
-                  .map(this::collectInvalidReportsAsync)
-                  .collect(toImmutableList());
+          decryptedShards.stream()
+              .map(this::collectInvalidReportsAsync)
+              .collect(toImmutableList());
 
       ListenableFuture<List<ImmutableList<DecryptionValidationResult>>>
           invalidReportsPerShardUnified = Futures.successfulAsList(invalidReportsPerShards);

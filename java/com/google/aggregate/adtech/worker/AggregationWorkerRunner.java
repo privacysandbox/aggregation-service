@@ -17,6 +17,12 @@
 package com.google.aggregate.adtech.worker;
 
 import com.beust.jcommander.JCommander;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.ServiceManager;
+import com.google.common.util.concurrent.ServiceManager.Listener;
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,6 +40,31 @@ final class AggregationWorkerRunner {
     AggregationWorkerModule guiceModule = new AggregationWorkerModule(cliArgs);
 
     AggregationWorker worker = AggregationWorker.fromModule(guiceModule);
-    worker.createServiceManager().startAsync();
+    ServiceManager workerServiceManager = worker.createServiceManager();
+    workerServiceManager.addListener(
+        new Listener() {
+          @Override
+          public void failure(Service service) {
+            logger.error("Failure in the Aggregation Worker. Exiting the enclave process.");
+            System.exit(1);
+          }
+          @Override
+          public void healthy(){
+            logger.info("The aggregation worker is healthy.");
+          }
+        }, MoreExecutors.directExecutor());
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        // Give the service some time to stop to ensure that we are responsive to shutdown
+        // requests.
+        try {
+          workerServiceManager.stopAsync().awaitStopped(Duration.ofMinutes(1));
+        } catch (TimeoutException timeout) {
+          // Stopping timed out
+          logger.error("Unable to stop the worker service: " + timeout);
+        }
+      }
+    });
+    workerServiceManager.startAsync();
   }
 }

@@ -44,6 +44,9 @@ DEFAULT_ENCLAVE_ARGS = [
 DEFAULT_JVM_OPTIONS = [
     # Setting max JVM heap size to 75% of total memory in the enclave.
     "-XX:MaxRAMPercentage=75",
+    # Exit the JVM program when out of memory. Use `HeapDumpOnOutOfMemoryError`
+    # JVM option to generate heap dump when out of memory.
+    "-XX:+ExitOnOutOfMemoryError",
 ]
 
 # Enclave args to be used by e2e tests during release verification process

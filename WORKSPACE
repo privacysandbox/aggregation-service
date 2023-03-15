@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v0.51.6"  # version updated on 2023-03-02
+COORDINATOR_VERSION = "v0.51.7"  # version updated on 2023-03-13
 
 JACKSON_VERSION = "2.12.2"
 

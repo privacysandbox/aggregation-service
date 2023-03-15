@@ -90,6 +90,17 @@ public class LocalRunnerTest {
   }
 
   @Test
+  public void parameter_validation_does_not_throw_domain_missing() throws IOException {
+    String[] cli =
+        new String[] {
+          "--input_data_avro_file", "dummy_path",
+          "--output_directory", "dummy_path",
+          "--skip_domain"
+        };
+    LocalRunner.internalMain(cli);
+  }
+
+  @Test
   public void requiredParamTest_inputAvroFile() {
     String[] cli =
         new String[] {
@@ -545,6 +556,35 @@ public class LocalRunnerTest {
           pathToAvro,
           "--domain_avro_file",
           pathToDomain,
+          "--output_directory",
+          outputDirectory,
+          "--no_noising",
+          "--skip_domain",
+          "--json_output",
+        };
+    ServiceManager serviceManager = LocalRunner.internalMain(cli);
+    serviceManager.awaitStopped(Duration.ofMinutes(5));
+
+    Path outputJson = outputDirectoryPath.resolve("output.json");
+    List<AggregatedFact> output =
+        convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
+    List<AggregatedFact> expectedOutput =
+        convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(expectedOutputJson)));
+
+    assertThat(output).containsExactlyElementsIn(expectedOutput);
+  }
+
+  /** Test aggregation that no domain specified and skip_domain set works. */
+  @Test
+  public void skipDomain_noDomainFile() throws IOException, TimeoutException, InterruptedException {
+    String pathToAvro = getInputBatchAvro(FLEDGE_DATASET_1).toString();
+    String pathToDomain = getDomainAvroFile(FLEDGE_DATASET_1).toString();
+    String outputDirectory = outputDirectoryPath.toString();
+    Path expectedOutputJson = getExpectedOutputJson(OUTPUT_SET_1);
+    String[] cli =
+        new String[] {
+          "--input_data_avro_file",
+          pathToAvro,
           "--output_directory",
           outputDirectory,
           "--no_noising",
