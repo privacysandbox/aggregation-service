@@ -69,7 +69,10 @@ public class LocalWorkerArgs {
   @Parameter(names = "--delta", description = "Delta value for noising.")
   private double delta = 1e-5;
 
-  @Parameter(names = "--skip_domain", description = "mode where domain is optional", hidden = true)
+  @Parameter(
+      names = "--skip_domain",
+      description = "If set, domain is optional and thresholding is not done.",
+      hidden = true)
   private boolean skip_domain = false;
 
   @Parameter(
@@ -83,6 +86,19 @@ public class LocalWorkerArgs {
       description = "Format of the domain generation file.",
       hidden = true)
   private DomainFormatSelector domainFileFormat = DomainFormatSelector.AVRO;
+
+  @Parameter(
+      names = "--return_stack_trace",
+      description =
+          "Flag to allow stackTrace to be added to the resultInfo if there are any exceptions.")
+  private boolean enableReturningStackTraceInResponse = false;
+
+  @Parameter(
+      names = "--max_depth_of_stack_trace",
+      description =
+          "Maximum depth of stack trace for returning in response. The return_stack_trace flag"
+              + " needs to be enabled for this to take effect.")
+  private int maximumDepthOfStackTrace = 3;
 
   public String getInputDataAvroFile() {
     return inputDataAvroFile;
@@ -134,6 +150,14 @@ public class LocalWorkerArgs {
 
   public boolean isDebugRun() {
     return debugRun;
+  }
+
+  public boolean isEnableReturningStackTraceInResponse() {
+    return enableReturningStackTraceInResponse;
+  }
+
+  public int getMaximumDepthOfStackTrace() {
+    return maximumDepthOfStackTrace;
   }
 
   public void validate() {

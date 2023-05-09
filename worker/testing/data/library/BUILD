@@ -18,12 +18,15 @@ exports_files([
     "expected_output_set_1/*",
     "expected_output_set_3/*",
     "expected_output_set_4/*",
+    "expected_output_set_thresholding/*",
     "input_set_attribution_1/*",
     "input_set_attribution_2/*",
     "input_set_attribution_3/*",
     "input_set_attribution_4/*",
+    "input_set_attribution_5/*",
     "input_set_fledge_1/*",
     "input_set_fledge_2/*",
+    "input_set_thresholding_1/*",
 ])
 
 filegroup(
@@ -32,11 +35,14 @@ filegroup(
         "expected_output_set_1/*",
         "expected_output_set_3/*",
         "expected_output_set_4/*",
+        "expected_output_set_thresholding/*",
         "input_set_attribution_1/*",
         "input_set_attribution_2/*",
         "input_set_attribution_3/*",
         "input_set_attribution_4/*",
+        "input_set_attribution_5/*",
         "input_set_fledge_1/*",
         "input_set_fledge_2/*",
+        "input_set_thresholding_1/*",
     ]),
 )

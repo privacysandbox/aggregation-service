@@ -17,14 +17,13 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.common.truth.Truth8.assertThat;
-import static com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory.DECRYPTION_ERROR;
-import static com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory.GENERAL_ERROR;
 
 import com.google.acai.Acai;
 import com.google.acai.TestScoped;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
+import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.testing.FakeRecordDecrypter;
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator;
@@ -101,7 +100,7 @@ public class ReportDecrypterAndValidatorTest {
     // decryption error
     assertThat(decryptionValidationResult.report()).isEmpty();
     assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
-        .containsExactly(DECRYPTION_ERROR.name());
+        .containsExactly(ErrorCounter.DECRYPTION_ERROR);
   }
 
   @Test
@@ -114,7 +113,7 @@ public class ReportDecrypterAndValidatorTest {
     // Check that the report isn't present and that there is an ErrorMessage from the FakeValidator
     assertThat(decryptionValidationResult.report()).isEmpty();
     assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
-        .containsExactly(GENERAL_ERROR.name());
+        .containsExactly(ErrorCounter.DECRYPTION_ERROR);
   }
 
   public static final class TestEnv extends AbstractModule {

@@ -102,6 +102,6 @@ public class ReportingOriginMatchesRequestValidatorTest {
     Optional<ErrorMessage> validationError = validator.validate(report, testCtx);
 
     assertThat(validationError).isPresent();
-    assertThat(validationError.get().category()).isEqualTo(ATTRIBUTION_REPORT_TO_MISMATCH.name());
+    assertThat(validationError.get().category()).isEqualTo(ATTRIBUTION_REPORT_TO_MISMATCH);
   }
 }

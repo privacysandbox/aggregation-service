@@ -183,8 +183,14 @@ present in the `result_info` section of the GetJob API response body
 -   RETRIES_EXHAUSTED: The aggregation request failed because it exhausted the number of retries
     attempted. This error is transient and the job can be retried.
 
-Note: Additional error response codes can be found in
+If the job fails due to a handled exception, then `result_info.return_code` will have the
+corresponding error code in
 [AggregationWorkerReturnCode.java](https://github.com/privacysandbox/aggregation-service/blob/main/java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java)
+and `result_info.return_messages` will have the exception message followed by a few stack frames of
+the exception stacktrace for debugging.
+
+If an unexpected exception occurs, `result_info.error_summary.error_messages` will contain the error
+messages.
 
 #### Error Response body
 

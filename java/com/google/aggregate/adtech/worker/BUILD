@@ -225,6 +225,16 @@ java_library(
     ],
 )
 
+java_library(
+    name = "annotations",
+    srcs = [
+        "Annotations.java",
+    ],
+    deps = [
+        "//java/external:guice",
+    ],
+)
+
 # The uber-JAR for the aggregation library.
 java_binary(
     name = "LocalTestingTool",

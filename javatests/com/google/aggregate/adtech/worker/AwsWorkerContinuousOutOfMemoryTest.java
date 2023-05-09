@@ -18,10 +18,8 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.createJobRequest;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getAndWriteStopwatchesFromS3;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromS3;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.RETRIES_EXHAUSTED;
 import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
@@ -58,8 +56,9 @@ public class AwsWorkerContinuousOutOfMemoryTest {
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
   private static final String DEFAULT_TEST_DATA_BUCKET = "aggregation-service-testing";
 
-  @Inject
-  S3BlobStorageClient s3BlobStorageClient;
+  private static final String TEST_DATA_S3_KEY_PREFIX = "generated-test-data";
+
+  @Inject S3BlobStorageClient s3BlobStorageClient;
   @Inject AvroResultsFileReader avroResultsFileReader;
 
   @Before
@@ -79,9 +78,15 @@ public class AwsWorkerContinuousOutOfMemoryTest {
   @Test
   public void createJobE2ETest() throws Exception {
 
-    var inputKey = String.format("%s/test-inputs/10k_OOM_test_input.avro", KOKORO_BUILD_ID);
-    var domainKey = String.format("%s/test-inputs/30m_OOM_test_domain.avro", KOKORO_BUILD_ID);
-    var outputKey = String.format("%s/test-outputs/OOM_test_output.avro", KOKORO_BUILD_ID);
+    var inputKey =
+        String.format(
+            "%s/%s/test-inputs/10k_OOM_test_input.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var domainKey =
+        String.format(
+            "%s/%s/test-inputs/30m_OOM_test_domain.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var outputKey =
+        String.format(
+            "%s/%s/test-outputs/OOM_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest1 =
         AwsWorkerContinuousTestHelper.createJobRequest(
@@ -99,8 +104,12 @@ public class AwsWorkerContinuousOutOfMemoryTest {
     assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
         .isTrue();
 
-    domainKey = String.format("%s/test-inputs/1k_OOM_test_domain.avro", KOKORO_BUILD_ID);
-    outputKey = String.format("%s/test-outputs/OOM_test_output.avro", KOKORO_BUILD_ID);
+    domainKey =
+        String.format(
+            "%s/%s/test-inputs/1k_OOM_test_domain.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    outputKey =
+        String.format(
+            "%s/%s/test-outputs/OOM_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest2 =
         AwsWorkerContinuousTestHelper.createJobRequest(

@@ -60,5 +60,41 @@ public enum AggregationWorkerReturnCode {
   INPUT_DATA_READ_FAILED,
 
   /** Aggregation Job completed successfully. */
-  SUCCESS
+  SUCCESS,
+
+  /**
+   * Aggregation Job completed but with errors. Some reports may have errors. Error details are
+   * added to the response error summary.
+   */
+  SUCCESS_WITH_ERRORS,
+
+  /**
+   * Aggregation Job running on Debug Mode succeeded, but would have failed if running in non-debug
+   * mode due to a privacy budget error.
+   */
+  DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR,
+
+  /**
+   * Aggregation Job running on Debug Mode succeeded, but would have failed if running in non-debug
+   * mode due to privacy budget exhaustion.
+   */
+  DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED;
+
+  /**
+   * Convert the parameter failure code into the equivalent code for debug mode. Namely for privacy
+   * budget.
+   *
+   * @param code
+   * @return
+   */
+  public static AggregationWorkerReturnCode getDebugEquivalent(AggregationWorkerReturnCode code) {
+    switch (code) {
+      case PRIVACY_BUDGET_ERROR:
+        return DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR;
+      case PRIVACY_BUDGET_EXHAUSTED:
+        return DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED;
+      default:
+        return code;
+    }
+  }
 }

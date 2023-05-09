@@ -38,7 +38,7 @@ public final class ReportingOriginMatchesRequestValidator implements ReportValid
 
     return Optional.of(
         ErrorMessage.builder()
-            .setCategory(ATTRIBUTION_REPORT_TO_MISMATCH.name())
+            .setCategory(ATTRIBUTION_REPORT_TO_MISMATCH)
             .setDetailedErrorMessage(
                 detailedErrorMessage(report.sharedInfo().reportingOrigin(), attributionReportTo))
             .build());

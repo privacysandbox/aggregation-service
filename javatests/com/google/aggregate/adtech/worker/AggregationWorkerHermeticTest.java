@@ -42,9 +42,7 @@ import com.google.inject.Injector;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.operator.protos.shared.backend.ErrorCountProto.ErrorCount;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
-import com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory;
 import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
-import com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode;
 import com.google.scp.operator.shared.testing.AwsHermeticTestHelper;
 import com.google.scp.operator.shared.testing.SimulationTestParams;
 import java.io.IOException;
@@ -84,7 +82,7 @@ public class AggregationWorkerHermeticTest {
   private String[] args;
   private Path stopwatchFile;
 
-  private ImmutableList<String> simulationInputFileLines;
+  private ImmutableList<String> simulationInputFileLines, allThresholdedSimulationInputFileLines;
   private ImmutableList<MetadataElement> metadata;
 
   private static final String UUID1 = "416abdc0-0697-4021-9300-10c1224ba204";
@@ -116,6 +114,7 @@ public class AggregationWorkerHermeticTest {
             "22:20,33:15",
             "44:123,33:5",
             "33:1");
+    allThresholdedSimulationInputFileLines = ImmutableList.of("22:1,33:2", "44:3,55:1");
     metadata =
         ImmutableList.of(
             MetadataElement.create(/* key= */ "foo", /* value= */ "bar"),
@@ -136,7 +135,7 @@ public class AggregationWorkerHermeticTest {
   }
 
   @Test
-  public void localTestNoNoising() throws Exception {
+  public void localTestNoNoising_doesThresholding() throws Exception {
     AwsHermeticTestHelper.generateAvroReportsFromTextList(
         SimulationTestParams.builder()
             .setHybridKey(hybridKey)
@@ -171,7 +170,7 @@ public class AggregationWorkerHermeticTest {
         SimulationTestParams.builder()
             .setHybridKey(hybridKey)
             .setReportsAvro(reportsAvro)
-            .setSimulationInputFileLines(simulationInputFileLines)
+            .setSimulationInputFileLines(allThresholdedSimulationInputFileLines)
             .setNoEncryption(true)
             .build());
     Files.copy(reportsAvro, reportShardsDir.resolve("shard.avro"));
@@ -181,17 +180,7 @@ public class AggregationWorkerHermeticTest {
     runWorker();
     ImmutableList<AggregatedFact> factList = waitForAggregation();
 
-    // Some keys got filtered out due to delta thresholding.
-    AggregatedFact expectedFact1 =
-        AggregatedFact.create(
-            /* key= */ createBucketFromInt(22), /* metric= */ 56, /* unnoisedMetric= */ 56L);
-    AggregatedFact expectedFact2 =
-        AggregatedFact.create(
-            /* key= */ createBucketFromInt(33), /* metric= */ 33, /* unnoisedMetric= */ 33L);
-    AggregatedFact expectedFact4 =
-        AggregatedFact.create(
-            /* key= */ createBucketFromInt(44), /* metric= */ 123, /* unnoisedMetric= */ 123L);
-    assertThat(factList).containsExactly(expectedFact1, expectedFact2, expectedFact4);
+    assertThat(factList).isEmpty();
   }
 
   @Test
@@ -396,17 +385,21 @@ public class AggregationWorkerHermeticTest {
                         .addAllErrorCounts(
                             ImmutableList.of(
                                 ErrorCount.newBuilder()
-                                    .setCategory(JobErrorCategory.DECRYPTION_ERROR.name())
+                                    .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                    .setDescription(ErrorCounter.DECRYPTION_ERROR.getDescription())
                                     .setCount(2L)
                                     .build(),
                                 ErrorCount.newBuilder()
                                     .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                    .setDescription(
+                                        ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
                                     .setCount(2L)
                                     .build()))
                         .build())
                 .setFinishedAt(actualResult.getFinishedAt())
-                .setReturnMessage("Aggregation job successfully processed")
-                .setReturnCode(ReturnCode.SUCCESS.name())
+                .setReturnMessage(
+                    "Aggregation job successfully processed but some reports have errors.")
+                .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
                 .build());
   }
 
@@ -444,17 +437,21 @@ public class AggregationWorkerHermeticTest {
                         .addAllErrorCounts(
                             ImmutableList.of(
                                 ErrorCount.newBuilder()
-                                    .setCategory(JobErrorCategory.DECRYPTION_ERROR.name())
+                                    .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                    .setDescription(ErrorCounter.DECRYPTION_ERROR.getDescription())
                                     .setCount(2L)
                                     .build(),
                                 ErrorCount.newBuilder()
                                     .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                    .setDescription(
+                                        ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
                                     .setCount(2L)
                                     .build()))
                         .build())
                 .setFinishedAt(actualResult.getFinishedAt())
-                .setReturnMessage("Aggregation job successfully processed")
-                .setReturnCode(ReturnCode.SUCCESS.name())
+                .setReturnMessage(
+                    "Aggregation job successfully processed but some reports have errors.")
+                .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
                 .build());
   }
 
@@ -480,7 +477,7 @@ public class AggregationWorkerHermeticTest {
                 .setErrorSummary(ErrorSummary.getDefaultInstance())
                 .setFinishedAt(actualResult.getFinishedAt())
                 .setReturnMessage("Aggregation job successfully processed")
-                .setReturnCode(ReturnCode.SUCCESS.name())
+                .setReturnCode(AggregationWorkerReturnCode.SUCCESS.name())
                 .build());
   }
 
@@ -514,17 +511,21 @@ public class AggregationWorkerHermeticTest {
                         .addAllErrorCounts(
                             ImmutableList.of(
                                 ErrorCount.newBuilder()
-                                    .setCategory(JobErrorCategory.DECRYPTION_ERROR.name())
+                                    .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                    .setDescription(ErrorCounter.DECRYPTION_ERROR.getDescription())
                                     .setCount(2L)
                                     .build(),
                                 ErrorCount.newBuilder()
                                     .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                    .setDescription(
+                                        ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
                                     .setCount(2L)
                                     .build()))
                         .build())
                 .setFinishedAt(actualResult.getFinishedAt())
-                .setReturnMessage("Aggregation job successfully processed")
-                .setReturnCode(ReturnCode.SUCCESS.name())
+                .setReturnMessage(
+                    "Aggregation job successfully processed but some reports have errors.")
+                .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
                 .build());
   }
 
@@ -560,17 +561,21 @@ public class AggregationWorkerHermeticTest {
                         .addAllErrorCounts(
                             ImmutableList.of(
                                 ErrorCount.newBuilder()
-                                    .setCategory(JobErrorCategory.DECRYPTION_ERROR.name())
+                                    .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                    .setDescription(ErrorCounter.DECRYPTION_ERROR.getDescription())
                                     .setCount(2L)
                                     .build(),
                                 ErrorCount.newBuilder()
                                     .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                    .setDescription(
+                                        ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
                                     .setCount(2L)
                                     .build()))
                         .build())
                 .setFinishedAt(actualResult.getFinishedAt())
-                .setReturnMessage("Aggregation job successfully processed")
-                .setReturnCode(ReturnCode.SUCCESS.name())
+                .setReturnMessage(
+                    "Aggregation job successfully processed but some reports have errors.")
+                .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
                 .build());
   }
 
@@ -608,17 +613,21 @@ public class AggregationWorkerHermeticTest {
                         .addAllErrorCounts(
                             ImmutableList.of(
                                 ErrorCount.newBuilder()
-                                    .setCategory(JobErrorCategory.DECRYPTION_ERROR.name())
+                                    .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                    .setDescription(ErrorCounter.DECRYPTION_ERROR.getDescription())
                                     .setCount(2L)
                                     .build(),
                                 ErrorCount.newBuilder()
                                     .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                    .setDescription(
+                                        ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
                                     .setCount(2L)
                                     .build()))
                         .build())
                 .setFinishedAt(actualResult.getFinishedAt())
-                .setReturnMessage("Aggregation job successfully processed")
-                .setReturnCode(ReturnCode.SUCCESS.name())
+                .setReturnMessage(
+                    "Aggregation job successfully processed but some reports have errors.")
+                .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
                 .build());
   }
 

@@ -148,6 +148,6 @@ public class SupportedReportApiTypeValidatorTest {
     Optional<ErrorMessage> validationError = validator.validate(report, ctx);
 
     assertThat(validationError).isPresent();
-    assertThat(validationError.get().category()).isEqualTo(UNSUPPORTED_REPORT_API_TYPE.name());
+    assertThat(validationError.get().category()).isEqualTo(UNSUPPORTED_REPORT_API_TYPE);
   }
 }

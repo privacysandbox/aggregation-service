@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.0](https://github.com/privacysandbox/aggregation-service/compare/v0.8.0...v0.9.0) (2023-05-08)
+
+### Changes
+
+-   Update enclave base container to `java17-debian11`
+-   Fixing LocalTestingTool json output
+-   Add stacktrace to ResultInfo.ReturnMessage for handled exceptions
+-   Add a return code "SUCCESS_WITH_ERRORS" for jobs that complete successfully but with some errors
+    in some reports
+-   Add Description to ErrorCount categories
+-   Avro file load memory handling
+-   null report support
+-   Adding PBS results to debug runs
+
 ## [0.8.0](https://github.com/privacysandbox/aggregation-service/compare/v0.7.0...v0.8.0) (2023-03-15)
 
 ### Changes

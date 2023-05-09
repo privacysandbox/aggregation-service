@@ -16,6 +16,8 @@
 
 package com.google.aggregate.adtech.worker.model;
 
+import static java.time.temporal.ChronoUnit.DAYS;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -24,6 +26,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableSet;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -47,6 +51,12 @@ public abstract class SharedInfo {
   public static final String ATTRIBUTION_REPORTING_API = "attribution-reporting";
   public static final String FLEDGE_API = "fledge";
   public static final String SHARED_STORAGE_API = "shared-storage";
+  public static final ImmutableSet<String> SUPPORTED_APIS =
+      ImmutableSet.of(ATTRIBUTION_REPORTING_API, FLEDGE_API, SHARED_STORAGE_API);
+  // Max age of reports accepted for aggregation.
+  public static final Duration MAX_REPORT_AGE = Duration.of(90, DAYS);
+  public static final ImmutableSet<String> SUPPORTED_OPERATIONS =
+      ImmutableSet.of(Payload.HISTOGRAM_OPERATION);
 
   public static Builder builder() {
     return new AutoValue_SharedInfo.Builder()

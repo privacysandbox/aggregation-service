@@ -348,6 +348,19 @@ public final class AggregationWorkerArgs {
       description = "If set, the service will generate summary and debug results")
   private boolean debugRun = false;
 
+  @Parameter(
+      names = "--return_stack_trace",
+      description =
+          "Flag to allow stackTrace to be added to the resultInfo if there are any exceptions.")
+  private boolean enableReturningStackTraceInResponse = false;
+
+  @Parameter(
+      names = "--max_depth_of_stack_trace",
+      description =
+          "Maximum depth of stack trace to return in response. The return_stack_trace flag needs to"
+              + " be enabled for this to take effect.")
+  private int maximumDepthOfStackTrace = 3;
+
   ClientConfigSelector getClientConfigSelector() {
     return clientConfigSelector;
   }
@@ -588,11 +601,25 @@ public final class AggregationWorkerArgs {
     return domainOptional;
   }
 
+  public boolean isEnableThresholding() {
+    // Enable thresholding when domain input is optional, i.e. all report keys are considered for
+    // aggregated result.
+    return domainOptional;
+  }
+
   public DomainFormatSelector getDomainFileFormat() {
     return domainFileFormat;
   }
 
   public boolean isDebugRun() {
     return debugRun;
+  }
+
+  public boolean isEnableReturningStackTraceInResponse() {
+    return enableReturningStackTraceInResponse;
+  }
+
+  public int getMaximumDepthOfStackTrace() {
+    return maximumDepthOfStackTrace;
   }
 }

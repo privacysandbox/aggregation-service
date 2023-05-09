@@ -16,7 +16,6 @@
 
 package com.google.aggregate.adtech.worker.model;
 
-import static com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory.GENERAL_ERROR;
 import static org.junit.Assert.assertThrows;
 
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator;
@@ -46,7 +45,7 @@ public class DecryptionValidationResultTest {
         DecryptionValidationResult.builder()
             .addErrorMessage(
                 ErrorMessage.builder()
-                    .setCategory(GENERAL_ERROR.name())
+                    .setCategory(ErrorCounter.DECRYPTION_ERROR)
                     .setDetailedErrorMessage("")
                     .build());
 
@@ -65,7 +64,7 @@ public class DecryptionValidationResultTest {
             .setReport(FakeReportGenerator.generateWithParam(1, /* reportVersion */ ""))
             .addErrorMessage(
                 ErrorMessage.builder()
-                    .setCategory(GENERAL_ERROR.name())
+                    .setCategory(ErrorCounter.DECRYPTION_ERROR)
                     .setDetailedErrorMessage("")
                     .build());
 

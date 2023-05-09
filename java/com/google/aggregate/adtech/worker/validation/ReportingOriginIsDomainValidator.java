@@ -42,7 +42,7 @@ public final class ReportingOriginIsDomainValidator implements ReportValidator {
 
     return Optional.of(
         ErrorMessage.builder()
-            .setCategory(ATTRIBUTION_REPORT_TO_MALFORMED.name())
+            .setCategory(ATTRIBUTION_REPORT_TO_MALFORMED)
             .setDetailedErrorMessage(detailedErrorMessage(report.sharedInfo().reportingOrigin()))
             .build());
   }

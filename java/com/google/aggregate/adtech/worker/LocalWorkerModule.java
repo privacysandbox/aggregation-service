@@ -20,11 +20,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
+import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
+import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.LibraryAnnotations.LocalOutputDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
-import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingEpsilon;
@@ -37,6 +39,7 @@ import com.google.aggregate.adtech.worker.model.serdes.cbor.CborPayloadSerdes;
 import com.google.aggregate.adtech.worker.validation.SimulationValidationModule;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.noise.DpNoisedAggregationModule;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule;
@@ -74,6 +77,8 @@ public final class LocalWorkerModule extends AbstractModule {
     bind(Boolean.class)
         .annotatedWith(DomainOptional.class)
         .toInstance(localWorkerArgs.isSkipDomain());
+    // Thresholding is disabled for local worker as it is used to aggregate unencrypted data
+    bind(Boolean.class).annotatedWith(EnableThresholding.class).toInstance(false);
     bind(OutputDomainProcessor.class)
         .to(localWorkerArgs.getDomainFileFormat().getDomainProcessorClass());
 
@@ -125,6 +130,14 @@ public final class LocalWorkerModule extends AbstractModule {
     } else {
       install(new DpNoisedAggregationModule());
     }
+
+    // Response related flags
+    bind(boolean.class)
+        .annotatedWith(EnableStackTraceInResponse.class)
+        .toInstance(localWorkerArgs.isEnableReturningStackTraceInResponse());
+    bind(int.class)
+        .annotatedWith(MaxDepthOfStackTrace.class)
+        .toInstance(localWorkerArgs.getMaximumDepthOfStackTrace());
   }
 
   @Provides

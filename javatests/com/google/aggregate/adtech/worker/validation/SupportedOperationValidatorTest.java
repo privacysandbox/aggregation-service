@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.acai.Acai;
+import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Payload;
 import com.google.aggregate.adtech.worker.model.Report;
@@ -28,7 +29,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
-import com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.Before;
@@ -79,8 +79,7 @@ public class SupportedOperationValidatorTest {
     Optional<ErrorMessage> validationError = validator.validate(report, ctx);
 
     assertThat(validationError).isPresent();
-    assertThat(validationError.get().category())
-        .isEqualTo(JobErrorCategory.UNSUPPORTED_OPERATION.name());
+    assertThat(validationError.get().category()).isEqualTo(ErrorCounter.UNSUPPORTED_OPERATION);
   }
 
   public static final class TestEnv extends AbstractModule {}

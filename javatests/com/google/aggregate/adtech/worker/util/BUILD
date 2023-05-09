@@ -39,3 +39,23 @@ java_test(
         "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/model",
     ],
 )
+
+java_test(
+    name = "JobResultHelperTest",
+    srcs = ["JobResultHelperTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker:annotations",
+        "//java/com/google/aggregate/adtech/worker:return_code",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/external:clients_jobclient",
+        "//java/external:clients_jobclient_aws",
+        "//java/external:clients_jobclient_model",
+        "//java/external:google_truth",
+        "//java/external:guice",
+        "//java/external:operator_protos",
+        "//java/external:scp_shared_proto",
+        "@com_google_protobuf//:protobuf_java",
+    ],
+)

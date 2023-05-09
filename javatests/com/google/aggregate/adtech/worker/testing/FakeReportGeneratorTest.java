@@ -187,4 +187,25 @@ public class FakeReportGeneratorTest {
                         .build())
                 .build());
   }
+
+  @Test
+  public void generateNullReport() {
+    Report generatedReport = FakeReportGenerator.generateNullReport();
+
+    // Assert.
+    assertThat(generatedReport)
+        .isEqualTo(
+            Report.builder()
+                .setSharedInfo(
+                    SharedInfo.builder()
+                        .setPrivacyBudgetKey(String.valueOf("dummy"))
+                        .setDestination("dummy")
+                        .setReportingOrigin("dummy")
+                        .setScheduledReportTime(Instant.EPOCH.plus(1, SECONDS))
+                        .setSourceRegistrationTime(Instant.EPOCH.plus(1, SECONDS))
+                        .setReportId(generatedReport.sharedInfo().reportId().get())
+                        .build())
+                .setPayload(Payload.builder().addFact(FakeFactGenerator.generate(0, 0)).build())
+                .build());
+  }
 }

@@ -32,7 +32,7 @@ public abstract class ErrorMessage {
   }
 
   /** The category of the error message, used for identifying the type of an error message */
-  public abstract String category();
+  public abstract ErrorCounter category();
 
   /**
    * Detailed diagnostic information related to the error that would be useful for debugging or
@@ -43,7 +43,7 @@ public abstract class ErrorMessage {
   @AutoValue.Builder
   public abstract static class Builder {
 
-    public abstract Builder setCategory(String category);
+    public abstract Builder setCategory(ErrorCounter category);
 
     public abstract Builder setDetailedErrorMessage(String detailedErrorMessage);
 

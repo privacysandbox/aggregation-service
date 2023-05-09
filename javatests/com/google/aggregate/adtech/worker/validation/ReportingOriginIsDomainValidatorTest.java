@@ -109,6 +109,6 @@ public class ReportingOriginIsDomainValidatorTest {
         .isTrue();
     assertWithMessage(String.format("Test case: %s", attributionReportTo))
         .that(validationError.get().category())
-        .isEqualTo(ATTRIBUTION_REPORT_TO_MALFORMED.name());
+        .isEqualTo(ATTRIBUTION_REPORT_TO_MALFORMED);
   }
 }

@@ -27,6 +27,7 @@ java_test(
     deps = [
         ":aws_worker_continuous_test_helper",
         "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/aggregation/concurrent",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
         "//java/com/google/aggregate/adtech/worker/util",
@@ -45,6 +46,7 @@ java_test(
         "//java/external:guice",
         "//java/external:jackson_databind",
         "//java/external:jackson_datatype_jsr310",
+        "//java/external:slf4j",
     ],
 )
 

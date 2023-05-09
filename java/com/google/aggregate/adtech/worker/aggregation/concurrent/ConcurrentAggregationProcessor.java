@@ -23,15 +23,16 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PER
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_WRITE_ERROR;
-import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.SUCCESS;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.whenAllSucceed;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
+import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.ErrorSummaryAggregator;
 import com.google.aggregate.adtech.worker.JobProcessor;
@@ -50,6 +51,7 @@ import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
 import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.util.DebugSupportHelper;
+import com.google.aggregate.adtech.worker.util.JobResultHelper;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
@@ -78,14 +80,10 @@ import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobSto
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
-import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
-import com.google.scp.shared.proto.ProtoUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.AccessControlException;
-import java.time.Clock;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -100,8 +98,6 @@ import org.slf4j.LoggerFactory;
 /** Processor which uses simple in-memory aggregation. */
 public final class ConcurrentAggregationProcessor implements JobProcessor {
 
-  public static final String RESULT_SUCCESS_MESSAGE = "Aggregation job successfully processed";
-
   // Key for user provided debug epsilon value in the job params of the job request.
   public static final String JOB_PARAM_DEBUG_PRIVACY_EPSILON = "debug_privacy_epsilon";
   public static final String JOB_PARAM_ATTRIBUTION_REPORT_TO = "attribution_report_to";
@@ -114,7 +110,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   // all of them will necessarily be captured.
   private static final int MAX_INVALID_REPORTS_COLLECTED = 1000;
 
-  private static final String PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE =
+  public static final String PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE =
       "Insufficient privacy budget for one or more aggregatable reports. No aggregatable report can"
           + " appear in more than one batch or contribute to more than one summary report.";
   private static final Logger logger =
@@ -125,15 +121,16 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   private final OutputDomainProcessor outputDomainProcessor;
   private final NoisedAggregationRunner noisedAggregationRunner;
   private final ResultLogger resultLogger;
+  private final JobResultHelper jobResultHelper;
   private final BlobStorageClient blobStorageClient;
   private final AvroReportsReaderFactory readerFactory;
   private final AvroRecordEncryptedReportConverter encryptedReportConverter;
-  private final Clock clock;
   private final StopwatchRegistry stopwatches;
   private final PrivacyBudgetingServiceBridge privacyBudgetingServiceBridge;
   private final ListeningExecutorService blockingThreadPool;
   private final ListeningExecutorService nonBlockingThreadPool;
   private final boolean domainOptional;
+  private final boolean enableThresholding;
   // Provider<Boolean> used so the value can be dynamically changed in tests
 
   @Inject
@@ -146,12 +143,13 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       BlobStorageClient blobStorageClient,
       AvroReportsReaderFactory readerFactory,
       AvroRecordEncryptedReportConverter encryptedReportConverter,
-      Clock clock,
       StopwatchRegistry stopwatches,
       PrivacyBudgetingServiceBridge privacyBudgetingServiceBridge,
+      JobResultHelper jobResultHelper,
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
-      @DomainOptional Boolean domainOptional) {
+      @DomainOptional Boolean domainOptional,
+      @EnableThresholding Boolean enableThresholding) {
     this.reportDecrypterAndValidator = reportDecrypterAndValidator;
     this.engineProvider = engineProvider;
     this.outputDomainProcessor = outputDomainProcessor;
@@ -160,12 +158,13 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     this.blobStorageClient = blobStorageClient;
     this.readerFactory = readerFactory;
     this.encryptedReportConverter = encryptedReportConverter;
-    this.clock = clock;
     this.stopwatches = stopwatches;
     this.privacyBudgetingServiceBridge = privacyBudgetingServiceBridge;
+    this.jobResultHelper = jobResultHelper;
     this.blockingThreadPool = blockingThreadPool;
     this.nonBlockingThreadPool = nonBlockingThreadPool;
     this.domainOptional = domainOptional;
+    this.enableThresholding = enableThresholding;
   }
 
   /**
@@ -185,8 +184,6 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
         stopwatches.createStopwatch("concurrent-" + toJobKeyString(job.jobKey()));
     processingStopwatch.start();
 
-    JobResult.Builder jobResultBuilder = JobResult.builder().setJobKey(job.jobKey());
-
     final Boolean debugRun = DebugSupportHelper.isDebugRun(job);
     final Optional<Double> debugPrivacyEpsilon = getPrivacyEpsilonForJob(job);
 
@@ -205,7 +202,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     if (jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME)
         && jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX)
         && (!jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME).isEmpty()
-        || !jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX).isEmpty())) {
+            || !jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX).isEmpty())) {
       outputDomainLocation =
           Optional.of(
               BlobStorageClient.getDataLocation(
@@ -255,9 +252,9 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
 
       ImmutableList<ListenableFuture<ImmutableList<DecryptionValidationResult>>>
           invalidReportsPerShards =
-          decryptedShards.stream()
-              .map(this::collectInvalidReportsAsync)
-              .collect(toImmutableList());
+              decryptedShards.stream()
+                  .map(this::collectInvalidReportsAsync)
+                  .collect(toImmutableList());
 
       ListenableFuture<List<ImmutableList<DecryptionValidationResult>>>
           invalidReportsPerShardUnified = Futures.successfulAsList(invalidReportsPerShards);
@@ -311,35 +308,14 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       // Create error summary from the list of errors from decryption/validation
       ErrorSummary errorSummary = ErrorSummaryAggregator.createErrorSummary(invalidReports);
 
-      ImmutableList<PrivacyBudgetUnit> missingPrivacyBudgetUnits = ImmutableList.of();
-
-      // Do not consume any privacy budget for debug-run jobs.
-      if (!debugRun) {
-        try {
-          // Only send request to PBS if there are units to consume budget for, the list of units
-          // can be empty if all reports failed decryption
-          ImmutableList<PrivacyBudgetUnit> budgetsToConsume =
-              aggregationEngine.getPrivacyBudgetUnits();
-          if (!budgetsToConsume.isEmpty()) {
-            missingPrivacyBudgetUnits =
-                privacyBudgetingServiceBridge.consumePrivacyBudget(
-                    /* budgetsToConsume= */ budgetsToConsume,
-                    /* attributionReportTo= */ job.requestInfo()
-                        .getJobParameters()
-                        .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
-          }
-        } catch (PrivacyBudgetingServiceBridgeException e) {
-          var nestedMessage = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
-          throw new AggregationJobProcessException(
-              PRIVACY_BUDGET_ERROR,
-              String.format(
-                  "Exception while consuming privacy budget. Exception message: %s",
-                  nestedMessage));
-        }
-
-        if (!missingPrivacyBudgetUnits.isEmpty()) {
-          throw new AggregationJobProcessException(
-              PRIVACY_BUDGET_EXHAUSTED, PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE);
+      AggregationWorkerReturnCode defaultCode = AggregationWorkerReturnCode.SUCCESS;
+      try {
+        consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
+      } catch (AggregationJobProcessException e) {
+        if (debugRun) {
+          defaultCode = AggregationWorkerReturnCode.getDebugEquivalent(e.getCode());
+        } else {
+          throw e;
         }
       }
 
@@ -349,20 +325,13 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
         DataLocation debugLocation =
             resultLogger.logDebugResults(noisedDebugResult.noisedAggregatedFacts().stream(), job);
       }
+
       // Log summary results
       DataLocation dataLocation =
           resultLogger.logResults(
               noisedResultSet.noisedResult().noisedAggregatedFacts().stream(), job);
 
-      return jobResultBuilder
-          .setResultInfo(
-              ResultInfo.newBuilder()
-                  .setReturnCode(SUCCESS.name())
-                  .setReturnMessage(RESULT_SUCCESS_MESSAGE)
-                  .setErrorSummary(errorSummary)
-                  .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                  .build())
-          .build();
+      return jobResultHelper.createJobResultOnCompletion(job, errorSummary, defaultCode);
     } catch (ResultLogException e) {
       throw new AggregationJobProcessException(
           RESULT_WRITE_ERROR, "Exception occured while writing result.", e);
@@ -391,6 +360,36 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       }
 
       throw e;
+    }
+  }
+
+  private void consumePrivacyBudgetUnits(ImmutableList<PrivacyBudgetUnit> budgetsToConsume, Job job)
+      throws AggregationJobProcessException {
+    ImmutableList<PrivacyBudgetUnit> missingPrivacyBudgetUnits = ImmutableList.of();
+
+    try {
+      // Only send request to PBS if there are units to consume budget for, the list of units
+      // can be empty if all reports failed decryption
+      if (!budgetsToConsume.isEmpty()) {
+        missingPrivacyBudgetUnits =
+            privacyBudgetingServiceBridge.consumePrivacyBudget(
+                /* budgetsToConsume= */ budgetsToConsume,
+                /* attributionReportTo= */ job.requestInfo()
+                    .getJobParameters()
+                    .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
+      }
+    } catch (PrivacyBudgetingServiceBridgeException e) {
+      String nestedMessage = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
+      throw new AggregationJobProcessException(
+          PRIVACY_BUDGET_ERROR,
+          String.format(
+              "Exception while consuming privacy budget. Exception message: %s", nestedMessage),
+          e);
+    }
+
+    if (!missingPrivacyBudgetUnits.isEmpty()) {
+      throw new AggregationJobProcessException(
+          PRIVACY_BUDGET_EXHAUSTED, PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE);
     }
   }
 
@@ -495,15 +494,15 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
                 NoisedAggregationResult.merge(
                     noisedReportsOnlyNoThresholdWithAnno, noisedDomainOnlyNoThresholdWithAnno)));
       }
+
       if (domainOptional) {
-        NoisedAggregationResult noisedReportsOnlyThreshold =
+        NoisedAggregationResult noisedReportsDomainOptional =
             noisedAggregationRunner.noise(
-                pseudoDiff.entriesOnlyOnLeft().values(),
-                /* doThreshold= */ true,
-                debugPrivacyEpsilon);
+                pseudoDiff.entriesOnlyOnLeft().values(), enableThresholding, debugPrivacyEpsilon);
+
         return noisedResultSetBuilder
             .setNoisedResult(
-                NoisedAggregationResult.merge(noisedDomainNoThreshold, noisedReportsOnlyThreshold))
+                NoisedAggregationResult.merge(noisedDomainNoThreshold, noisedReportsDomainOptional))
             .build();
       } else {
         return noisedResultSetBuilder.setNoisedResult(noisedDomainNoThreshold).build();

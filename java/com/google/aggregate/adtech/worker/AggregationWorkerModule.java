@@ -20,6 +20,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
+import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
+import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWorkingDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
@@ -107,6 +110,9 @@ public final class AggregationWorkerModule extends AbstractModule {
   @Override
   protected void configure() {
     bind(Boolean.class).annotatedWith(DomainOptional.class).toInstance(args.isDomainOptional());
+    bind(Boolean.class)
+        .annotatedWith(EnableThresholding.class)
+        .toInstance(args.isEnableThresholding());
     bind(OutputDomainProcessor.class).to(args.getDomainFileFormat().getDomainProcessorClass());
 
     install(new WorkerModule());
@@ -323,6 +329,14 @@ public final class AggregationWorkerModule extends AbstractModule {
         .annotatedWith(NoisingL1Sensitivity.class)
         .toInstance(args.getNoisingL1Sensitivity());
     bind(double.class).annotatedWith(NoisingDelta.class).toInstance(args.getNoisingDelta());
+
+    // Response related flags
+    bind(boolean.class)
+        .annotatedWith(EnableStackTraceInResponse.class)
+        .toInstance(args.isEnableReturningStackTraceInResponse());
+    bind(int.class)
+        .annotatedWith(MaxDepthOfStackTrace.class)
+        .toInstance(args.getMaximumDepthOfStackTrace());
   }
 
   @Provides

@@ -61,9 +61,12 @@ public class LocalRunnerTest {
   private final String FLEDGE_DATASET_1 = "fledge_1";
   private final String FLEDGE_DATASET_2 = "fledge_2";
 
+  private final String THRESHOLDING_DATASET_1 = "thresholding_1";
+
   private final String OUTPUT_SET_1 = "1";
   private final String OUTPUT_SET_3 = "3";
   private final String OUTPUT_SET_4 = "4";
+  private final String OUTPUT_SET_THRESHOLDING = "thresholding";
 
   @Before
   public void setUp() throws IOException {
@@ -231,6 +234,33 @@ public class LocalRunnerTest {
           outputDirectory,
           "--no_noising",
           "--json_output",
+        };
+    ServiceManager serviceManager = LocalRunner.internalMain(cli);
+    serviceManager.awaitStopped(Duration.ofMinutes(5));
+
+    Path outputJson = outputDirectoryPath.resolve("output.json");
+    List<AggregatedFact> output =
+        convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
+    List<AggregatedFact> expectedOutput =
+        convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(expectedOutputJson)));
+
+    assertThat(output).containsExactlyElementsIn(expectedOutput);
+  }
+
+  @Test
+  public void testSkipDomain_NoThresholding() throws Exception {
+    String pathToAvro = getInputBatchAvro(THRESHOLDING_DATASET_1).toString();
+    String outputDirectory = outputDirectoryPath.toString();
+    Path expectedOutputJson = getExpectedOutputJson(OUTPUT_SET_THRESHOLDING);
+    String[] cli =
+        new String[] {
+          "--input_data_avro_file",
+          pathToAvro,
+          "--output_directory",
+          outputDirectory,
+          "--no_noising",
+          "--json_output",
+          "--skip_domain"
         };
     ServiceManager serviceManager = LocalRunner.internalMain(cli);
     serviceManager.awaitStopped(Duration.ofMinutes(5));
@@ -682,7 +712,7 @@ public class LocalRunnerTest {
               writtenResults.add(
                   AggregatedFact.create(
                       createBucketFromString(entry.get("bucket").asText()),
-                      entry.get("value").asLong()));
+                      entry.get("metric").asLong()));
             });
     return writtenResults;
   }

@@ -39,6 +39,7 @@ DEFAULT_ENCLAVE_ARGS = [
     "--simulation_inputs",  # Note: this should only be used in dev environments.
     "--noising",
     "CONSTANT_NOISING",
+    "--return_stack_trace",
 ]
 
 DEFAULT_JVM_OPTIONS = [

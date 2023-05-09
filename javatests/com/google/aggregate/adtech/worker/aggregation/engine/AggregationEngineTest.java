@@ -19,12 +19,12 @@ package com.google.aggregate.adtech.worker.aggregation.engine;
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.Fact;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator;
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator.FakeFactGenerator;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import java.math.BigInteger;
@@ -149,6 +149,61 @@ public class AggregationEngineTest {
             AggregatedFact.create(createBucketFromInt(3), /* value= */ 10),
             createBucketFromInt(4),
             AggregatedFact.create(createBucketFromInt(4), /* value= */ 20));
+  }
+
+  @Test
+  public void makeAggregation_nullReports_aggregatesTo0() {
+    // Arrange
+    // Unlike reports without facts, null reports have facts with both key and value set to 0.
+    // Aggregating them should return 0 for the key 0.
+    Report firstNullReport = FakeReportGenerator.generateNullReport();
+    Report secondNullReport = FakeReportGenerator.generateNullReport();
+
+    // Act
+    engine.accept(firstNullReport);
+    engine.accept(secondNullReport);
+    ImmutableMap<BigInteger, AggregatedFact> aggregation = engine.makeAggregation();
+
+    // Assert
+    assertThat(aggregation)
+        .containsExactly(createBucketFromInt(0), AggregatedFact.create(createBucketFromInt(0), 0));
+  }
+
+  @Test
+  public void makeAggregation_multipleReportsWithSomeNullReports() {
+    // Arrange
+    Fact regularFact1 = FakeFactGenerator.generate(1, 2);
+    Fact regularFact2 = FakeFactGenerator.generate(1, 4);
+    Fact regularFact3 = FakeFactGenerator.generate(2, 1);
+    Fact regularFact4 = FakeFactGenerator.generate(2, 6);
+    Fact nullFact1 = FakeFactGenerator.generate(0, 0);
+    Fact nullFact2 = FakeFactGenerator.generate(0, 0);
+    Report regularReport =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(regularFact1, regularFact2, regularFact3), "");
+    Report reportWithSomeNullFacts =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(regularFact4, nullFact1, nullFact2), "");
+    // Reports with facts having both key and value set to 0.
+    Report firstNullReport = FakeReportGenerator.generateNullReport();
+    Report secondNullReport = FakeReportGenerator.generateNullReport();
+
+    // Act
+    engine.accept(regularReport);
+    engine.accept(reportWithSomeNullFacts);
+    engine.accept(firstNullReport);
+    engine.accept(secondNullReport);
+    ImmutableMap<BigInteger, AggregatedFact> aggregation = engine.makeAggregation();
+
+    // Assert
+    assertThat(aggregation)
+        .containsExactly(
+            createBucketFromInt(0),
+            AggregatedFact.create(createBucketFromInt(0), 0),
+            createBucketFromInt(1),
+            AggregatedFact.create(createBucketFromInt(1), 6),
+            createBucketFromInt(2),
+            AggregatedFact.create(createBucketFromInt(2), 7));
   }
 
   @Test

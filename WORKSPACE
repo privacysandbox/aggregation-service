@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v0.51.7"  # version updated on 2023-03-13
+COORDINATOR_VERSION = "v0.51.11"  # version updated on 2023-03-31
 
 JACKSON_VERSION = "2.12.2"
 
@@ -108,7 +108,7 @@ maven_install(
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
         "com.google.guava:guava:30.1-jre",
         "com.google.guava:guava-testlib:30.1-jre",
-        "com.google.inject:guice:4.2.3",
+        "com.google.inject:guice:5.1.0",
         "com.google.jimfs:jimfs:1.2",
         "com.google.testparameterinjector:test-parameter-injector:1.1",
         "com.google.truth.extensions:truth-java8-extension:1.1.2",
@@ -289,10 +289,10 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 # Distroless image for running Java.
 container_pull(
     name = "java_base",
-    # Using SHA-256 for reproducibility.
-    digest = "sha256:1606422cc472612cb5bcd885684b4bf87b3813246c266df473357dce5a0fb4b4",
+    # Using SHA-256 for reproducibility. The tag is latest-amd64.
+    digest = "sha256:901215ab3ae619500f184668461cf901830e7a9707f8f9c016d9c08d8060db5a",
     registry = "gcr.io",
-    repository = "distroless/java",
+    repository = "distroless/java17-debian11",
 )
 
 # Distroless image for running C++.
@@ -401,8 +401,8 @@ http_archive(
 package(default_visibility = ["//visibility:public"])
 exports_files(["packer"])
 """,
-    sha256 = "8a94b84542d21b8785847f4cccc8a6da4c7be5e16d4b1a2d0a5f7ec5532faec0",
-    url = "https://releases.hashicorp.com/packer/1.7.8/packer_1.7.8_linux_amd64.zip",
+    sha256 = "57d0411e578aea62918d36ed186951139d5d49d44b76e5666d1fbf2427b385ae",
+    url = "https://releases.hashicorp.com/packer/1.8.6/packer_1.8.6_linux_amd64.zip",
 )
 
 # google cloud sdk for releasing artifacts to gcs

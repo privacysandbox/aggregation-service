@@ -23,6 +23,7 @@ import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
+import com.google.aggregate.adtech.worker.util.JobResultHelper;
 import com.google.aggregate.adtech.worker.validation.JobValidator;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.StopwatchExporter.StopwatchExportException;
@@ -38,7 +39,6 @@ import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
 import com.google.scp.shared.proto.ProtoUtil;
-import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -52,11 +52,11 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
 
   private final JobClient jobClient;
   private final JobProcessor jobProcessor;
+  private final JobResultHelper jobResultHelper;
   private final MetricClient metricClient;
   private final StopwatchRegistry stopwatchRegistry;
   private final StopwatchExporter stopwatchExporter;
   private final boolean benchmarkMode;
-  private final Clock clock;
 
   private final ListeningExecutorService nonBlockingThreadPool;
   private final ListeningExecutorService blockingThreadPool;
@@ -73,8 +73,8 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
   WorkerPullWorkService(
       JobClient jobClient,
       JobProcessor jobProcessor,
+      JobResultHelper jobResultHelper,
       MetricClient metricClient,
-      Clock clock,
       StopwatchRegistry stopwatchRegistry,
       StopwatchExporter stopwatchExporter,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
@@ -82,9 +82,9 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
       @BenchmarkMode boolean benchmarkMode) {
     this.jobClient = jobClient;
     this.jobProcessor = jobProcessor;
+    this.jobResultHelper = jobResultHelper;
     this.metricClient = metricClient;
     this.moreNewRequests = true;
-    this.clock = clock;
     this.stopwatchRegistry = stopwatchRegistry;
     this.stopwatchExporter = stopwatchExporter;
     this.nonBlockingThreadPool = nonBlockingThreadPool;
@@ -148,7 +148,6 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
         }
 
         JobResult jobResult = jobProcessor.process(job.get());
-
         jobClient.markJobCompleted(jobResult);
         recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
       } catch (AggregationJobProcessException e) {
@@ -194,24 +193,11 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     }
   }
 
-  private JobResult createErrorJobResult(Job job, String errorCode, String errorMessage) {
-    return JobResult.builder()
-        .setJobKey(job.jobKey())
-        .setResultInfo(
-            ResultInfo.newBuilder()
-                .setReturnMessage(errorMessage)
-                .setReturnCode(errorCode)
-                .setErrorSummary(ErrorSummary.getDefaultInstance())
-                .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                .build())
-        .build();
-  }
-
   private void processAggregationJobProcessException(
       AggregationJobProcessException e, JobClient jobClient, Job job) {
     logger.error("Exception while running job :", e);
     try {
-      JobResult jobResult = createErrorJobResult(job, e.getCode().name(), e.getMessage());
+      JobResult jobResult = jobResultHelper.createJobResultOnException(job, e);
       jobClient.markJobCompleted(jobResult);
       recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
     } catch (Exception ex) {

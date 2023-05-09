@@ -57,13 +57,19 @@ public class AwsWorkerContinuousDiffTest {
 
   private static final String DEFAULT_TEST_DATA_BUCKET = "aggregation-service-testing";
 
+  private static final String TEST_DATA_S3_KEY_PREFIX = "generated-test-data";
+
   // Input data is generated in shared_e2e.sh
   private static final String inputKey =
-      String.format("%s/test-inputs/10k_diff_test_input_sharded/", KOKORO_BUILD_ID);
+      String.format(
+          "%s/%s/test-inputs/10k_diff_test_input_sharded/",
+          TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
   private static final String domainKey =
-      String.format("%s/test-inputs/diff_test_domain_sharded/", KOKORO_BUILD_ID);
+      String.format(
+          "%s/%s/test-inputs/diff_test_domain_sharded/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
   private static final String outputKey =
-      String.format("%s/test-outputs/10k_diff_test_output.avro", KOKORO_BUILD_ID);
+      String.format(
+          "%s/%s/test-outputs/10k_diff_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
   @Inject S3BlobStorageClient s3BlobStorageClient;
   @Inject AvroResultsFileReader avroResultsFileReader;
@@ -125,8 +131,11 @@ public class AwsWorkerContinuousDiffTest {
         ResultDiffer.diffResults(aggregatedFacts.stream(), goldenAggregatedFacts.stream());
     assertWithMessage(
             String.format(
-                "Found (%s) diffs between left(test) and right(golden).",
-                diffs.entriesDiffering().size()))
+                "Found (%s) diffs between left(test) and right(golden). Found (%s) entries only on"
+                    + " left(test) and (%s) entries only on right(golden).",
+                diffs.entriesDiffering().size(),
+                diffs.entriesOnlyOnLeft().size(),
+                diffs.entriesOnlyOnRight().size()))
         .that(diffs.areEqual())
         .isTrue();
 

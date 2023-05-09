@@ -17,21 +17,18 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.ORIGINAL_REPORT_TIME_TOO_OLD;
-import static java.time.temporal.ChronoUnit.DAYS;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
+import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 
 /** Validates that the report is younger than the max age threshold. */
 public final class ReportNotTooOldValidator implements ReportValidator {
-
-  private static final Duration MAX_REPORT_AGE = Duration.of(90, DAYS);
 
   // Used for checking report age
   private final Clock clock;
@@ -44,14 +41,14 @@ public final class ReportNotTooOldValidator implements ReportValidator {
 
   @Override
   public Optional<ErrorMessage> validate(Report report, Job unused) {
-    Instant oldestAllowedTime = Instant.now(clock).minus(MAX_REPORT_AGE);
+    Instant oldestAllowedTime = Instant.now(clock).minus(SharedInfo.MAX_REPORT_AGE);
     if (report.sharedInfo().scheduledReportTime().isAfter(oldestAllowedTime)) {
       return Optional.empty();
     }
 
     return Optional.of(
         ErrorMessage.builder()
-            .setCategory(ORIGINAL_REPORT_TIME_TOO_OLD.name())
+            .setCategory(ORIGINAL_REPORT_TIME_TOO_OLD)
             .setDetailedErrorMessage(
                 detailedErrorMessage(oldestAllowedTime, report.sharedInfo().scheduledReportTime()))
             .build());
@@ -61,6 +58,6 @@ public final class ReportNotTooOldValidator implements ReportValidator {
     return String.format(
         "Report's originalReportTime is too old, reports cannot be older than %s, must be more"
             + " recent than %s but was %s",
-        MAX_REPORT_AGE, oldestAllowedTime, originalReportTime);
+        SharedInfo.MAX_REPORT_AGE, oldestAllowedTime, originalReportTime);
   }
 }

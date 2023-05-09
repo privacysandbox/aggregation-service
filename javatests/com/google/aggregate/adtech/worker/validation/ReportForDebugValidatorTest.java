@@ -16,7 +16,7 @@
 
 package com.google.aggregate.adtech.worker.validation;
 
-import static com.google.aggregate.adtech.worker.model.ErrorCounter.NUM_REPORTS_DEBUG_NOT_ENABLED;
+import static com.google.aggregate.adtech.worker.model.ErrorCounter.DEBUG_NOT_ENABLED;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 
@@ -93,7 +93,7 @@ public class ReportForDebugValidatorTest {
     Optional<ErrorMessage> validationError = validator.validate(report, job);
 
     assertThat(validationError).isPresent();
-    assertThat(validationError.get().category()).isEqualTo(NUM_REPORTS_DEBUG_NOT_ENABLED.name());
+    assertThat(validationError.get().category()).isEqualTo(DEBUG_NOT_ENABLED);
   }
 
   /** Test not in the debug run, the report's debug mode is not enabled and passes validation */

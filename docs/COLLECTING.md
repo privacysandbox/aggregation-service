@@ -353,7 +353,7 @@ The output of above tool execution will be in `output.json` with the following c
 [
     {
         "bucket": "\u0005Y",
-        "value": 32768
+        "metric": 32768
     }
 ]
 ```

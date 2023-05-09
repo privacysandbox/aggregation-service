@@ -16,34 +16,50 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
-import static com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory.GENERAL_ERROR;
-
+import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.validation.ReportValidator;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.Set;
 
 /** Simple fake ReportValidator used to test that failed validations are handled correctly */
 public final class FakeValidator implements ReportValidator {
 
-  private Iterator<Boolean> nextShouldReturnError;
+  private Optional<Set<String>> reportIdShouldReturnError = Optional.empty();
+  private Optional<Iterator<Boolean>> nextShouldReturnError = Optional.empty();
 
   public void setNextShouldReturnError(Iterator<Boolean> nextShouldReturnError) {
-    this.nextShouldReturnError = nextShouldReturnError;
+    this.nextShouldReturnError = Optional.of(nextShouldReturnError);
+  }
+
+  public void setReportIdShouldReturnError(Set<String> reportIdShouldReturnError) {
+    this.reportIdShouldReturnError = Optional.of(reportIdShouldReturnError);
   }
 
   @Override
   public Optional<ErrorMessage> validate(Report report, Job unused) {
-    if (nextShouldReturnError.next()) {
-      return Optional.of(
-          ErrorMessage.builder()
-              .setCategory(GENERAL_ERROR.name())
-              .setDetailedErrorMessage("")
-              .build());
-    } else {
-      return Optional.empty();
+
+    if (this.reportIdShouldReturnError.isPresent() && report.sharedInfo().reportId().isPresent()) {
+      if (this.reportIdShouldReturnError.get().contains(report.sharedInfo().reportId().get())) {
+        return Optional.of(
+            ErrorMessage.builder()
+                .setCategory(ErrorCounter.DECRYPTION_ERROR)
+                .setDetailedErrorMessage("")
+                .build());
+      }
     }
+    if (this.nextShouldReturnError.isPresent()) {
+      if (this.nextShouldReturnError.get().next()) {
+        return Optional.of(
+            ErrorMessage.builder()
+                .setCategory(ErrorCounter.DECRYPTION_ERROR)
+                .setDetailedErrorMessage("")
+                .build());
+      }
+    }
+    return Optional.empty();
   }
 }

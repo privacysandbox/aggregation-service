@@ -27,15 +27,14 @@ import static com.google.aggregate.adtech.worker.aggregation.concurrent.Concurre
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_RUN;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
-import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.RESULT_SUCCESS_MESSAGE;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.NUM_REPORTS_WITH_ERRORS;
+import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_MESSAGE;
+import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_WITH_ERRORS_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
-import static com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory.GENERAL_ERROR;
-import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.SUCCESS;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
@@ -45,9 +44,13 @@ import static org.junit.Assert.assertThrows;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.acai.Acai;
 import com.google.acai.TestScoped;
+import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
+import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.FailJobOnPbsException;
+import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
@@ -67,6 +70,7 @@ import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.AvroRecordEncryptedReportConverter;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
+import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.serdes.PayloadSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.SharedInfoSerdes;
@@ -96,6 +100,7 @@ import com.google.aggregate.shared.mapper.TimeObjectMapper;
 import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -160,6 +165,10 @@ public class ConcurrentAggregationProcessorTest {
   private ResultInfo.Builder resultInfoBuilder;
   private ImmutableList<EncryptedReport> encryptedReports1;
   private ImmutableList<EncryptedReport> encryptedReports2;
+  private String reportId1 = String.valueOf(UUID.randomUUID());
+  private String reportId2 = String.valueOf(UUID.randomUUID());
+  private String reportId3 = String.valueOf(UUID.randomUUID());
+  private String reportId4 = String.valueOf(UUID.randomUUID());
 
   // Settable value so that failJobOnPbsExceptionProvider can be changed for different tests
   private static boolean failJobOnPbsException = false;
@@ -181,25 +190,21 @@ public class ConcurrentAggregationProcessorTest {
     assertThat(actualNoReturnMessage).isEqualTo(expectedNoReturnMessage);
   }
 
-  private static void assertJobResultsEqualsReturnCode(JobResult actual, JobResult expected) {
-    assertThat(actual.resultInfo().getReturnCode())
-        .isEqualTo(expected.resultInfo().getReturnCode());
-  }
-
-  private EncryptedReport generateEncryptedReport(int param) {
+  private EncryptedReport generateEncryptedReport(int param, String reportId) {
     String keyId = UUID.randomUUID().toString();
-    Report report = FakeReportGenerator.generateWithParam(param, /* reportVersion */ "");
-    String sharedInfoString1 = sharedInfoSerdes.reverse().convert(Optional.of(report.sharedInfo()));
+    Report report =
+        FakeReportGenerator.generateWithFixedReportId(param, reportId, /* reportVersion */ "");
+    String sharedInfoString = sharedInfoSerdes.reverse().convert(Optional.of(report.sharedInfo()));
     try {
       ByteSource firstReportBytes =
           fakeDecryptionKeyService.generateCiphertext(
               keyId,
               payloadSerdes.reverse().convert(Optional.of(report.payload())),
-              sharedInfoString1);
+              sharedInfoString);
       return EncryptedReport.builder()
           .setPayload(firstReportBytes)
           .setKeyId(keyId)
-          .setSharedInfo(sharedInfoString1)
+          .setSharedInfo(sharedInfoString)
           .build();
     } catch (Exception ex) {
       // return null to fail test
@@ -234,20 +239,20 @@ public class ConcurrentAggregationProcessorTest {
 
     resultInfoBuilder =
         ResultInfo.newBuilder()
-            .setReturnCode(SUCCESS.name())
+            .setReturnCode(AggregationWorkerReturnCode.SUCCESS.name())
             .setReturnMessage(RESULT_SUCCESS_MESSAGE)
             .setFinishedAt(ProtoUtil.toProtoTimestamp(FIXED_TIME))
             .setErrorSummary(ErrorSummary.getDefaultInstance());
 
     expectedJobResult = makeExpectedJobResult();
 
-    EncryptedReport firstReport = generateEncryptedReport(1);
-    EncryptedReport secondReport = generateEncryptedReport(2);
+    EncryptedReport firstReport = generateEncryptedReport(1, reportId1);
+    EncryptedReport secondReport = generateEncryptedReport(2, reportId2);
 
     // thirdReport is same as firstReport but has new report id
-    EncryptedReport thirdReport = generateEncryptedReport(1);
+    EncryptedReport thirdReport = generateEncryptedReport(1, reportId3);
     // fourthReport is same as secondReport but has new report id
-    EncryptedReport fourthReport = generateEncryptedReport(2);
+    EncryptedReport fourthReport = generateEncryptedReport(2, reportId4);
 
     encryptedReports1 = ImmutableList.of(firstReport, secondReport);
     encryptedReports2 = ImmutableList.of(thirdReport, fourthReport);
@@ -258,7 +263,7 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void aggregate() throws Exception {
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -272,7 +277,7 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void aggregate_noOutputDomain_thresholding() throws Exception {
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -304,7 +309,7 @@ public class ConcurrentAggregationProcessorTest {
                         combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
                     .build())
             .build();
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -340,7 +345,7 @@ public class ConcurrentAggregationProcessorTest {
                     .build())
             .build();
 
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -378,7 +383,7 @@ public class ConcurrentAggregationProcessorTest {
                     .build())
             .build();
 
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -414,7 +419,7 @@ public class ConcurrentAggregationProcessorTest {
                     .build())
             .build();
 
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     AggregationJobProcessException ex =
@@ -424,7 +429,7 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void aggregate_noOutputDomain_thresholding_withoutDebugRun() throws Exception {
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -455,12 +460,15 @@ public class ConcurrentAggregationProcessorTest {
                         combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
                     .build())
             .build();
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+    // Confirm correct success code is returned, and not an alternate debug mode success code
+    assertThat(jobResultProcessor.resultInfo().getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
         .containsExactly(
             AggregatedFact.create(
@@ -505,7 +513,7 @@ public class ConcurrentAggregationProcessorTest {
                     .build())
             .build();
 
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -558,7 +566,7 @@ public class ConcurrentAggregationProcessorTest {
                         combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
                     .build())
             .build();
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -592,7 +600,7 @@ public class ConcurrentAggregationProcessorTest {
                         combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
                     .build())
             .build();
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -632,7 +640,7 @@ public class ConcurrentAggregationProcessorTest {
                         combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
                     .build())
             .build();
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -669,7 +677,7 @@ public class ConcurrentAggregationProcessorTest {
                         combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
                     .build())
             .build();
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
 
     AggregationJobProcessException ex =
@@ -680,7 +688,7 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void aggregate_withNoise() throws Exception {
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(10));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -696,7 +704,7 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void process_withValidationErrors() throws Exception {
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(true, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of(reportId1));
     // Since 1st report has validation errors, only facts in 2nd report are noised.
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
 
@@ -706,16 +714,22 @@ public class ConcurrentAggregationProcessorTest {
         this.expectedJobResult.toBuilder()
             .setResultInfo(
                 resultInfoBuilder
+                    .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
+                    .setReturnMessage(RESULT_SUCCESS_WITH_ERRORS_MESSAGE)
                     .setErrorSummary(
                         ErrorSummary.newBuilder()
                             .addAllErrorCounts(
                                 ImmutableList.of(
                                     ErrorCount.newBuilder()
-                                        .setCategory(GENERAL_ERROR.name())
+                                        .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                        .setDescription(
+                                            ErrorCounter.DECRYPTION_ERROR.getDescription())
                                         .setCount(1L)
                                         .build(),
                                     ErrorCount.newBuilder()
-                                        .setCategory(NUM_REPORTS_WITH_ERRORS.name())
+                                        .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                        .setDescription(
+                                            ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
                                         .setCount(1L)
                                         .build()))
                             .build())
@@ -737,7 +751,8 @@ public class ConcurrentAggregationProcessorTest {
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
     // Throw validation errors for all reports
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(true, true, true, true).iterator());
+    fakeValidator.setReportIdShouldReturnError(
+        ImmutableSet.of(reportId1, reportId2, reportId3, reportId4));
 
     JobResult jobResultProcessor = processor.process(ctx);
 
@@ -745,16 +760,22 @@ public class ConcurrentAggregationProcessorTest {
         this.expectedJobResult.toBuilder()
             .setResultInfo(
                 resultInfoBuilder
+                    .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
+                    .setReturnMessage(RESULT_SUCCESS_WITH_ERRORS_MESSAGE)
                     .setErrorSummary(
                         ErrorSummary.newBuilder()
                             .addAllErrorCounts(
                                 ImmutableList.of(
                                     ErrorCount.newBuilder()
-                                        .setCategory(GENERAL_ERROR.name())
+                                        .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                        .setDescription(
+                                            ErrorCounter.DECRYPTION_ERROR.getDescription())
                                         .setCount(4L)
                                         .build(),
                                     ErrorCount.newBuilder()
-                                        .setCategory(NUM_REPORTS_WITH_ERRORS.name())
+                                        .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                        .setDescription(
+                                            ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
                                         .setCount(4L)
                                         .build()))
                             .build())
@@ -772,7 +793,7 @@ public class ConcurrentAggregationProcessorTest {
   public void process_inputReadFailedCodeWhenBadShardThrows() throws Exception {
     Path badDataShard = reportsDirectory.resolve("reports_bad.avro");
     Files.writeString(badDataShard, "Bad data", US_ASCII, WRITE, CREATE);
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     AggregationJobProcessException ex =
         assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
     assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
@@ -781,7 +802,7 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void process_outputWriteFailedCodeWhenResultLoggerThrows() throws Exception {
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
     resultLogger.setShouldThrow(true);
     AggregationJobProcessException ex =
@@ -791,7 +812,7 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void process_decryptionKeyFetchFailedWithPermissionDeniedReason() throws Exception {
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
     fakeDecryptionKeyService.setShouldThrowPermissionException(true);
     AggregationJobProcessException ex =
@@ -801,7 +822,7 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void process_decryptionKeyFetchFailedOtherReasons() throws Exception {
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
     fakeDecryptionKeyService.setShouldThrow(true);
 
@@ -810,9 +831,28 @@ public class ConcurrentAggregationProcessorTest {
     JobResult expectedJobResult =
         this.expectedJobResult.toBuilder()
             .setResultInfo(
-                resultInfoBuilder.setReturnCode(SUCCESS.name()).setReturnMessage("").build())
+                resultInfoBuilder
+                    .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
+                    .setReturnMessage(RESULT_SUCCESS_WITH_ERRORS_MESSAGE)
+                    .setErrorSummary(
+                        ErrorSummary.newBuilder()
+                            .addAllErrorCounts(
+                                ImmutableList.of(
+                                    ErrorCount.newBuilder()
+                                        .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                        .setDescription(
+                                            ErrorCounter.DECRYPTION_ERROR.getDescription())
+                                        .setCount(4L)
+                                        .build(),
+                                    ErrorCount.newBuilder()
+                                        .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                        .setDescription(NUM_REPORTS_WITH_ERRORS.getDescription())
+                                        .setCount(4L)
+                                        .build()))
+                            .build())
+                    .build())
             .build();
-    assertJobResultsEqualsReturnCode(actualJobResult, expectedJobResult);
+    assertThat(actualJobResult).isEqualTo(expectedJobResult);
   }
 
   @Test
@@ -856,7 +896,7 @@ public class ConcurrentAggregationProcessorTest {
                         combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
                     .build())
             .build();
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -873,7 +913,7 @@ public class ConcurrentAggregationProcessorTest {
     // No budget given, i.e. all the budgets are depleted for this test.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
     AggregationJobProcessException ex =
         assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
@@ -890,7 +930,7 @@ public class ConcurrentAggregationProcessorTest {
         PrivacyBudgetUnit.create("2", Instant.ofEpochMilli(0)), 1);
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
 
     JobResult jobResultProcessor = processor.process(ctx);
@@ -919,7 +959,7 @@ public class ConcurrentAggregationProcessorTest {
     fakePrivacyBudgetingServiceBridge.setShouldThrow();
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
     AggregationJobProcessException ex =
         assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
@@ -939,7 +979,7 @@ public class ConcurrentAggregationProcessorTest {
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
-    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
     AggregationJobProcessException ex =
         assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
@@ -987,6 +1027,70 @@ public class ConcurrentAggregationProcessorTest {
         assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
     assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
     assertThat(ex.getMessage()).contains("No report shards found for location");
+  }
+
+  @Test
+  public void aggregate_withDebugRunAndPrivacyBudgetFailure_succeedsWithErrorCode()
+      throws Exception {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JOB_PARAM_DEBUG_RUN, "true");
+    // Set debug run params in job.
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                    .build())
+            .build();
+
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    // Privacy Budget failure via thrown exception
+    fakePrivacyBudgetingServiceBridge.setShouldThrow();
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
+        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0)), 1);
+    // Missing budget for the second report.
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
+
+    JobResult result = processor.process(ctx);
+
+    // Return code should be SUCCESS, return message should match the would-be error
+    assertThat(result.resultInfo().getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR.name());
+  }
+
+  /** Test that worker completes with success if debug run despite Privacy Budget exhausted */
+  @Test
+  public void aggregateDebug_withPrivacyBudgetExhausted() throws Exception {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JOB_PARAM_DEBUG_RUN, "true");
+    // Set debug run params in job.
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                    .build())
+            .build();
+
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
+        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0)), 1);
+    // Missing budget for the second report.
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
+
+    JobResult result = processor.process(ctx);
+
+    // Return code should be SUCCESS, return message should match the would-be error
+    assertThat(result.resultInfo().getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
   }
 
   private void writeOutputDomain(Path outputDomainPath, String... keys) throws IOException {
@@ -1092,9 +1196,14 @@ public class ConcurrentAggregationProcessorTest {
       bind(double.class).annotatedWith(NoisingEpsilon.class).toInstance(0.1);
       bind(long.class).annotatedWith(NoisingL1Sensitivity.class).toInstance(4L);
       bind(double.class).annotatedWith(NoisingDelta.class).toInstance(5.00);
+
       // TODO(b/227210339) Add a test with false value for domainOptional
-      bind(Boolean.class).annotatedWith(DomainOptional.class).toInstance(true);
+      boolean domainOptional = true;
+      bind(Boolean.class).annotatedWith(DomainOptional.class).toInstance(domainOptional);
+      bind(Boolean.class).annotatedWith(EnableThresholding.class).toInstance(domainOptional);
       bind(OutputDomainProcessor.class).to(TextOutputDomainProcessor.class);
+      bind(Boolean.class).annotatedWith(EnableStackTraceInResponse.class).toInstance(true);
+      bind(Integer.class).annotatedWith(MaxDepthOfStackTrace.class).toInstance(3);
     }
 
     @Provides

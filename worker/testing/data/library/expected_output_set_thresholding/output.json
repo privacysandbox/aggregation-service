@@ -1,0 +1,13 @@
+[ {
+  "bucket" : "22",
+  "metric" : 1
+}, {
+  "bucket" : "33",
+  "metric" : 2
+}, {
+  "bucket" : "44",
+  "metric" : 3
+}, {
+  "bucket" : "55",
+  "metric" : 1
+} ]

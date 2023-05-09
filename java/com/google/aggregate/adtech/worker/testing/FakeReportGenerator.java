@@ -120,6 +120,17 @@ public class FakeReportGenerator {
   }
 
   /**
+   * Returns a null report. A null report has facts with key and value set to 0.
+   *
+   * @return A fake null report having key and value set to 0.
+   */
+  public static Report generateNullReport() {
+    Fact nullFact = FakeFactGenerator.generate(0, 0);
+    return generate(
+        Optional.of(ImmutableList.of(nullFact)), Optional.empty(), Optional.empty(), "");
+  }
+
+  /**
    * Internal Fake Report generator. Either facts OR dummyValue must be set, and only exactly one.
    * If reportId is set, dummyValue must be too. See public generate() methods for specifics on the
    * Fake Report that will be generated.

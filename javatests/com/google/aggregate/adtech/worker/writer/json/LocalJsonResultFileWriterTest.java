@@ -85,7 +85,7 @@ public class LocalJsonResultFileWriterTest {
                   AggregatedFact.create(
                       NumericConversions.uInt128FromBytes(
                           entry.get("bucket").asText().getBytes(StandardCharsets.US_ASCII)),
-                      entry.get("value").asLong()));
+                      entry.get("metric").asLong()));
             });
     assertThat(writtenResults).containsExactly(results.toArray());
   }

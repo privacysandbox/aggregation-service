@@ -20,10 +20,17 @@ java_library(
     name = "util",
     srcs = [
         "DebugSupportHelper.java",
+        "JobResultHelper.java",
         "NumericConversions.java",
     ],
     deps = [
+        "//java/com/google/aggregate/adtech/worker:annotations",
+        "//java/com/google/aggregate/adtech/worker:return_code",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/external:clients_jobclient_model",
+        "//java/external:javax_inject",
+        "//java/external:operator_protos",
+        "//java/external:scp_shared_proto",
         "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/jobclient:model",
         "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/model",
     ],

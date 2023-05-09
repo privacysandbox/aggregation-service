@@ -17,36 +17,20 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_REPORT_API_TYPE;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.FLEDGE_API;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
-import com.google.inject.Inject;
+import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.scp.operator.cpio.jobclient.model.Job;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 
 /** Validates that the report API type is supported for aggregation. */
 public final class SupportedReportApiTypeValidator implements ReportValidator {
 
-  Set<String> supportedApiTypes;
-
-  /** Constructor initializes set of supported report api types */
-  @Inject
-  public SupportedReportApiTypeValidator() {
-    supportedApiTypes = new HashSet<>();
-    supportedApiTypes.add(ATTRIBUTION_REPORTING_API);
-    supportedApiTypes.add(FLEDGE_API);
-    supportedApiTypes.add(SHARED_STORAGE_API);
-  }
-
   @Override
   public Optional<ErrorMessage> validate(Report report, Job unused) {
     if (report.sharedInfo().api().isEmpty()
-        || supportedApiTypes.contains(report.sharedInfo().api().get())) {
+        || SharedInfo.SUPPORTED_APIS.contains(report.sharedInfo().api().get())) {
       /**
        * attribution-reporting reports with version "" do not have api field present in shared Info
        */
@@ -55,7 +39,7 @@ public final class SupportedReportApiTypeValidator implements ReportValidator {
 
     return Optional.of(
         ErrorMessage.builder()
-            .setCategory(UNSUPPORTED_REPORT_API_TYPE.name())
+            .setCategory(UNSUPPORTED_REPORT_API_TYPE)
             .setDetailedErrorMessage(detailedErrorMessage(report.sharedInfo().api().get()))
             .build());
   }

@@ -119,6 +119,7 @@ PROD_ENCLAVE_ARGS = [
     "AWS",
     "--noising",
     "DP_NOISING",
+    "--return_stack_trace",
 ]
 # Check the documentation for the worker_aws_deployment macro for details on
 # what is available in this package.

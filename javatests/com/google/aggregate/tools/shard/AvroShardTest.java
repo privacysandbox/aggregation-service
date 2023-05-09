@@ -118,6 +118,77 @@ public class AvroShardTest {
     assertEquals(outputDomainShards.size(), readDomain(domainPath).size());
   }
 
+  @Test
+  public void testUnevenSharding() throws IOException {
+    int numShard = 4;
+    int[] numReportsPerShard = new int[] {1, 5};
+    Path outputDomainShardsDir = outPutDirectory.resolve("domainShards");
+    // 6 entries contained within this file
+    Path domainPath = baseDirectory.resolve("input_set_attribution_1/domain.avro");
+    List<AvroOutputDomainRecord> outputDomainShards = new ArrayList<>();
+    String[] cli =
+        new String[] {
+          "--input", domainPath.toString(),
+          "--output_dir", outputDomainShardsDir.toString(),
+          "--num_shards", String.valueOf(numShard),
+          "--domain"
+        };
+
+    avroShard.main(cli);
+
+    assertTrue(Files.exists(outputDomainShardsDir));
+
+    List<String> domainShardPaths = Arrays.asList(outputDomainShardsDir.toFile().list());
+
+    // Uneven sharding should result in specified number of shards generated
+    assertEquals(domainShardPaths.size(), numShard);
+
+    for (String domainShardPath : domainShardPaths) {
+      outputDomainShards.addAll(readDomain(outputDomainShardsDir.resolve(domainShardPath)));
+    }
+
+    assertEquals(outputDomainShards.size(), readDomain(domainPath).size());
+  }
+
+  @Test
+  public void testEvenShardingDistribution() throws IOException {
+    // Arrange
+    int numShards = 501;
+    Path outputReportShardsDir = outPutDirectory.resolve("reportShards");
+    // 1000 entries contained within this file
+    Path reportPath = baseDirectory.resolve("input_set_attribution_5/batch.avro");
+    String[] cli =
+        new String[] {
+          "--input", reportPath.toString(),
+          "--output_dir", outputReportShardsDir.toString(),
+          "--num_shards", String.valueOf(numShards),
+        };
+
+    // Act
+    avroShard.main(cli);
+    assertTrue(Files.exists(outputReportShardsDir));
+    List<String> reportShardPaths = Arrays.asList(outputReportShardsDir.toFile().list());
+    int numReports = 0;
+    int maxReportsPerShard = Integer.MIN_VALUE;
+    int minReportsPerShard = Integer.MAX_VALUE;
+    for (String reportShardPath : reportShardPaths) {
+      ImmutableList<AvroReportRecord> reports =
+          readReport(outputReportShardsDir.resolve(reportShardPath));
+      maxReportsPerShard = Math.max(reports.size(), maxReportsPerShard);
+      minReportsPerShard = Math.min(reports.size(), minReportsPerShard);
+      numReports += reports.size();
+    }
+
+    // Assert
+    // Uneven sharding should still result in specified number of shards generated
+    assertEquals(reportShardPaths.size(), numShards);
+    // Shards should not differ in size by more than 1 report
+    int reportsPerShardDifference = maxReportsPerShard - minReportsPerShard;
+    assertTrue(reportsPerShardDifference <= 1);
+    // Confirm all reports were written to shards
+    assertEquals(numReports, readReport(reportPath).size());
+  }
+
   private ImmutableList<AvroOutputDomainRecord> readDomain(Path domainPath) throws IOException {
     AvroOutputDomainReaderFactory domainReaderFactory =
         injector.getInstance(AvroOutputDomainReaderFactory.class);

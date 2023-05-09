@@ -22,12 +22,46 @@ import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSumm
  * Describes a category of error message, used to distinguish between processing or validation
  * failures reported by the {@link ErrorSummary} class.
  */
+// TODO(b/277005581): Add external documentation
 public enum ErrorCounter {
-  ATTRIBUTION_REPORT_TO_MISMATCH,
-  ATTRIBUTION_REPORT_TO_MALFORMED,
-  ORIGINAL_REPORT_TIME_MISMATCH,
-  ORIGINAL_REPORT_TIME_TOO_OLD,
-  NUM_REPORTS_DEBUG_NOT_ENABLED,
-  NUM_REPORTS_WITH_ERRORS,
-  UNSUPPORTED_REPORT_API_TYPE
+  ATTRIBUTION_REPORT_TO_MALFORMED(
+      "Report's shared_info.reporting_origin domain is malformed. Domain must be syntactically"
+          + " valid and have an Effective Top Level Domain (eTLD)."),
+  ATTRIBUTION_REPORT_TO_MISMATCH(
+      "Report's shared_info.reporting_origin value does not match attribution_report_to value set"
+          + " in the Aggregation job parameters. Aggregation request job parameters must have"
+          + " attribution_report_to set to report's shared_info.reporting_origin value."),
+  DECRYPTION_ERROR(
+      "Unable to decrypt the report. This may be caused by: misconfiguration of an "
+          + "ad tech service, running the Aggregation Service enclave in debug mode, "
+          + "tampered reports, corrupt keys, or other such issues."),
+  DEBUG_NOT_ENABLED(
+      "Reports without shared_info.debug_mode enabled cannot be processed in a debug run."),
+  NUM_REPORTS_WITH_ERRORS(
+      "Total number of reports that had an error. These reports were not considered in aggregation."
+          + " See additional error messages for details on specific reasons."),
+  ORIGINAL_REPORT_TIME_TOO_OLD(
+      String.format(
+          "Report's shared_info.scheduled_report_time is too old, reports cannot be older than %s"
+              + " days.",
+          SharedInfo.MAX_REPORT_AGE.toDays())),
+  UNSUPPORTED_OPERATION(
+      String.format(
+          "Report's operation is unsupported. Supported operations are %s.",
+          SharedInfo.SUPPORTED_OPERATIONS)),
+  UNSUPPORTED_REPORT_API_TYPE(
+      String.format(
+          "The report's API type is not supported for aggregation. Supported APIs are %s",
+          SharedInfo.SUPPORTED_APIS));
+
+  private String description;
+
+  ErrorCounter(String description) {
+    this.description = description;
+  }
+
+  /** Returns the description of the error category. */
+  public String getDescription() {
+    return description;
+  }
 }

@@ -17,12 +17,12 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory.DECRYPTION_ERROR;
 
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter.DecryptionException;
 import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
+import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.validation.ReportValidator;
@@ -86,7 +86,7 @@ public final class ReportDecrypterAndValidator {
       return DecryptionValidationResult.builder()
           .addErrorMessage(
               ErrorMessage.builder()
-                  .setCategory(DECRYPTION_ERROR.name())
+                  .setCategory(ErrorCounter.DECRYPTION_ERROR)
                   .setDetailedErrorMessage(detailedErrorMessage)
                   .build())
           .build();

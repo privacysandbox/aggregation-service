@@ -23,6 +23,8 @@ import static com.google.common.util.concurrent.Service.State.TERMINATED;
 
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
+import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
@@ -204,6 +206,10 @@ public class AggregationWorkerTest {
       bind(double.class).annotatedWith(NoisingEpsilon.class).toInstance(0.1);
       bind(long.class).annotatedWith(NoisingL1Sensitivity.class).toInstance(4L);
       bind(double.class).annotatedWith(NoisingDelta.class).toInstance(5.00);
+
+      // Response related flags
+      bind(boolean.class).annotatedWith(EnableStackTraceInResponse.class).toInstance(true);
+      bind(int.class).annotatedWith(MaxDepthOfStackTrace.class).toInstance(32);
     }
 
     @Provides

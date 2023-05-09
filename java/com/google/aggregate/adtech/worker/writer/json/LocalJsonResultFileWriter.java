@@ -82,7 +82,7 @@ public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
               StandardCharsets.US_ASCII);
       jgen.writeStartObject();
       jgen.writeStringField("bucket", bucket);
-      jgen.writeNumberField("value", aggregatedFact.metric());
+      jgen.writeNumberField("metric", aggregatedFact.metric());
       jgen.writeEndObject();
     }
   }

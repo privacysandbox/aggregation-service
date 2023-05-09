@@ -1,19 +1,19 @@
 [ {
   "bucket" : "key4",
-  "value" : 2000000
+  "metric" : 2000000
 }, {
   "bucket" : "key1",
-  "value" : 12000000
+  "metric" : 12000000
 }, {
   "bucket" : "key3",
-  "value" : 2000000
+  "metric" : 2000000
 }, {
   "bucket" : "key2",
-  "value" : 13000000
+  "metric" : 13000000
 }, {
   "bucket" : "key11",
-  "value" : 0
+  "metric" : 0
 }, {
   "bucket" : "key12",
-  "value" : 0
+  "metric" : 0
 } ]

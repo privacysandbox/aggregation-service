@@ -16,36 +16,32 @@
 
 package com.google.aggregate.adtech.worker.validation;
 
+import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
-import com.google.aggregate.adtech.worker.model.Payload;
 import com.google.aggregate.adtech.worker.model.Report;
-import com.google.common.collect.ImmutableSet;
+import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.scp.operator.cpio.jobclient.model.Job;
-import com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory;
 import java.util.Optional;
 
 /** Validates that the report's operation is an accepted value */
 public final class SupportedOperationValidator implements ReportValidator {
 
-  // Only the "histogram" operation is supported
-  private static final ImmutableSet<String> SUPPORTED_OPERATIONS =
-      ImmutableSet.of(Payload.HISTOGRAM_OPERATION);
   private static final String DETAILED_ERROR_MESSAGE_TEMPLATE =
       "Report's operation is not supported. Operation was '%s'. Supported operations are %s.";
 
   @Override
   public Optional<ErrorMessage> validate(Report report, Job unused) {
-    if (SUPPORTED_OPERATIONS.contains(report.payload().operation())) {
+    if (SharedInfo.SUPPORTED_OPERATIONS.contains(report.payload().operation())) {
       return Optional.empty();
     }
     return Optional.of(
         ErrorMessage.builder()
-            .setCategory(JobErrorCategory.UNSUPPORTED_OPERATION.name())
+            .setCategory(ErrorCounter.UNSUPPORTED_OPERATION)
             .setDetailedErrorMessage(
                 String.format(
                     DETAILED_ERROR_MESSAGE_TEMPLATE,
                     report.payload().operation(),
-                    SUPPORTED_OPERATIONS))
+                    SharedInfo.SUPPORTED_OPERATIONS))
             .build());
   }
 }

@@ -20,6 +20,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Spliterator;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericRecord;
@@ -65,6 +66,36 @@ public abstract class AvroRecordWriter<Record> implements AutoCloseable {
       for (Record record : records) {
         GenericRecord genericAvroRecord = serializeRecordToGeneric(record, schema);
         streamWriter.append(genericAvroRecord);
+      }
+
+      streamWriter.flush();
+      outStream.flush();
+    }
+  }
+
+  /** Writes out @numRecords records with the given {@link AvroReportRecord} */
+  public void writeRecordsFromSpliterator(
+      ImmutableList<MetadataElement> metadata,
+      Spliterator<Record> recordSpliterator,
+      int numRecords)
+      throws IOException {
+    Schema schema = schemaSupplier.get();
+
+    metadata.forEach(meta -> avroWriter.setMeta(meta.key(), meta.value()));
+
+    try (DataFileWriter<GenericRecord> streamWriter = avroWriter.create(schema, outStream)) {
+      for (int i = 0; i < numRecords; i++) {
+        recordSpliterator.tryAdvance(
+            record -> {
+              GenericRecord genericAvroRecord = null;
+              // TODO(b/276489466): Replace try-catch with a thrown TunnelException from Guava lib
+              try {
+                genericAvroRecord = serializeRecordToGeneric(record, schema);
+                streamWriter.append(genericAvroRecord);
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            });
       }
 
       streamWriter.flush();

@@ -26,6 +26,8 @@ import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,7 +36,10 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class FakeValidatorTest {
 
-  private static Report report;
+  private static Report report1;
+  private static Report report2;
+  private static String reportId1;
+  private static String reportId2;
   private static Job ctx;
 
   // Under test
@@ -42,22 +47,36 @@ public class FakeValidatorTest {
 
   @Before
   public void setUp() {
-    report = FakeReportGenerator.generateWithParam(1, /* reportVersion */ "");
+    reportId1 = String.valueOf(UUID.randomUUID());
+    reportId2 = String.valueOf(UUID.randomUUID());
+    report1 = FakeReportGenerator.generateWithFixedReportId(1, reportId1, "");
+    report2 = FakeReportGenerator.generateWithFixedReportId(1, reportId2, "");
     ctx = FakeJobGenerator.generate("foo");
 
     fakeValidator = new FakeValidator();
   }
 
   @Test
-  public void validation() {
+  public void setReportIdShouldReturnErrorValidation() {
+    fakeValidator.setReportIdShouldReturnError(Set.of(reportId2));
+
+    Optional<ErrorMessage> firstValidationError = fakeValidator.validate(report1, ctx);
+    Optional<ErrorMessage> secondValidationError = fakeValidator.validate(report2, ctx);
+
+    assertThat(firstValidationError).isEmpty();
+    assertThat(secondValidationError).isPresent();
+  }
+
+  @Test
+  public void setNextShouldReturnErrorValidation() {
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, true).iterator());
 
-    Optional<ErrorMessage> firstValidationError = fakeValidator.validate(report, ctx);
-    Optional<ErrorMessage> secondValidationError = fakeValidator.validate(report, ctx);
+    Optional<ErrorMessage> firstValidationError = fakeValidator.validate(report1, ctx);
+    Optional<ErrorMessage> secondValidationError = fakeValidator.validate(report2, ctx);
 
     assertThat(firstValidationError).isEmpty();
     assertThat(secondValidationError).isPresent();
     // Runs out of errors.
-    assertThrows(NoSuchElementException.class, () -> fakeValidator.validate(report, ctx));
+    assertThrows(NoSuchElementException.class, () -> fakeValidator.validate(report2, ctx));
   }
 }

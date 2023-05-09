@@ -67,6 +67,11 @@ public final class Annotations {
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
+  public @interface EnableThresholding {}
+
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
   public @interface FailJobOnPbsException {}
 
   @BindingAnnotation
@@ -78,6 +83,18 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   @interface ResultWriter {}
+
+  /** Annotation to enable or disable returning stack trace in response. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface EnableStackTraceInResponse {}
+
+  /** Annotation to declare the max depth of stacktrace to be returned. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface MaxDepthOfStackTrace {}
 
   private Annotations() {}
 }

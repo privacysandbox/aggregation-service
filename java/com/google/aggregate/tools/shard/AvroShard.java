@@ -16,9 +16,7 @@
 
 package com.google.aggregate.tools.shard;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -33,7 +31,6 @@ import com.google.aggregate.protocol.avro.AvroReportWriterFactory;
 import com.google.aggregate.protocol.avro.AvroReportsReader;
 import com.google.aggregate.protocol.avro.AvroReportsReaderFactory;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -43,7 +40,9 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
+import java.util.Spliterator;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /*
  * This tool is for sharding Avro report or domain.
@@ -70,105 +69,149 @@ final class AvroShard {
 
     Path inputPath = Paths.get(cliArgs.input);
     Path outputDirPath = Paths.get(cliArgs.outputDir);
-    int recordSize;
-    int shardSize;
-    int shardNum = cliArgs.numShards;
+    final AtomicInteger numRecords = new AtomicInteger();
+    int numShards = cliArgs.numShards;
 
     if (cliArgs.domain) {
-      ImmutableList<AvroOutputDomainRecord> records = readDomainRecords(inputPath);
-      recordSize = records.size();
-      shardSize = recordSize / shardNum;
-      System.out.printf("Total records: %d\n", recordSize);
-      System.out.printf("Shards: %d\n", shardNum);
-      System.out.printf("Shard size: %d\n", shardSize);
-      writeDomainRecords(records, outputDirPath, shardSize, shardNum);
+      try (Stream<AvroOutputDomainRecord> stream = streamDomainRecords(inputPath)) {
+        System.out.println("Iterating over domain records");
+        stream.forEach(
+            shard -> {
+              numRecords.incrementAndGet();
+            });
+        System.out.println("Finished iterating over domain records");
+      }
+      // Determining stream length is a terminal operation, so the Stream of Domain Records is
+      // created twice
+      try (Stream<AvroOutputDomainRecord> stream = streamDomainRecords(inputPath)) {
+        System.out.printf("Total domain records: %d\n", numRecords.get());
+        System.out.printf("Shards: %d\n", numShards);
+        System.out.printf("Shard size: %d\n", numRecords.get() / numShards);
+
+        writeDomainRecordsFromStream(stream, outputDirPath, numRecords.get(), numShards);
+      }
     } else {
-      ImmutableList<AvroReportRecord> records = readReportRecords(inputPath);
-      recordSize = records.size();
-      shardSize = recordSize / shardNum;
-      System.out.printf("Total records: %d\n", recordSize);
-      System.out.printf("Shards: %d\n", shardNum);
-      System.out.printf("Shard size: %d\n", shardSize);
-      writeReportRecords(records, outputDirPath, shardSize, shardNum);
+      try (Stream<AvroReportRecord> stream = streamReportRecords(inputPath)) {
+        System.out.println("Iterating over records");
+        stream.forEach(
+            shard -> {
+              numRecords.incrementAndGet();
+            });
+        System.out.println("Finished iterating over records");
+      }
+      // Determining stream length is a terminal operation, so the Stream of Report Records is
+      // created twice
+      try (Stream stream = streamReportRecords(inputPath)) {
+        System.out.printf("Total records: %d\n", numRecords.get());
+        System.out.printf("Shards: %d\n", numShards);
+        System.out.printf("Shard size: %d\n", numRecords.get() / numShards);
+
+        writeReportRecordsFromStream(stream, outputDirPath, numRecords.get(), numShards);
+      }
     }
   }
 
-  public static ImmutableList<AvroOutputDomainRecord> readDomainRecords(Path inputPath)
-      throws IOException {
+  public static Stream<AvroOutputDomainRecord> streamDomainRecords(Path inputPath) {
     AvroOutputDomainReaderFactory domainReaderFactory =
         injector.getInstance(AvroOutputDomainReaderFactory.class);
-    ImmutableList<AvroOutputDomainRecord> records;
-    try (InputStream avroStream = Files.newInputStream(inputPath);
-        AvroOutputDomainReader reader = domainReaderFactory.create(avroStream)) {
-      records = reader.streamRecords().collect(toImmutableList());
+    Stream<AvroOutputDomainRecord> stream = null;
+    try {
+      InputStream avroStream = Files.newInputStream(inputPath);
+      AvroOutputDomainReader reader = domainReaderFactory.create(avroStream);
+      stream = reader.streamRecords();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
-    return records;
+    return stream;
   }
 
-  public static ImmutableList<AvroReportRecord> readReportRecords(Path inputPath)
-      throws IOException {
+  public static Stream<AvroReportRecord> streamReportRecords(Path inputPath) {
     AvroReportsReaderFactory reportReaderFactory =
         injector.getInstance(AvroReportsReaderFactory.class);
-    ImmutableList<AvroReportRecord> records;
-    try (InputStream avroStream = Files.newInputStream(inputPath);
-        AvroReportsReader reader = reportReaderFactory.create(avroStream)) {
-      records = reader.streamRecords().collect(toImmutableList());
+    Stream<AvroReportRecord> stream = null;
+    try {
+      InputStream avroStream = Files.newInputStream(inputPath);
+      AvroReportsReader reader = reportReaderFactory.create(avroStream);
+      stream = reader.streamRecords();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
-    return records;
+    return stream;
   }
 
-  private static void writeDomainRecords(
-      ImmutableList<AvroOutputDomainRecord> records,
-      Path outputDirPath,
-      int shardSize,
-      int shardNum)
+  private static void writeDomainRecordsFromStream(
+      Stream<AvroOutputDomainRecord> records, Path outputDirPath, int numRecords, int numShards)
       throws IOException {
 
     AvroOutputDomainWriterFactory domainWriterFactory =
         injector.getInstance(AvroOutputDomainWriterFactory.class);
-    int runningShard = 1;
-    for (List<AvroOutputDomainRecord> shard : Iterables.partition(records, shardSize)) {
+
+    Files.createDirectories(outputDirPath);
+
+    Spliterator<AvroOutputDomainRecord> recordsSpliterator = records.spliterator();
+    int recordsWritten = 0;
+    for (int currentShard = 1; currentShard <= numShards; currentShard++) {
+      int numRecordsToWrite = getNumRecordsToWrite(numRecords, numShards, currentShard);
       Path shardPath =
           outputDirPath.resolve(
-              String.format("shard-domain-%d-of-%d.avro", runningShard, shardNum));
+              String.format("shard-domain-%d-of-%d.avro", currentShard, numShards));
 
       System.out.printf(
-          "Writing domain shard %d at %s\n", runningShard, shardPath.toAbsolutePath());
+          "Writing domain shard %d at %s\n", currentShard, shardPath.toAbsolutePath());
 
-      Files.createDirectories(outputDirPath);
-
-      try (OutputStream shardStream = Files.newOutputStream(shardPath, CREATE, TRUNCATE_EXISTING);
-          AvroOutputDomainWriter writer = domainWriterFactory.create(shardStream)) {
-        writer.writeRecords(/* metadata= */ ImmutableList.of(), ImmutableList.copyOf(shard));
+      if (currentShard == numShards) {
+        numRecordsToWrite = numRecords - recordsWritten;
       }
-      System.out.println("Domain shard written");
-      runningShard++;
+
+      try (OutputStream shardStream = Files.newOutputStream(shardPath, CREATE);
+          AvroOutputDomainWriter writer = domainWriterFactory.create(shardStream)) {
+        writer.writeRecordsFromSpliterator(
+            /* metadata= */ ImmutableList.of(), recordsSpliterator, numRecordsToWrite);
+        recordsWritten += numRecordsToWrite;
+        System.out.printf("Domain Shard %d written", currentShard);
+      }
     }
   }
 
-  private static void writeReportRecords(
-      ImmutableList<AvroReportRecord> records, Path outputDirPath, int shardSize, int shardNum)
+  private static void writeReportRecordsFromStream(
+      Stream<AvroReportRecord> records, Path outputDirPath, int numRecords, int numShards)
       throws IOException {
 
     AvroReportWriterFactory reportWriterFactory =
         injector.getInstance(AvroReportWriterFactory.class);
-    int runningShard = 1;
-    for (List<AvroReportRecord> shard : Iterables.partition(records, shardSize)) {
+
+    Files.createDirectories(outputDirPath);
+
+    Spliterator<AvroReportRecord> recordsSpliterator = records.spliterator();
+
+    int recordsWritten = 0;
+    for (int currentShard = 1; currentShard <= numShards; currentShard++) {
+      int numRecordsToWrite = getNumRecordsToWrite(numRecords, numShards, currentShard);
       Path shardPath =
           outputDirPath.resolve(
-              String.format("shard-report-%d-of-%d.avro", runningShard, shardNum));
+              String.format("shard-report-%d-of-%d.avro", currentShard, numShards));
 
-      System.out.printf("Writing shard %d at %s\n", runningShard, shardPath.toAbsolutePath());
+      System.out.printf("Writing shard %d at %s\n", currentShard, shardPath.toAbsolutePath());
 
-      Files.createDirectories(outputDirPath);
-
+      if (currentShard == numShards) {
+        numRecordsToWrite = numRecords - recordsWritten;
+      }
       try (OutputStream shardStream = Files.newOutputStream(shardPath, CREATE);
           AvroReportWriter writer = reportWriterFactory.create(shardStream)) {
-        writer.writeRecords(/* metadata= */ ImmutableList.of(), ImmutableList.copyOf(shard));
+        writer.writeRecordsFromSpliterator(
+            /* metadata= */ ImmutableList.of(), recordsSpliterator, numRecordsToWrite);
+        recordsWritten += numRecordsToWrite;
+        System.out.printf("Report Shard %d written", currentShard);
       }
-      System.out.println("Shard written");
-      runningShard++;
     }
+  }
+
+  private static int getNumRecordsToWrite(int numRecords, int numShards, int currentShard) {
+    int minRecordsPerShard = numRecords / numShards;
+    int numShardsWithSpillover = numRecords % numShards;
+    int spilloverRecordsInCurrentShard = currentShard < numShardsWithSpillover ? 1 : 0;
+
+    return minRecordsPerShard + spilloverRecordsInCurrentShard;
   }
 
   private static final class Env extends AbstractModule {}

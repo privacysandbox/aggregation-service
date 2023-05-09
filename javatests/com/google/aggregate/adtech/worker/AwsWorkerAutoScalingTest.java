@@ -51,6 +51,7 @@ public class AwsWorkerAutoScalingTest {
       Duration.of(5, ChronoUnit.MINUTES);
 
   private static final String DATA_BUCKET = "aggregation-service-testing";
+  private static final String TEST_DATA_S3_KEY_PREFIX = "generated-test-data";
 
   // Input data and domain were generated in continuous_auto_scaling_test in shared_e2e.sh.
   // Generate only one set of input reports and domain for 5 job requests
@@ -60,9 +61,13 @@ public class AwsWorkerAutoScalingTest {
   // Use 100k reports because if the report size is too small, the job completes very fast
   // and almost no job waits in queue, which would not trigger auto-scaling.
   private static final String INPUT_DATA_PATH =
-      String.format("%s/test-inputs/100k_auto_scale_test_input.avro", KOKORO_BUILD_ID);
+      String.format(
+          "%s/%s/test-inputs/100k_auto_scale_test_input.avro",
+          TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
   private static final String INPUT_DOMAIN_PATH =
-      String.format("%s/test-inputs/100k_auto_scale_test_domain.avro", KOKORO_BUILD_ID);
+      String.format(
+          "%s/%s/test-inputs/100k_auto_scale_test_domain.avro",
+          TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
   public static final String AUTO_SCALING_GROUP = System.getenv("AUTO_SCALING_GROUP");
   private static final Integer CONCURRENT_JOBS = 5;
@@ -90,7 +95,9 @@ public class AwsWorkerAutoScalingTest {
 
   private CreateJobRequest createE2EJob(Integer jobCount) throws Exception {
     String outputFile = String.format("100k_auto_scale_job_%d.avro.test", jobCount);
-    String outputDataPath = String.format("test-outputs/%s/%s", KOKORO_BUILD_ID, outputFile);
+    String outputDataPath =
+        String.format(
+            "%s/test-outputs/%s/%s", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID, outputFile);
     CreateJobRequest createJobRequest =
         createJobRequest(
             DATA_BUCKET,

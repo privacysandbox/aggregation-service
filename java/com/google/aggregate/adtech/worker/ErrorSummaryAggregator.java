@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
+import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -44,16 +45,16 @@ public final class ErrorSummaryAggregator {
             .collect(toImmutableList());
 
     // Iterate over all of the {@code ErrorMessages} and count the occurrence of each category
-    ImmutableMap<String, Long> errorCounts =
+    ImmutableMap<ErrorCounter, Long> errorCounts =
         onlyResultsWithErrors.stream()
             .map(DecryptionValidationResult::errorMessages)
             .flatMap(ImmutableList::stream)
             .collect(toImmutableMap(ErrorMessage::category, (unused) -> 1L, Math::addExact));
     if (onlyResultsWithErrors.size() > 0) {
       errorCounts =
-          ImmutableMap.<String, Long>builder()
+          ImmutableMap.<ErrorCounter, Long>builder()
               .putAll(errorCounts)
-              .put(NUM_REPORTS_WITH_ERRORS.name(), Long.valueOf(onlyResultsWithErrors.size()))
+              .put(NUM_REPORTS_WITH_ERRORS, Long.valueOf(onlyResultsWithErrors.size()))
               .build();
     }
 
@@ -64,7 +65,8 @@ public final class ErrorSummaryAggregator {
                     i ->
                         ErrorCount.newBuilder()
                             .setCount(i.getValue())
-                            .setCategory(i.getKey())
+                            .setCategory(i.getKey().name())
+                            .setDescription(i.getKey().getDescription())
                             .build())
                 .collect(toImmutableList()))
         .build();

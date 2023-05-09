@@ -16,13 +16,10 @@
 
 package com.google.aggregate.adtech.worker;
 
-import static com.google.aggregate.adtech.worker.model.ErrorCounter.ATTRIBUTION_REPORT_TO_MISMATCH;
-import static com.google.aggregate.adtech.worker.model.ErrorCounter.NUM_REPORTS_WITH_ERRORS;
-import static com.google.aggregate.adtech.worker.model.ErrorCounter.ORIGINAL_REPORT_TIME_MISMATCH;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.operator.protos.shared.backend.JobErrorCategoryProto.JobErrorCategory.DECRYPTION_ERROR;
 
 import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
+import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator;
 import com.google.common.collect.ImmutableList;
@@ -46,20 +43,15 @@ public class ErrorSummaryAggregatorTest {
             DecryptionValidationResult.builder()
                 .addErrorMessage(
                     ErrorMessage.builder()
-                        .setCategory(DECRYPTION_ERROR.name())
+                        .setCategory(ErrorCounter.DECRYPTION_ERROR)
                         .setDetailedErrorMessage("foo")
                         .build())
                 .build(),
             DecryptionValidationResult.builder()
                 .addErrorMessage(
                     ErrorMessage.builder()
-                        .setCategory(ATTRIBUTION_REPORT_TO_MISMATCH.name())
+                        .setCategory(ErrorCounter.ATTRIBUTION_REPORT_TO_MISMATCH)
                         .setDetailedErrorMessage("bar")
-                        .build())
-                .addErrorMessage(
-                    ErrorMessage.builder()
-                        .setCategory(ORIGINAL_REPORT_TIME_MISMATCH.name())
-                        .setDetailedErrorMessage("fizz")
                         .build())
                 .build(),
             DecryptionValidationResult.builder()
@@ -68,7 +60,7 @@ public class ErrorSummaryAggregatorTest {
             DecryptionValidationResult.builder()
                 .addErrorMessage(
                     ErrorMessage.builder()
-                        .setCategory(ATTRIBUTION_REPORT_TO_MISMATCH.name())
+                        .setCategory(ErrorCounter.ATTRIBUTION_REPORT_TO_MISMATCH)
                         .setDetailedErrorMessage("buzz")
                         .build())
                 .build());
@@ -77,19 +69,19 @@ public class ErrorSummaryAggregatorTest {
             .addAllErrorCounts(
                 ImmutableList.of(
                     ErrorCount.newBuilder()
-                        .setCategory(DECRYPTION_ERROR.name())
+                        .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                        .setDescription(ErrorCounter.DECRYPTION_ERROR.getDescription())
                         .setCount(1L)
                         .build(),
                     ErrorCount.newBuilder()
-                        .setCategory(ATTRIBUTION_REPORT_TO_MISMATCH.name())
+                        .setCategory(ErrorCounter.ATTRIBUTION_REPORT_TO_MISMATCH.name())
+                        .setDescription(
+                            ErrorCounter.ATTRIBUTION_REPORT_TO_MISMATCH.getDescription())
                         .setCount(2L)
                         .build(),
                     ErrorCount.newBuilder()
-                        .setCategory(ORIGINAL_REPORT_TIME_MISMATCH.name())
-                        .setCount(1L)
-                        .build(),
-                    ErrorCount.newBuilder()
-                        .setCategory(NUM_REPORTS_WITH_ERRORS.name())
+                        .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                        .setDescription(ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
                         .setCount(3L)
                         .build()))
             .build();

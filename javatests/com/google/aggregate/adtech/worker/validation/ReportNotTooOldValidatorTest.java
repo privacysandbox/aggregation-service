@@ -90,7 +90,7 @@ public class ReportNotTooOldValidatorTest {
     Optional<ErrorMessage> validationError = validator.validate(report, ctx);
 
     assertThat(validationError).isPresent();
-    assertThat(validationError.get().category()).isEqualTo(ORIGINAL_REPORT_TIME_TOO_OLD.name());
+    assertThat(validationError.get().category()).isEqualTo(ORIGINAL_REPORT_TIME_TOO_OLD);
   }
 
   public static final class TestEnv extends AbstractModule {
