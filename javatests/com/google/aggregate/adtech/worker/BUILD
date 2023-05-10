@@ -322,6 +322,8 @@ java_test(
         "//java/external:aws_regions",
         "//java/external:aws_s3",
         "//java/external:aws_url_connection_client",
+        "//java/external:clients_blobstorageclient_aws",
+        "//java/external:clients_blobstorageclient_model",
         "//java/external:frontend_java_proto",
         "//java/external:google_truth",
         "//java/external:guice",

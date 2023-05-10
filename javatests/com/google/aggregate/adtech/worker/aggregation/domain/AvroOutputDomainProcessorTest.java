@@ -113,6 +113,20 @@ public class AvroOutputDomainProcessorTest {
     assertThat(error).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  public void readOutputDomain_emptyOutputDomain_throwsException() throws Exception {
+    writeOutputDomain(outputDomainDirectory.resolve("domain_1.avro"), Stream.of());
+    writeOutputDomain(outputDomainDirectory.resolve("domain_2.avro"), Stream.of());
+
+    ExecutionException error = assertThrows(ExecutionException.class, this::readOutputDomain);
+
+    assertThat(error).hasCauseThat().isInstanceOf(DomainReadException.class);
+    assertThat(error.getCause()).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+    assertThat(error.getCause())
+        .hasMessageThat()
+        .containsMatch("No output domain provided in the location.*");
+  }
+
   private ImmutableSet<BigInteger> readOutputDomain()
       throws ExecutionException, InterruptedException {
     return outputDomainProcessor.readAndDedupDomain(outputDomainLocation).get();

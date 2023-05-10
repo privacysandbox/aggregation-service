@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/privacysandbox/aggregation-service/compare/v0.9.0...v0.10.0) (2023-05-10)
+
+### Changes
+
+-   Upgraded control plane shared library dependency to
+    [v0.51.13](https://github.com/privacysandbox/control-plane-shared-libraries/tree/v0.51.13)
+
 ## [0.9.0](https://github.com/privacysandbox/aggregation-service/compare/v0.8.0...v0.9.0) (2023-05-08)
 
 ### Changes

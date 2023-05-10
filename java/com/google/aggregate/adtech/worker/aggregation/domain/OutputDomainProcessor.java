@@ -100,6 +100,15 @@ public abstract class OutputDomainProcessor {
                   .flatMap(Collection::stream)
                   .collect(ImmutableSet.toImmutableSet());
           stopwatch.stop();
+          if (domain.isEmpty()) {
+            throw new DomainReadException(
+                new IllegalArgumentException(
+                    String.format(
+                        "No output domain provided in the location. : %s. Please refer to the API"
+                            + " documentation for output domain parameters at"
+                            + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/API.md",
+                        outputDomainLocation)));
+          }
           return domain;
         },
         nonBlockingThreadPool);

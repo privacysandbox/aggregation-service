@@ -24,6 +24,8 @@ import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.w
 import com.google.acai.Acai;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
+import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.PartialRequestBufferSize;
+import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3UsePartialRequests;
 import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.time.Duration;
 import java.time.Instant;
@@ -165,6 +167,8 @@ public class AwsWorkerAutoScalingTest {
               AutoScalingClient.builder()
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
+      bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
+      bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }
   }
 }

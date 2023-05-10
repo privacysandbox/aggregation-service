@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.scp.operator.cpio.jobclient.model.Job;
@@ -44,41 +45,98 @@ public class JobValidatorTest {
   }
 
   @Test
-  public void test_nonEmptyReportValidationSucceeds() {
-    ImmutableMap jobParams = ImmutableMap.of("attribution_report_to", "foo.com");
-    Job job =
-        jobBuilder
-            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
-            .build();
-
-    boolean result = JobValidator.validate(Optional.of(job));
-
-    assertThat(result).isTrue();
-  }
-
-  @Test
-  public void test_emptyReportValidationEmptyString() {
-    ImmutableMap jobParams = ImmutableMap.of("attribution_report_to", "");
-    Job job =
-        jobBuilder
-            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
-            .build();
-
-    boolean result = JobValidator.validate(Optional.of(job));
-
-    assertThat(result).isFalse();
-  }
-
-  @Test
-  public void test_emptyReportValidationMissingParam() {
+  public void validate_noAttributionReportToKeyInParams_fails() {
     ImmutableMap jobParams = ImmutableMap.of();
     Job job =
         jobBuilder
             .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
             .build();
 
-    boolean result = JobValidator.validate(Optional.of(job));
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> JobValidator.validate(Optional.of(job), /* domainOptional= */ false));
 
-    assertThat(result).isFalse();
+    assertThat(exception)
+        .hasMessageThat()
+        .containsMatch("Job parameters does not have an attribution_report_to field for the Job");
+  }
+
+  @Test
+  public void validate_noAttributionReportTo_fails() {
+    ImmutableMap jobParams = ImmutableMap.of("attribution_report_to", "");
+    Job job =
+        jobBuilder
+            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
+            .build();
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> JobValidator.validate(Optional.of(job), /* domainOptional= */ false));
+
+    assertThat(exception)
+        .hasMessageThat()
+        .containsMatch("Job parameters does not have an attribution_report_to field for the Job");
+  }
+
+  @Test
+  public void validate_noOutputDomain_domainOptional_succeeds() {
+    ImmutableMap jobParams = ImmutableMap.of("attribution_report_to", "foo.com");
+    Job job =
+        jobBuilder
+            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
+            .build();
+
+    JobValidator.validate(Optional.of(job), /* domainOptional= */ true);
+  }
+
+  @Test
+  public void validate_noOutputDomain_domainNotOptional_fails() {
+    ImmutableMap jobParams = ImmutableMap.of("attribution_report_to", "foo.com");
+    Job job =
+        jobBuilder
+            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
+            .build();
+
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> JobValidator.validate(Optional.of(job), /* domainOptional= */ false));
+    assertThat(exception)
+        .hasMessageThat()
+        .containsMatch(
+            "Job parameters for the job '' does not have output domain location specified in"
+                + " 'output_domain_bucket_name' and 'output_domain_blob_prefix' fields. Please"
+                + " refer to the API documentation for output domain parameters at"
+                + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/API.md");
+  }
+
+  @Test
+  public void validate_outputDomainPresent_domainNotOptional_succeeds() {
+    ImmutableMap jobParams =
+        ImmutableMap.of(
+            "attribution_report_to",
+            "foo.com",
+            "output_domain_blob_prefix",
+            "prefix_",
+            "output_domain_bucket_name",
+            "bucket");
+    Job job =
+        jobBuilder
+            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
+            .build();
+
+    JobValidator.validate(Optional.of(job), /* domainOptional= */ false);
+  }
+
+  @Test
+  public void validate_noJob_fails() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> JobValidator.validate(Optional.empty(), /* domainOptional= */ false));
+
+    assertThat(exception).hasMessageThat().isEqualTo("Job metadata not found.");
   }
 }

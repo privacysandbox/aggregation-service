@@ -17,10 +17,10 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INVALID_JOB;
-import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.aggregate.adtech.worker.util.JobResultHelper;
@@ -37,9 +37,6 @@ import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
-import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
-import com.google.scp.shared.proto.ProtoUtil;
-import java.time.Instant;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.slf4j.Logger;
@@ -56,6 +53,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
   private final MetricClient metricClient;
   private final StopwatchRegistry stopwatchRegistry;
   private final StopwatchExporter stopwatchExporter;
+  private final boolean domainOptional;
   private final boolean benchmarkMode;
 
   private final ListeningExecutorService nonBlockingThreadPool;
@@ -79,7 +77,8 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
       StopwatchExporter stopwatchExporter,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
-      @BenchmarkMode boolean benchmarkMode) {
+      @BenchmarkMode boolean benchmarkMode,
+      @DomainOptional Boolean domainOptional) {
     this.jobClient = jobClient;
     this.jobProcessor = jobProcessor;
     this.jobResultHelper = jobResultHelper;
@@ -90,6 +89,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     this.nonBlockingThreadPool = nonBlockingThreadPool;
     this.blockingThreadPool = blockingThreadPool;
     this.benchmarkMode = benchmarkMode;
+    this.domainOptional = domainOptional;
   }
 
   // TODO(b/271323750) Implement unit tests
@@ -112,38 +112,10 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
 
         logger.info("Item pulled");
 
-        boolean validated = JobValidator.validate(job);
-
-        if (!validated) {
-          JobResult jobErrorResult =
-              JobResult.builder()
-                  .setResultInfo(
-                      ResultInfo.newBuilder()
-                          .setReturnCode(INVALID_JOB.name())
-                          .setReturnMessage(
-                              String.format(
-                                  "Job '%s' does not have an attribution_report_to field.",
-                                  toJobKeyString(job.get().jobKey())))
-                          .setErrorSummary(ErrorSummary.getDefaultInstance())
-                          .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now()))
-                          .build())
-                  .build();
-          jobClient.markJobCompleted(jobErrorResult);
-
-          try {
-            CustomMetric metric =
-                CustomMetric.builder()
-                    .setNameSpace(METRIC_NAMESPACE)
-                    .setName("JobValidationFailure")
-                    .setValue(1.0)
-                    .setUnit("Count")
-                    .addLabel("Validator", JobValidator.class.getSimpleName())
-                    .build();
-            metricClient.recordMetric(metric);
-          } catch (MetricClientException e) {
-            logger.warn(String.format("Could not record JobValidationFailure metric.\n%s", e));
-          }
-
+        try {
+          JobValidator.validate(job, domainOptional);
+        } catch (IllegalArgumentException iae) {
+          processValidationException(iae, job.get());
           continue;
         }
 
@@ -202,6 +174,38 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
       recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
     } catch (Exception ex) {
       logger.error("Exception while processing AggregationJobProcessException :", ex.getMessage());
+      processException(ex, jobClient, job);
+    }
+  }
+
+  /**
+   * Handles the exception from job validation.
+   *
+   * @param iae an instance of IllegalArgumentException thrown when validating the job
+   * @param job
+   */
+  private void processValidationException(IllegalArgumentException iae, Job job) {
+    logger.error(String.format("Exception when validating the job : %s", job.jobKey()), iae);
+    try {
+      JobResult jobErrorResult =
+          jobResultHelper.createJobResult(
+              job, INVALID_JOB.name(), iae.getMessage(), ErrorSummary.getDefaultInstance());
+      jobClient.markJobCompleted(jobErrorResult);
+      try {
+        CustomMetric metric =
+            CustomMetric.builder()
+                .setNameSpace(METRIC_NAMESPACE)
+                .setName("JobValidationFailure")
+                .setValue(1.0)
+                .setUnit("Count")
+                .addLabel("Validator", JobValidator.class.getSimpleName())
+                .build();
+        metricClient.recordMetric(metric);
+      } catch (MetricClientException e) {
+        logger.warn(String.format("Could not record JobValidationFailure metric.\n%s", e));
+      }
+    } catch (Exception ex) {
+      logger.error("Exception while processing validation exceptions :", ex.getMessage(), ex);
       processException(ex, jobClient, job);
     }
   }

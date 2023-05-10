@@ -64,23 +64,16 @@ public final class JobResultHelper {
    */
   public JobResult createJobResultOnCompletion(
       Job job, ErrorSummary errorSummary, AggregationWorkerReturnCode successCode) {
-    ResultInfo.Builder resultInfoBuilder =
-        ResultInfo.newBuilder()
-            .setErrorSummary(errorSummary)
-            .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)));
-
     if (errorSummary.getErrorCountsList().isEmpty()) {
-      resultInfoBuilder.setReturnCode(successCode.name()).setReturnMessage(RESULT_SUCCESS_MESSAGE);
+      return createJobResult(
+          job, successCode.name(), RESULT_SUCCESS_MESSAGE, errorSummary);
     } else {
-      resultInfoBuilder
-          .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
-          .setReturnMessage(RESULT_SUCCESS_WITH_ERRORS_MESSAGE);
+      return createJobResult(
+          job,
+          AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name(),
+          RESULT_SUCCESS_WITH_ERRORS_MESSAGE,
+          errorSummary);
     }
-
-    return JobResult.builder()
-        .setJobKey(job.jobKey())
-        .setResultInfo(resultInfoBuilder.build())
-        .build();
   }
 
   /**
@@ -102,13 +95,30 @@ public final class JobResultHelper {
    * @param exception the thrown AggregationJobProcessException instance.
    */
   public JobResult createJobResultOnException(Job job, AggregationJobProcessException exception) {
+    return createJobResult(
+        job,
+        exception.getCode().name(),
+        getDetailedExceptionMessage(exception),
+        ErrorSummary.getDefaultInstance());
+  }
+
+  /**
+   * Returns {@code JobResult} for the given returnCode, returnMessage.
+   *
+   * @param job current job
+   * @param returnCode return code for the aggregation job
+   * @param returnMessage response message for the job
+   * @param errorSummary {@Code ErrorSummary} object of the errors in reports
+   */
+  public JobResult createJobResult(
+      Job job, String returnCode, String returnMessage, ErrorSummary errorSummary) {
     return JobResult.builder()
         .setJobKey(job.jobKey())
         .setResultInfo(
             ResultInfo.newBuilder()
-                .setReturnMessage(getDetailedExceptionMessage(exception))
-                .setReturnCode(exception.getCode().name())
-                .setErrorSummary(ErrorSummary.getDefaultInstance())
+                .setReturnMessage(returnMessage)
+                .setReturnCode(returnCode)
+                .setErrorSummary(errorSummary)
                 .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
                 .build())
         .build();

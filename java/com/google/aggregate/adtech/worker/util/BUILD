@@ -21,6 +21,7 @@ java_library(
     srcs = [
         "DebugSupportHelper.java",
         "JobResultHelper.java",
+        "JobUtils.java",
         "NumericConversions.java",
     ],
     deps = [

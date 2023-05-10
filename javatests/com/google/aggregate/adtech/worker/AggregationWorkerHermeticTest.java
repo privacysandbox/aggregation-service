@@ -184,6 +184,64 @@ public class AggregationWorkerHermeticTest {
   }
 
   @Test
+  public void worker_domainOptionalFalse_noOutputDomainPath_throwsException() throws Exception {
+    args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ true, /* outputDomain= */ false, /* domainOptional= */ false);
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .setNoEncryption(true)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard.avro"));
+    setupLocalAggregationWorker(args);
+
+    runWorker();
+
+    String actualResultSerialized = Files.readString(resultFile);
+    ResultInfo.Builder builder = ResultInfo.newBuilder();
+    JSON_PARSER.merge(actualResultSerialized, builder);
+    ResultInfo actualResult = builder.build();
+    assertThat(actualResult.getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.INVALID_JOB.name());
+    assertThat(actualResult.getReturnMessage())
+        .containsMatch(
+            "Job parameters for the job 'request' does not have output domain location specified in"
+                + " 'output_domain_bucket_name' and 'output_domain_blob_prefix' fields. Please"
+                + " refer to the API documentation for output domain parameters at"
+                + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/API.md");
+  }
+
+  @Test
+  public void worker_domainOptionalFalse_outputDomainKeysFile_throwsException() throws Exception {
+    args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ true, /* outputDomain= */ true, /* domainOptional= */ false);
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .setNoEncryption(true)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard.avro"));
+    setupLocalAggregationWorker(args);
+
+    runWorker();
+
+    String actualResultSerialized = Files.readString(resultFile);
+    ResultInfo.Builder builder = ResultInfo.newBuilder();
+    JSON_PARSER.merge(actualResultSerialized, builder);
+    ResultInfo actualResult = builder.build();
+    assertThat(actualResult.getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.INPUT_DATA_READ_FAILED.name());
+    assertThat(actualResult.getReturnMessage())
+        .containsMatch(".*Exception while reading domain input data.*");
+  }
+
+  @Test
   public void localTestConstantNoising() throws Exception {
     AwsHermeticTestHelper.generateAvroReportsFromTextList(
         SimulationTestParams.builder()

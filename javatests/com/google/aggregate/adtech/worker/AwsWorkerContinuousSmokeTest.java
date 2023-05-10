@@ -36,6 +36,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClient;
+import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.PartialRequestBufferSize;
+import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3UsePartialRequests;
 import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
@@ -603,6 +605,8 @@ public class AwsWorkerContinuousSmokeTest {
                   .region(AWS_S3_BUCKET_REGION)
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
+      bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
+      bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }
   }
 }

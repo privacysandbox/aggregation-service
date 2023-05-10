@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v0.51.11"  # version updated on 2023-03-31
+COORDINATOR_VERSION = "v0.51.13"  # version updated on 2023-04-26
 
 JACKSON_VERSION = "2.12.2"
 
@@ -356,29 +356,27 @@ rules_proto_toolchains()
 # Binary Runtime Dependencies #
 ###############################
 
-# TODO: find a better way to host kmstool binaries, using a public S3 bucket for the time being.
 http_file(
     name = "kmstool_enclave_cli",
     downloaded_file_path = "kmstool_enclave_cli",
     executable = True,
-    sha256 = "37dcd658328c5b57c0a6d8ea141156407de4e4fb5ac43f5906b171b2018352fc",
-    urls = ["https://mgol-enclavepoc-deps.s3.us-east-2.amazonaws.com/kmstool_enclave_cli"],
+    sha256 = "39ac7b55e30df69f963f8519686cd9e1ac3b815dd1f4cc85a35582bbc0fa6126",
+    urls = ["https://storage.googleapis.com/scp-dependencies/aws/2023-03-27/kmstool_enclave_cli"],
 )
 
-# TODO: find a better way to host kmstool binaries, using a public S3 bucket for the time being.
 http_file(
     name = "kmstool_enclave",
     downloaded_file_path = "kmstool_enclave",
     executable = True,
-    urls = ["https://mgol-enclavepoc-deps.s3.us-east-2.amazonaws.com/kmstool_enclave"],
+    urls = ["https://storage.googleapis.com/scp-dependencies/aws/2023-03-27/kmstool_enclave"],
 )
 
-# TODO: find a better way to host kmstool binaries, using a public S3 bucket for the time being.
 http_file(
     name = "libnsm",
     downloaded_file_path = "libnsm.so",
     executable = False,
-    urls = ["https://mgol-enclavepoc-deps.s3.us-east-2.amazonaws.com/libnsm.so"],
+    sha256 = "df536a96458af26e4800b04aef0771a05728ed4fe7d24683cc4c1ea6bbd62d50",
+    urls = ["https://storage.googleapis.com/scp-dependencies/aws/2023-03-27/libnsm.so"],
 )
 
 ###########################

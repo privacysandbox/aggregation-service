@@ -16,20 +16,50 @@
 
 package com.google.aggregate.adtech.worker.validation;
 
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
+
 import com.google.scp.operator.cpio.jobclient.model.Job;
+import java.util.Map;
 import java.util.Optional;
 
-/** Checks that a job's attribution_report_to job parameter is not empty and not blank. */
+/** Validates the job parameters are valid. */
 public final class JobValidator {
 
-  public static boolean validate(Optional<Job> job) {
-    return job.isPresent()
-        && job.get().requestInfo().getJobParameters().containsKey("attribution_report_to")
-        && !job.get()
-            .requestInfo()
-            .getJobParameters()
-            .get("attribution_report_to")
-            .trim()
-            .isEmpty();
+  /**
+   * validates the job parameters are valid.
+   *
+   * @param job
+   * @param domainOptional if the output domain is optional. If not set, then output_domain path
+   *     should be set.
+   */
+  public static void validate(Optional<Job> job, boolean domainOptional) {
+    checkArgument(job.isPresent(), "Job metadata not found.");
+    String jobKey = toJobKeyString(job.get().jobKey());
+    checkArgument(
+        job.get().requestInfo().getJobParameters().containsKey("attribution_report_to")
+            && !job.get()
+                .requestInfo()
+                .getJobParameters()
+                .get("attribution_report_to")
+                .trim()
+                .isEmpty(),
+        String.format(
+            "Job parameters does not have an attribution_report_to field for the Job %s.", jobKey));
+    Map<String, String> jobParams = job.get().requestInfo().getJobParameters();
+    checkArgument(
+        domainOptional
+            || (jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME)
+                && jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX)
+                && (!jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME).isEmpty()
+                    || !jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX).isEmpty())),
+        String.format(
+            "Job parameters for the job '%s' does not have output domain location specified in"
+                + " 'output_domain_bucket_name' and 'output_domain_blob_prefix' fields. Please"
+                + " refer to the API documentation for output domain parameters at"
+                + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/API.md",
+            jobKey));
   }
 }
