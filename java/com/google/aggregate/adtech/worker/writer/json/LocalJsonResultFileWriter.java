@@ -76,12 +76,8 @@ public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
     public void serialize(
         AggregatedFact aggregatedFact, JsonGenerator jgen, SerializerProvider serializerProvider)
         throws IOException {
-      String bucket =
-          new String(
-              NumericConversions.toUnSignedByteArray(aggregatedFact.bucket()),
-              StandardCharsets.US_ASCII);
       jgen.writeStartObject();
-      jgen.writeStringField("bucket", bucket);
+      jgen.writeBinaryField("bucket", aggregatedFact.bucket().toByteArray());
       jgen.writeNumberField("metric", aggregatedFact.metric());
       jgen.writeEndObject();
     }

@@ -24,6 +24,7 @@ import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.LibraryAnnotations.LocalOutputDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
@@ -51,6 +52,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
+import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerPath;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerResultPath;
@@ -95,6 +97,7 @@ public final class LocalWorkerModule extends AbstractModule {
       install(new LocalAvroResultLoggerModule());
     }
     install(new WorkerModule());
+    install(new OtlpJsonLoggingOTelConfigurationModule());
     bind(PrivacyBudgetingServiceBridge.class).to(PrivacyBudgetingSelector.UNLIMITED.getBridge());
     bind(StopwatchExporter.class).to(NoOpStopwatchExporter.class);
     bind(PayloadSerdes.class).to(CborPayloadSerdes.class);
@@ -138,6 +141,9 @@ public final class LocalWorkerModule extends AbstractModule {
     bind(int.class)
         .annotatedWith(MaxDepthOfStackTrace.class)
         .toInstance(localWorkerArgs.getMaximumDepthOfStackTrace());
+    bind(double.class)
+        .annotatedWith(ReportErrorThresholdPercentage.class)
+        .toInstance(localWorkerArgs.getReportErrorThresholdPercentage());
   }
 
   @Provides

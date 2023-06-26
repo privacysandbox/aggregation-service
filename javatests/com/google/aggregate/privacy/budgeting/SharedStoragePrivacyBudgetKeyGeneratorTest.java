@@ -66,7 +66,7 @@ public class SharedStoragePrivacyBudgetKeyGeneratorTest {
    * is same. This ensures the budget key generator hash is stable.
    */
   @Test
-  public void testSharedStoragePrivacyBudgetKeyGeneratorForTwoSharedInfos() {
+  public void validate_PrivacyBudgetKey_ProtectedAudienceAPI_forSameSharedInfos() {
     SharedInfo.Builder sharedInfoBuilder1 =
         SharedInfo.builder()
             .setVersion(SHARED_STORAGE_VERSION_0_1)

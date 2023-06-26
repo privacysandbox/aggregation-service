@@ -25,9 +25,12 @@ import com.google.aggregate.adtech.worker.selector.LifecycleClientSelector;
 import com.google.aggregate.adtech.worker.selector.MetricClientSelector;
 import com.google.aggregate.adtech.worker.selector.ParameterClientSelector;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
+import com.google.privacysandbox.otel.OTelExporterSelector;
 import java.net.URI;
 
 public final class AggregationWorkerArgs {
+
+  private static final int NUM_CPUS = Runtime.getRuntime().availableProcessors();
 
   @Parameter(names = "--client_config_env", description = "Selects client config environment")
   private ClientConfigSelector clientConfigSelector = ClientConfigSelector.AWS;
@@ -273,12 +276,16 @@ public final class AggregationWorkerArgs {
   @Parameter(
       names = "--nonblocking_thread_pool_size",
       description = "Size of the non-blocking thread pool")
-  private int nonBlockingThreadPoolSize = 16;
+  // Changing this value would affect process thread pool size in ConcurrentAggregationProcessor.
+  private int nonBlockingThreadPoolSize = Math.max(1, NUM_CPUS);
 
   @Parameter(
       names = "--blocking_thread_pool_size",
       description = "Size of the blocking thread pool")
-  private int blockingThreadPoolSize = 64;
+  // Blocking thread is for I/O which is faster than non-IO operation in aggregation service.
+  // Therefore, the thread pool size default is set to be smaller than nonBlockingThreadPool size.
+  // Changing this value would affect read thread pool size in ConcurrentAggregationProcessor.
+  private int blockingThreadPoolSize = Math.max(1, NUM_CPUS / 2);
 
   @Parameter(
       names = "--timer_exporter_file_path",
@@ -348,6 +355,16 @@ public final class AggregationWorkerArgs {
       description = "If set, the service will generate summary and debug results")
   private boolean debugRun = false;
 
+  @Parameter(names = "--otel_exporter", description = "Otel exporter implementation.")
+  private OTelExporterSelector oTelExporterSelector = OTelExporterSelector.GRPC;
+
+  @Parameter(
+      names = "--grpc_collector_endpoint",
+      description =
+          "Endpoint for GRPC OTel collector. Format: {protocol}://{host}:{port}, eg."
+              + " http://localhost:4317")
+  private String grpcCollectorEndpoint = "http://localhost:4317";
+
   @Parameter(
       names = "--return_stack_trace",
       description =
@@ -360,6 +377,13 @@ public final class AggregationWorkerArgs {
           "Maximum depth of stack trace to return in response. The return_stack_trace flag needs to"
               + " be enabled for this to take effect.")
   private int maximumDepthOfStackTrace = 3;
+
+  @Parameter(
+      names = "--report_error_threshold_percentage",
+      description =
+          "The percentage of total input reports, if excluded from aggregation due to an"
+              + " error, will fail the job. This can be overridden in job request.")
+  private double reportErrorThresholdPercentage = 10.0;
 
   ClientConfigSelector getClientConfigSelector() {
     return clientConfigSelector;
@@ -615,8 +639,20 @@ public final class AggregationWorkerArgs {
     return debugRun;
   }
 
+  OTelExporterSelector getOTelExporterSelector() {
+    return oTelExporterSelector;
+  }
+
+  String getGrpcCollectorEndpoint() {
+    return grpcCollectorEndpoint;
+  }
+
   public boolean isEnableReturningStackTraceInResponse() {
     return enableReturningStackTraceInResponse;
+  }
+
+  double getReportErrorThresholdPercentage() {
+    return reportErrorThresholdPercentage;
   }
 
   public int getMaximumDepthOfStackTrace() {

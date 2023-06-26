@@ -16,7 +16,7 @@
 package com.google.aggregate.privacy.budgeting;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.FLEDGE_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -41,12 +41,14 @@ public class PrivacyBudgetKeyGeneratorFactoryTest {
   }
 
   @Test
-  public void testGetFledgePbkGenerator() {
+  public void testGetProtectedAudiencePbkGenerator() {
     Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator =
-        PrivacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(Optional.of(FLEDGE_API));
+        PrivacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(
+            Optional.of(PROTECTED_AUDIENCE_API));
 
     assertThat(privacyBudgetKeyGenerator).isPresent();
-    assertTrue(privacyBudgetKeyGenerator.get() instanceof FledgePrivacyBudgetKeyGenerator);
+    assertTrue(
+        privacyBudgetKeyGenerator.get() instanceof ProtectedAudiencePrivacyBudgetKeyGenerator);
   }
 
   @Test

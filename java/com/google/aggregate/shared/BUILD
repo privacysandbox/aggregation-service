@@ -22,6 +22,7 @@ java_library(
         "DependencyMetadata.java",
         "LicenseUtil.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",

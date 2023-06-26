@@ -78,7 +78,14 @@ public enum AggregationWorkerReturnCode {
    * Aggregation Job running on Debug Mode succeeded, but would have failed if running in non-debug
    * mode due to privacy budget exhaustion.
    */
-  DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED;
+  DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED,
+
+  /**
+   * Aggregation Job failed early because the report error counts exceeded a threshold. The
+   * threshold can be set in job.request_info.job_parameters for the key
+   * "report_error_threshold_percentage".
+   */
+  REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD;
 
   /**
    * Convert the parameter failure code into the equivalent code for debug mode. Namely for privacy

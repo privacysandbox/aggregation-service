@@ -12,12 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Based on https://github.com/GoogleCloudPlatform/cloud-builders/blob/2c8cebc3e2dc28ac15b6e06f2887103e32a036ef/bazel/Dockerfile
-# Keeps GCLIBC at version 2.28 since Golang Apache Beam only supports up to GLIBC version 2.29 in the harnes container as of 2022s0103
-
-
-# bookworm stable with latest security updates
-FROM debian:bookworm-slim
+# bookworm-slim stable with latest security updates 2023-06-12
+FROM debian@sha256:b396b38adb888af839a4b967ba919c49086987126500d6cd8f662531e202d038
 
 RUN \
     # This makes add-apt-repository available.

@@ -1,0 +1,15 @@
+[Unit]
+Description=Start the AWS OTel collector
+After=docker.service
+BindsTo=docker.service
+ReloadPropagatedFrom=docker.service
+
+[Service]
+ExecStart=/opt/otel/start_collector.sh
+ExecReload=/opt/otel/start_collector.sh
+ExecStop=/opt/otel/stop_collector.sh
+RemainAfterExit=yes
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

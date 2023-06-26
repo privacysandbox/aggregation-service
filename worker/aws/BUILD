@@ -124,21 +124,6 @@ PROD_ENCLAVE_ARGS = [
 # Check the documentation for the worker_aws_deployment macro for details on
 # what is available in this package.
 
-# Note: A temporary target for fast staging.
-worker_aws_deployment(
-    name = "worker_aws_fast_staging",
-    ami_name = ":ami_name_flag",
-    aws_region = ":aws_region_flag",
-    enable_worker_debug_mode = True,
-    jar_args = DEFAULT_ENCLAVE_ARGS,
-    jar_file = "/WorkerRunner_deploy.jar",
-    jvm_options = DEFAULT_JVM_OPTIONS,
-    licenses = ":all_licenses",
-    repo_name = TEE_REPO_NAME,
-    subnet_id = ":subnet_id_flag",
-    worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
-)
-
 # Target to generate AMI for multi-party coordinators.
 worker_aws_deployment(
     name = "worker_mp_aws_prod",
@@ -173,53 +158,11 @@ worker_aws_deployment(
         "--coordinator_b_privacy_budget_service_auth_endpoint",
         "https://auth.mp-pbs-b.agg-2.aws.privacysandboxservices.com/auth",
     ],
-    jar_file = "/WorkerRunner_deploy.jar",
+    jar_file = "/WorkerRunner_prod_deploy.jar",
     jvm_options = DEFAULT_JVM_OPTIONS,
     licenses = ":all_licenses",
     repo_name = TEE_REPO_NAME,
     subnet_id = ":subnet_id_flag",
-    worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
-)
-
-# Target to generate AMI for multi-party coordinators running against staging.
-worker_aws_deployment(
-    name = "worker_mp_aws_preprod",
-    ami_name = ":ami_name_flag",
-    aws_region = ":aws_region_flag",
-    enable_worker_debug_mode = True,
-    jar_args = PROD_ENCLAVE_ARGS + [
-        "--decryption_key_service",
-        "AWS_ENCLAVE_CLI_MULTI_PARTY_DECRYPTION_KEY_SERVICE",
-        "--coordinator_a_encryption_key_service_base_url",
-        "https://privatekeyservice-a.staging-agg-1.aws.privacysandboxservices.com/v1alpha",
-        "--coordinator_b_encryption_key_service_base_url",
-        "https://privatekeyservice-b.staging-agg-2.aws.privacysandboxservices.com/v1alpha",
-
-        # PBS related arguments
-        # PBS regions
-        "--coordinator_a_region_override",
-        "us-west-2",
-        "--coordinator_b_region_override",
-        "us-west-2",
-        "--privacy_budgeting",
-        "HTTP",
-
-        # PBS endpoints
-        "--coordinator_a_privacy_budgeting_endpoint",
-        "https://mp-pbs-a.staging-agg-1.aws.privacysandboxservices.com/v1",
-        "--coordinator_b_privacy_budgeting_endpoint",
-        "https://mp-pbs-b.staging-agg-2.aws.privacysandboxservices.com/v1",
-
-        # PBS auth endpoints
-        "--coordinator_a_privacy_budget_service_auth_endpoint",
-        "https://auth.mp-pbs-a.staging-agg-1.aws.privacysandboxservices.com/auth",
-        "--coordinator_b_privacy_budget_service_auth_endpoint",
-        "https://auth.mp-pbs-b.staging-agg-2.aws.privacysandboxservices.com/auth",
-    ],
-    jar_file = "/WorkerRunner_deploy.jar",
-    jvm_options = DEFAULT_JVM_OPTIONS,
-    licenses = ":all_licenses",
-    repo_name = TEE_REPO_NAME,
-    subnet_id = ":subnet_id_flag",
+    user_rpms = ["//worker/aws/telemetry/otel_collector:otel_collector_rpm"],
     worker_path = "//java/com/google/aggregate/adtech/worker:WorkerRunnerDeploy",
 )

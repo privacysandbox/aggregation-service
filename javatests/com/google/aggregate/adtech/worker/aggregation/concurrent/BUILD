@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 java_test(
     name = "ConcurrentAggregationProcessorTest",
     srcs = ["ConcurrentAggregationProcessorTest.java"],
+    runtime_deps = ["//telemetry/debug/java/com/google/privacysandbox/otel:otel_debug"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/aggregation/concurrent",
@@ -63,5 +64,6 @@ java_test(
         "//java/external:operator_protos",
         "//java/external:scp_shared_proto",
         "//java/external:shared_model",
+        "//telemetry/common/java/com/google/privacysandbox/otel:otel_common",
     ],
 )

@@ -96,5 +96,11 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface MaxDepthOfStackTrace {}
 
+  /** Annotation to declare the threshold of report errors to fail the job. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface ReportErrorThresholdPercentage {}
+
   private Annotations() {}
 }

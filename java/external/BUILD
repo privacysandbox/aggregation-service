@@ -54,6 +54,7 @@ java_library(
     exported_plugins = [
         ":autoservice_plugin",
     ],
+    javacopts = ["-Xep:Var"],
     neverlink = True,
     exports = [":autoservice_plugin"],
 )
@@ -176,6 +177,7 @@ java_library(
         ":autooneof_plugin",
         ":autovalue_plugin",
     ],
+    javacopts = ["-Xep:Var"],
     neverlink = True,
     exports = [":autovalue_plugin"],
 )
@@ -197,6 +199,7 @@ java_plugin(
 java_library(
     name = "autofactory",
     exported_plugins = [":autofactory_plugin"],
+    javacopts = ["-Xep:Var"],
     neverlink = True,
     exports = [":autofactory_library"],
 )
@@ -762,4 +765,69 @@ alias(
 alias(
     name = "operator_metadatadb_protos",
     actual = "@com_google_adm_cloud_scp//operator/protos/shared/backend/metadatadb:java_proto",
+)
+
+alias(
+    name = "rxjava",
+    actual = "@maven//:io_reactivex_rxjava3_rxjava",
+)
+
+alias(
+    name = "error_prone_anntotations",
+    actual = "@maven//:com_google_errorprone_error_prone_annotations",
+)
+
+alias(
+    name = "opentelemetry_api",
+    actual = "@maven//:io_opentelemetry_opentelemetry_api",
+)
+
+alias(
+    name = "opentelemetry_context",
+    actual = "@maven//:io_opentelemetry_opentelemetry_context",
+)
+
+alias(
+    name = "opentelemetry_exporter_logging",
+    actual = "@maven//:io_opentelemetry_opentelemetry_exporter_logging",
+)
+
+alias(
+    name = "opentelemetry_exporter_logging_otlp",
+    actual = "@maven//:io_opentelemetry_opentelemetry_exporter_logging_otlp",
+)
+
+alias(
+    name = "opentelemetry_exporter_otlp",
+    actual = "@maven//:io_opentelemetry_opentelemetry_exporter_otlp",
+)
+
+alias(
+    name = "opentelemetry_sdk",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk",
+)
+
+alias(
+    name = "opentelemetry_sdk_common",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_common",
+)
+
+alias(
+    name = "opentelemetry_sdk_metrics",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_metrics",
+)
+
+alias(
+    name = "opentelemetry_sdk_testing",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_testing",
+)
+
+alias(
+    name = "opentelemetry_sdk_trace",
+    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_trace",
+)
+
+alias(
+    name = "opentelemetry_contrib_aws_xray",
+    actual = "@maven//:io_opentelemetry_contrib_opentelemetry_aws_xray",
 )

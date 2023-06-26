@@ -22,6 +22,7 @@ java_library(
         "StopwatchExporter.java",
         "StopwatchRegistry.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:guava",
         "//java/external:guice",

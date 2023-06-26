@@ -19,7 +19,7 @@ package com.google.aggregate.adtech.worker.validation;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_REPORT_API_TYPE;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.FLEDGE_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.common.truth.Truth.assertThat;
@@ -67,9 +67,8 @@ public class SupportedReportApiTypeValidatorTest {
     ctx = FakeJobGenerator.generate("");
   }
 
-  /** Test that attribution-reporting reports are validated */
   @Test
-  public void testAttributionReportingReports() {
+  public void attributionReportingReports_validationSucceed() {
     SharedInfo.Builder sharedInfoVersion00Builder =
         SharedInfo.builder()
             .setVersion(DEFAULT_VERSION)
@@ -99,12 +98,11 @@ public class SupportedReportApiTypeValidatorTest {
     assertThat(validationErrorVersion01).isEmpty();
   }
 
-  /** Test that fledge reports are validated */
   @Test
-  public void testFledgeReports() {
+  public void protectedAudienceReports_validationSucceeds() {
     SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
-            .setApi(FLEDGE_API)
+            .setApi(PROTECTED_AUDIENCE_API)
             .setVersion("0.1")
             .setReportId(RANDOM_UUID)
             .setReportingOrigin(REPORTING_ORIGIN)
@@ -116,9 +114,8 @@ public class SupportedReportApiTypeValidatorTest {
     assertThat(validationError).isEmpty();
   }
 
-  /** Test that shared-storage reports are validated */
   @Test
-  public void testSharedStorageReports() {
+  public void sharedStorageReports_validationSucceeds() {
     SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
             .setApi(SHARED_STORAGE_API)
@@ -133,9 +130,8 @@ public class SupportedReportApiTypeValidatorTest {
     assertThat(validationError).isEmpty();
   }
 
-  /** Test that invalid reports api types are not validated */
   @Test
-  public void testInvalidApiTypeReports() {
+  public void invalidApiTypeReports_validationFails() {
     SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
             .setApi("invalid-api")

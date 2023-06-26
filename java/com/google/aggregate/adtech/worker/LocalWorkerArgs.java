@@ -100,6 +100,13 @@ public class LocalWorkerArgs {
               + " needs to be enabled for this to take effect.")
   private int maximumDepthOfStackTrace = 3;
 
+  @Parameter(
+      names = "--report_error_threshold_percentage",
+      description =
+          "The percentage of total input reports, if excluded from aggregation due to an"
+              + " error, will fail the job. This can be overridden in job request.")
+  private double reportErrorThresholdPercentage = 10.0;
+
   public String getInputDataAvroFile() {
     return inputDataAvroFile;
   }
@@ -158,6 +165,10 @@ public class LocalWorkerArgs {
 
   public int getMaximumDepthOfStackTrace() {
     return maximumDepthOfStackTrace;
+  }
+
+  double getReportErrorThresholdPercentage() {
+    return reportErrorThresholdPercentage;
   }
 
   public void validate() {

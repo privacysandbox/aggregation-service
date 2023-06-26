@@ -22,6 +22,7 @@ java_library(
         "LocalBlobStorageClient.java",
         "LocalBlobStorageClientModule.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",

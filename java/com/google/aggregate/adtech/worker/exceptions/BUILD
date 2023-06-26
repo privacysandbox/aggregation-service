@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "exceptions",
     srcs = glob(["*.java"]),
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker:return_code",
     ],

@@ -17,6 +17,7 @@
 exclude: (?x)^(
              bazel-(bin|out|testlogs|workspace)/.*|
              .bazel_output/.*|
+             builders/.*|
              javatests/testData/.*|
              version.txt
          )$
@@ -24,7 +25,7 @@ exclude: (?x)^(
 fail_fast: true
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.3.0
+  rev: v4.4.0
   hooks:
   - id: end-of-file-fixer
   - id: fix-byte-order-marker
@@ -55,11 +56,19 @@ repos:
   - id: script-must-have-extension
   - id: require-ascii
   - id: shellcheck
-    files: ^$
-    exclude: '^(production|tools|google_internal|builders/images)/.*$'
+    exclude: '^(build-scripts|kokoro|terraform|adtech|coordinator/terraform|tools/opensource)/.*$'
+
+- repo: https://github.com/bufbuild/buf
+  rev: v1.19.0
+  hooks:
+  - id: buf-format
+  - id: buf-lint
+    args:
+    - --config
+    - tools/buf.yaml
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.4.0
+  rev: v2.9.0
   hooks:
   - id: pretty-format-java
     name: Google Java Formatter
@@ -72,7 +81,7 @@ repos:
     name: addlicense
     language: golang
     additional_dependencies:
-    - github.com/google/addlicense@v1.1.0
+    - github.com/google/addlicense@v1.1.1
     always_run: false
     pass_filenames: true
     types_or:
@@ -80,23 +89,18 @@ repos:
     entry: addlicense -v
     exclude: &addlicense-ignores (?x)^(
         adtech/.*|
-        coordinator/.*|
+        coordinator/terraform/.*|
         kokoro/.*|
+        licenses/.*|
         .*gcp.*|
-        .*/.terraform.lock.hcl|
-        tools/opensource/.*|
-        version.adtech|
-        version.coordinator|
-        worker/aws/testing/.*|
-        worker/testing/data/1k/BUILD|
-        WORKSPACE
+        .*/.terraform.lock.hcl
       )$
 
   - id: addlicense-check
     name: addlicense check
     language: golang
     additional_dependencies:
-    - github.com/google/addlicense@v1.1.0
+    - github.com/google/addlicense@v1.1.1
     always_run: false
     pass_filenames: true
     types_or:
@@ -145,7 +149,7 @@ repos:
     - markdown
 
 - repo: https://github.com/DavidAnson/markdownlint-cli2
-  rev: v0.5.1
+  rev: v0.7.1
   hooks:
   - id: markdownlint-cli2
     name: lint markdown
@@ -157,7 +161,7 @@ repos:
     description: Format bazel WORKSPACE, BUILD and .bzl files with a standard convention.
     language: golang
     additional_dependencies:
-      - github.com/bazelbuild/buildtools/buildifier@5.1.0
+      - github.com/bazelbuild/buildtools/buildifier@6.1.1
     always_run: true
     pass_filenames: true
     types_or:
@@ -169,7 +173,7 @@ repos:
     - -warnings=all
 
 - repo: https://github.com/psf/black
-  rev: 22.8.0
+  rev: 23.3.0
   hooks:
   - id: black
     name: black python formatter

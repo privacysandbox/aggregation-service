@@ -18,9 +18,11 @@ package com.google.aggregate.adtech.worker.testing;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
 
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory.CipherCreationException;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.model.Report;
+import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 
 /**
  * Fake record decrypter that either returns the decrypted key as the same bytes as the encrypted
@@ -29,6 +31,7 @@ import com.google.aggregate.adtech.worker.model.Report;
 public final class FakeRecordDecrypter implements RecordDecrypter {
 
   private boolean shouldThrow;
+  private ErrorReason throwReason;
   private int idToGenerate;
 
   public FakeRecordDecrypter() {
@@ -43,14 +46,22 @@ public final class FakeRecordDecrypter implements RecordDecrypter {
   @Override
   public Report decryptSingleReport(EncryptedReport unused) throws DecryptionException {
     if (shouldThrow) {
-      throw new DecryptionException(new IllegalStateException("The decrypter was set to throw."));
+      shouldThrow = false;
+      if (throwReason != null) {
+        throw new DecryptionException(
+            new CipherCreationException(
+                new Exception("FakeRecordDecrypter test throw"), throwReason));
+      } else {
+        throw new DecryptionException(new IllegalStateException("The decrypter was set to throw."));
+      }
     }
 
     return FakeReportGenerator.generateWithParam(idToGenerate, DEFAULT_VERSION);
   }
 
-  public void setShouldThrow(boolean shouldThrowOnRead) {
-    shouldThrow = shouldThrowOnRead;
+  public void setShouldThrow(boolean shouldThrow, ErrorReason reason) {
+    this.shouldThrow = shouldThrow;
+    this.throwReason = reason;
   }
 
   public void setIdToGenerate(int idToGenerate) {

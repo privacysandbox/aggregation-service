@@ -24,6 +24,7 @@ import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWorkingDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
@@ -48,9 +49,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.AbstractModule;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import com.google.inject.multibindings.OptionalBinder;
+import com.google.privacysandbox.otel.Annotations.GrpcOtelCollectorEndpoint;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3EndpointOverrideBinding;
+import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3UsePartialRequests;
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorARegionBindingOverride;
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorBRegionBindingOverride;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorARoleArn;
@@ -125,6 +130,10 @@ public final class AggregationWorkerModule extends AbstractModule {
         bind(URI.class)
             .annotatedWith(S3EndpointOverrideBinding.class)
             .toInstance(args.getS3EndpointOverride());
+        OptionalBinder.newOptionalBinder(
+                binder(), Key.get(Boolean.class, S3UsePartialRequests.class))
+            .setBinding()
+            .toInstance(true);
         break;
       case LOCAL_FS_CLIENT:
         bind(FileSystem.class).toInstance(FileSystems.getDefault());
@@ -330,6 +339,19 @@ public final class AggregationWorkerModule extends AbstractModule {
         .toInstance(args.getNoisingL1Sensitivity());
     bind(double.class).annotatedWith(NoisingDelta.class).toInstance(args.getNoisingDelta());
 
+    // Otel exporter
+    switch (args.getOTelExporterSelector()) {
+        // Specifying CollectorEndpoint is required for GRPC exporter because aggregation service
+        // would send metric to the CollectorEndpoint and thus collector/exporter could collect.
+      case GRPC:
+        bind(String.class)
+            .annotatedWith(GrpcOtelCollectorEndpoint.class)
+            .toInstance(args.getGrpcCollectorEndpoint());
+        break;
+      default:
+        break;
+    }
+    install(args.getOTelExporterSelector().getOTelConfigurationModule());
     // Response related flags
     bind(boolean.class)
         .annotatedWith(EnableStackTraceInResponse.class)
@@ -337,6 +359,9 @@ public final class AggregationWorkerModule extends AbstractModule {
     bind(int.class)
         .annotatedWith(MaxDepthOfStackTrace.class)
         .toInstance(args.getMaximumDepthOfStackTrace());
+    bind(double.class)
+        .annotatedWith(ReportErrorThresholdPercentage.class)
+        .toInstance(args.getReportErrorThresholdPercentage());
   }
 
   @Provides
@@ -371,6 +396,7 @@ public final class AggregationWorkerModule extends AbstractModule {
   @Singleton
   @NonBlockingThreadPool
   ListeningExecutorService provideNonBlockingThreadPool() {
+    // TODO(b/281572881): Investigate on optimal value for nonBlockingThreadPool size.
     return MoreExecutors.listeningDecorator(
         Executors.newFixedThreadPool(args.getNonBlockingThreadPoolSize()));
   }
@@ -379,6 +405,7 @@ public final class AggregationWorkerModule extends AbstractModule {
   @Singleton
   @BlockingThreadPool
   ListeningExecutorService provideBlockingThreadPool() {
+    // TODO(b/281572881): Investigate on optimal value for blockingThreadPool size.
     return MoreExecutors.listeningDecorator(
         Executors.newFixedThreadPool(args.getBlockingThreadPoolSize()));
   }

@@ -27,6 +27,7 @@ import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** Creates {@code JobResult} for the run job */
@@ -36,6 +37,16 @@ public final class JobResultHelper {
 
   public static final String RESULT_SUCCESS_WITH_ERRORS_MESSAGE =
       "Aggregation job successfully processed but some reports have errors.";
+
+  public static final String RESULT_DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR_MESSAGE =
+      "Aggregation would have failed in non-debug mode due to a privacy budget error.";
+
+  public static final String RESULT_DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED_MESSAGE =
+      "Aggregation would have failed in non-debug mode due to privacy budget exhaustion";
+
+  public static final String RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE =
+      "Aggregation job failed early because the number of reports excluded from aggregation"
+          + " exceeded threshold.";
 
   private final boolean returnStackTraceInResponse;
 
@@ -54,81 +65,105 @@ public final class JobResultHelper {
   }
 
   /**
-   * Returns {@code JobResult} for completion if a job. The return code is SUCCESS or
-   * SUCCESS_WITH_ERRORS depending on success or partial success with errors in reports.
-   *
-   * @param job Current job
-   * @param errorSummary {@Code ErrorSummary} object of the errors in report
-   * @param successCode Code to return when the ErrorSummary is empty, and job is otherwise
-   *     successful
-   */
-  public JobResult createJobResultOnCompletion(
-      Job job, ErrorSummary errorSummary, AggregationWorkerReturnCode successCode) {
-    if (errorSummary.getErrorCountsList().isEmpty()) {
-      return createJobResult(
-          job, successCode.name(), RESULT_SUCCESS_MESSAGE, errorSummary);
-    } else {
-      return createJobResult(
-          job,
-          AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name(),
-          RESULT_SUCCESS_WITH_ERRORS_MESSAGE,
-          errorSummary);
-    }
-  }
-
-  /**
-   * Returns {@code JobResult} for completion if a job. The return code is SUCCESS or
-   * SUCCESS_WITH_ERRORS depending on success or partial success with errors in reports.
-   *
-   * @param job Current job
-   * @param errorSummary {@Code ErrorSummary} object of the errors in report
-   */
-  public JobResult createJobResultOnCompletion(Job job, ErrorSummary errorSummary) {
-    return createJobResultOnCompletion(job, errorSummary, AggregationWorkerReturnCode.SUCCESS);
-  }
-
-  /**
-   * Returns {@code JobResult} for a job that threw an Exception. Error stackTrace is attached to
-   * the return message if enabled.
+   * Returns {@code JobResult} for a job that threw an AggregationJobProcessException. Error
+   * stackTrace is attached to the return message if enabled.
    *
    * @param job current job
    * @param exception the thrown AggregationJobProcessException instance.
    */
   public JobResult createJobResultOnException(Job job, AggregationJobProcessException exception) {
-    return createJobResult(
+    return buildJobResult(
         job,
+        ErrorSummary.getDefaultInstance(),
         exception.getCode().name(),
-        getDetailedExceptionMessage(exception),
-        ErrorSummary.getDefaultInstance());
+        getDetailedExceptionMessage(exception));
   }
 
   /**
-   * Returns {@code JobResult} for the given returnCode, returnMessage.
+   * Returns JobResult with SUCCESS return code and default message for success. If errors are
+   * present within ErrorSummary, it will return SUCCESS_WITH_ERRORS and its corresponding message
+   * instead.
    *
    * @param job current job
-   * @param returnCode return code for the aggregation job
-   * @param returnMessage response message for the job
-   * @param errorSummary {@Code ErrorSummary} object of the errors in reports
+   * @param errorSummary error summary of the job
+   */
+  public JobResult createJobResult(Job job, ErrorSummary errorSummary) {
+    return createJobResult(
+        job,
+        errorSummary,
+        /* code= */ AggregationWorkerReturnCode.SUCCESS,
+        /* message= */ Optional.empty());
+  }
+
+  /**
+   * Returns {@code JobResult} upon job completion. Determines the correct type of result based on
+   * parameters. Message parameter can only be specified if code parameter is as well.
+   *
+   * @param job current job
+   * @param errorSummary error summary of the job
+   * @param code return code to set in the JobResult
+   * @param message Optional message to override the default one that corresponds to the return
+   *     code.
    */
   public JobResult createJobResult(
-      Job job, String returnCode, String returnMessage, ErrorSummary errorSummary) {
-    return JobResult.builder()
-        .setJobKey(job.jobKey())
-        .setResultInfo(
-            ResultInfo.newBuilder()
-                .setReturnMessage(returnMessage)
-                .setReturnCode(returnCode)
-                .setErrorSummary(errorSummary)
-                .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
-                .build())
-        .build();
+      Job job,
+      ErrorSummary errorSummary,
+      AggregationWorkerReturnCode code,
+      Optional<String> message) {
+
+    if (code.equals(AggregationWorkerReturnCode.SUCCESS)
+        && !errorSummary.getErrorCountsList().isEmpty()) {
+      code = AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS;
+    }
+
+    AggregationWorkerReturnCode finalCode = code;
+    String returnMessage = message.orElseGet(() -> getCorrespondingMessage(finalCode));
+
+    return buildJobResult(job, errorSummary, code.name(), returnMessage);
+  }
+
+  private String getCorrespondingMessage(AggregationWorkerReturnCode code) {
+    switch (code) {
+      case SUCCESS_WITH_ERRORS:
+        return RESULT_SUCCESS_WITH_ERRORS_MESSAGE;
+      case DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR:
+        return RESULT_DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR_MESSAGE;
+      case DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED:
+        return RESULT_DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED_MESSAGE;
+      case SUCCESS:
+      default:
+        return RESULT_SUCCESS_MESSAGE;
+    }
+  }
+
+  /**
+   * Returns {@code JobResult} for completion of a job. The return returnCode is set based on the
+   * parameter, due to different possible codes based on the run parameters and result of the
+   * aggregation.
+   *
+   * @param job Current job
+   * @param errorSummary {@code ErrorSummary} object of the errors in report
+   * @param returnCode {@code AggregationWorkerReturnCode} to set as the return code
+   * @param returnMessage String to set as the return message
+   */
+  private JobResult buildJobResult(
+      Job job, ErrorSummary errorSummary, String returnCode, String returnMessage) {
+    ResultInfo resultInfo =
+        ResultInfo.newBuilder()
+            .setReturnCode(returnCode)
+            .setReturnMessage(returnMessage)
+            .setErrorSummary(errorSummary)
+            .setFinishedAt(ProtoUtil.toProtoTimestamp(Instant.now(clock)))
+            .build();
+
+    return JobResult.builder().setJobKey(job.jobKey()).setResultInfo(resultInfo).build();
   }
 
   /**
    * Returns a string containing the throwable.toString() value followed by stacktrace of throwable.
    * If returnStackTraceInResponse is not enabled, it returns the throwable.toString() value.
    */
-  private String getDetailedExceptionMessage(Throwable throwable) {
+  public String getDetailedExceptionMessage(Throwable throwable) {
     StringBuilder builder = new StringBuilder();
     builder.append(throwable);
     if (returnStackTraceInResponse) {

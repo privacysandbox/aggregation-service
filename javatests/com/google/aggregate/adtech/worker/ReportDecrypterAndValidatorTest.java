@@ -34,6 +34,7 @@ import com.google.common.io.ByteSource;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.multibindings.Multibinder;
+import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import java.util.UUID;
@@ -91,7 +92,7 @@ public class ReportDecrypterAndValidatorTest {
 
   @Test
   public void testDecryptionError() {
-    fakeRecordDecrypter.setShouldThrow(true);
+    fakeRecordDecrypter.setShouldThrow(/* shouldThrow= */ true, /* reason= */ null);
 
     DecryptionValidationResult decryptionValidationResult =
         reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
@@ -114,6 +115,50 @@ public class ReportDecrypterAndValidatorTest {
     assertThat(decryptionValidationResult.report()).isEmpty();
     assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
         .containsExactly(ErrorCounter.DECRYPTION_ERROR);
+  }
+
+  @Test
+  public void testDecryptionKeyServiceError_INTERNAL() {
+    fakeRecordDecrypter.setShouldThrow(true, ErrorReason.INTERNAL);
+    DecryptionValidationResult decryptionValidationResult =
+        reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
+
+    assertThat(decryptionValidationResult.report()).isEmpty();
+    assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
+        .containsExactly(ErrorCounter.SERVICE_ERROR);
+  }
+
+  @Test
+  public void testDecryptionKeyServiceError_KEY_DECRYPTION_ERROR() {
+    fakeRecordDecrypter.setShouldThrow(true, ErrorReason.KEY_DECRYPTION_ERROR);
+    DecryptionValidationResult decryptionValidationResult =
+        reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
+
+    assertThat(decryptionValidationResult.report()).isEmpty();
+    assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
+        .containsExactly(ErrorCounter.DECRYPTION_KEY_FETCH_ERROR);
+  }
+
+  @Test
+  public void testDecryptionKeyServiceError_KEY_NOT_FOUND() {
+    fakeRecordDecrypter.setShouldThrow(true, ErrorReason.KEY_NOT_FOUND);
+    DecryptionValidationResult decryptionValidationResult =
+        reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
+
+    assertThat(decryptionValidationResult.report()).isEmpty();
+    assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
+        .containsExactly(ErrorCounter.DECRYPTION_KEY_NOT_FOUND);
+  }
+
+  @Test
+  public void testDecryptionKeyServiceError_DEFAULT() {
+    fakeRecordDecrypter.setShouldThrow(true, ErrorReason.UNKNOWN_ERROR);
+    DecryptionValidationResult decryptionValidationResult =
+        reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
+
+    assertThat(decryptionValidationResult.report()).isEmpty();
+    assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
+        .containsExactly(ErrorCounter.SERVICE_ERROR);
   }
 
   public static final class TestEnv extends AbstractModule {

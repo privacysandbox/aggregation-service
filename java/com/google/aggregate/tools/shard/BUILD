@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "avro_shard",
     srcs = ["AvroShard.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",

@@ -253,6 +253,56 @@ public class NumericConversionsTest {
     assertThat("61").isEqualTo(inTextFile);
   }
 
+  @Test
+  public void getPercentageValue_withValidPercentageValues() {
+    assertThat(NumericConversions.getPercentageValue("100% ")).isEqualTo(100.0);
+    assertThat(NumericConversions.getPercentageValue("37% ")).isEqualTo(37.0);
+    assertThat(NumericConversions.getPercentageValue(" 1.9 ")).isEqualTo(1.9);
+    assertThat(NumericConversions.getPercentageValue(" 99.997% ")).isEqualTo(99.997);
+  }
+
+  @Test
+  public void getPercentageValue_withEmptyValue_throwsIllegalArgument() {
+    IllegalArgumentException exception =
+        assertThrows(
+            IllegalArgumentException.class, () -> NumericConversions.getPercentageValue("    "));
+    assertThat(exception)
+        .hasMessageThat()
+        .containsMatch("Invalid string representation of percentage value. The string is empty:.*");
+  }
+
+  @Test
+  public void getPercentageValue_invalidStringRepresentation_throwsIllegalArgument() {
+    IllegalArgumentException exception1 =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> NumericConversions.getPercentageValue("no number"));
+    assertThat(exception1)
+        .hasMessageThat()
+        .containsMatch("Invalid string representation of percentage value.*");
+
+    IllegalArgumentException exception2 =
+        assertThrows(
+            IllegalArgumentException.class, () -> NumericConversions.getPercentageValue("%"));
+    assertThat(exception2)
+        .hasMessageThat()
+        .containsMatch("Invalid string representation of percentage value.*");
+  }
+
+  @Test
+  public void getPercentageValue_invalidPercentageRange_throwsIllegalArgument() {
+    IllegalArgumentException exception1 =
+        assertThrows(
+            IllegalArgumentException.class, () -> NumericConversions.getPercentageValue("-0.99"));
+    assertThat(exception1).hasMessageThat().containsMatch("Invalid value for percentage: .*");
+
+    IllegalArgumentException exception2 =
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> NumericConversions.getPercentageValue("100.00009"));
+    assertThat(exception2).hasMessageThat().containsMatch("Invalid value for percentage: .*");
+  }
+
   private void convertUInt32FromBytesAndAssert(byte[] bytes, long expected) {
     Long value = NumericConversions.uInt32FromBytes(bytes);
 

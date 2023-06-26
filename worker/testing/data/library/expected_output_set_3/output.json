@@ -1,19 +1,19 @@
 [ {
-  "bucket" : "key4",
+  "bucket" : "a2V5NA==",
   "metric" : 2000000
 }, {
-  "bucket" : "key1",
+  "bucket" : "a2V5MQ==",
   "metric" : 12000000
 }, {
-  "bucket" : "key3",
+  "bucket" : "a2V5Mw==",
   "metric" : 2000000
 }, {
-  "bucket" : "key2",
+  "bucket" : "a2V5Mg==",
   "metric" : 13000000
 }, {
-  "bucket" : "key11",
+  "bucket" : "a2V5MTE=",
   "metric" : 0
 }, {
-  "bucket" : "key12",
+  "bucket" : "a2V5MTI=",
   "metric" : 0
 } ]

@@ -18,7 +18,7 @@ package com.google.aggregate.adtech.worker.model;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.FLEDGE_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static org.junit.Assert.assertEquals;
@@ -48,7 +48,7 @@ public class SharedInfoTest {
 
   /** Test to verify the correctness of set/getReportDebugMode when debug mode is enabled */
   @Test
-  public void testSetAndGetReportDebugModeEnabled() {
+  public void sharedInfo_withDebugModeEnabled() {
     SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
             .setVersion(DEFAULT_VERSION)
@@ -65,7 +65,7 @@ public class SharedInfoTest {
 
   /** Test to verify the correctness of set/getReportDebugMode when debug mode is disabled */
   @Test
-  public void testSetAndGetReportDebugModeDisabled() {
+  public void sharedInfo_withDebugModeDisabled() {
     SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
             .setVersion(DEFAULT_VERSION)
@@ -82,7 +82,7 @@ public class SharedInfoTest {
 
   /** Test to verify the correctness of set/getReportDebugMode when debug mode is default */
   @Test
-  public void testSetAndGetReportDebugModeDefault() {
+  public void sharedInfo_withDebugModeDefault() {
     SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
             .setVersion(DEFAULT_VERSION)
@@ -101,7 +101,7 @@ public class SharedInfoTest {
    * mode is enabled
    */
   @Test
-  public void testSetReportDebugModeEnabledTwoTypes() {
+  public void sharedInfo_withDebugModeEnabledInTwoWays() {
     SharedInfo.Builder sharedInfoBuilder1 =
         SharedInfo.builder()
             .setVersion(DEFAULT_VERSION)
@@ -123,9 +123,8 @@ public class SharedInfoTest {
     assertEquals(si1, si2);
   }
 
-  /** Tests to verify Attribution reporting API type in SharedInfo */
   @Test
-  public void testSharedInfoApiTypeAttributionReporting() {
+  public void sharedInfo_withAttributionReportingAPIType() {
     SharedInfo.Builder sharedInfoMissingApiBuilder =
         SharedInfo.builder()
             .setVersion(DEFAULT_VERSION)
@@ -149,27 +148,25 @@ public class SharedInfoTest {
     assertEquals(sharedInfoAttributionReporting.api().get(), ATTRIBUTION_REPORTING_API);
   }
 
-  /** Tests to verify Fledge API type in SharedInfo */
   @Test
-  public void testSharedInfoApiTypeFledge() {
-    SharedInfo.Builder sharedInfoFledgeBuilder =
+  public void sharedInfo_withProtectedAudienceAPIType() {
+    SharedInfo.Builder sharedInfoSharedStorageBuilder =
         SharedInfo.builder()
             .setVersion(VERSION_0_1)
-            .setApi(FLEDGE_API)
+            .setApi(PROTECTED_AUDIENCE_API)
             .setScheduledReportTime(FIXED_TIME)
             .setReportingOrigin(REPORTING_ORIGIN)
             .setDestination(DESTINATION)
             .setSourceRegistrationTime(FIXED_TIME)
             .setReportId(RANDOM_UUID);
 
-    SharedInfo sharedInfoFledge = sharedInfoFledgeBuilder.build();
+    SharedInfo sharedInfoSharedStorage = sharedInfoSharedStorageBuilder.build();
 
-    assertEquals(sharedInfoFledge.api().get(), FLEDGE_API);
+    assertEquals(sharedInfoSharedStorage.api().get(), PROTECTED_AUDIENCE_API);
   }
 
-  /** Tests to verify Shared Storage API type in SharedInfo */
   @Test
-  public void testSharedInfoApiTypeSharedStorage() {
+  public void sharedInfo_withSharedStorageAPIType() {
     SharedInfo.Builder sharedInfoSharedStorageBuilder =
         SharedInfo.builder()
             .setVersion(VERSION_0_1)

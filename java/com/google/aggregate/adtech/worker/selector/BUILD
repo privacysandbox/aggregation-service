@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "selector",
     srcs = glob(["*.java"]),
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:clients_blobstorageclient_aws",
         "//java/external:clients_blobstorageclient_model",

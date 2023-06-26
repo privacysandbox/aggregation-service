@@ -30,6 +30,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.cryptoclient.DecryptionKeyService;
 import com.google.scp.operator.cpio.cryptoclient.DecryptionKeyService.KeyFetchException;
+import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import java.security.AccessControlException;
 import java.util.UUID;
 import org.junit.Rule;
@@ -62,6 +63,7 @@ public class HybridDecryptionCipherFactoryTest {
             CipherCreationException.class,
             () -> hybridDecryptionCipherFactory.decryptionCipherFor(encryptedReport));
     assertThat(exception).hasCauseThat().isInstanceOf(KeyFetchException.class);
+    assertThat(exception.reason).isEqualTo(ErrorReason.UNKNOWN_ERROR);
   }
 
   @Test

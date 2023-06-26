@@ -20,6 +20,7 @@ java_library(
     name = "http_client_test_utils",
     testonly = True,
     srcs = ["HttpClientTestUtils.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",

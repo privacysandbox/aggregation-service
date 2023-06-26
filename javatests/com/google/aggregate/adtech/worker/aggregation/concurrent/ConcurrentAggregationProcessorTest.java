@@ -26,10 +26,12 @@ import static com.google.aggregate.adtech.worker.aggregation.concurrent.Concurre
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_PRIVACY_EPSILON;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_RUN;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.NUM_REPORTS_WITH_ERRORS;
+import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_WITH_ERRORS_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
@@ -39,6 +41,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,6 +55,7 @@ import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.FailJobOnPbsException;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.TextOutputDomainProcessor;
@@ -108,6 +112,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
+import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.testing.FSBlobStorageClientModule;
@@ -129,6 +134,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -227,9 +233,11 @@ public class ConcurrentAggregationProcessorTest {
 
     // Add the debugPrivacyBudgetLimit to the job (stored RequestInfo)
     RequestInfo requestInfo = ctx.requestInfo();
+    Map<String, String> jobParameters = new HashMap<>(requestInfo.getJobParameters());
+    jobParameters.put("report_error_threshold_percentage", "100");
     RequestInfo newRequestInfo =
         requestInfo.toBuilder()
-            .putAllJobParameters(requestInfo.getJobParameters())
+            .putAllJobParameters(jobParameters)
             // Simulating 2 shards of input.
             .setInputDataBucketName(reportsDirectory.toAbsolutePath().toString())
             .setInputDataBlobPrefix("")
@@ -839,6 +847,71 @@ public class ConcurrentAggregationProcessorTest {
                             .addAllErrorCounts(
                                 ImmutableList.of(
                                     ErrorCount.newBuilder()
+                                        .setCategory(ErrorCounter.SERVICE_ERROR.name())
+                                        .setDescription(ErrorCounter.SERVICE_ERROR.getDescription())
+                                        .setCount(4L)
+                                        .build(),
+                                    ErrorCount.newBuilder()
+                                        .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                        .setDescription(NUM_REPORTS_WITH_ERRORS.getDescription())
+                                        .setCount(4L)
+                                        .build()))
+                            .build())
+                    .build())
+            .build();
+    assertThat(actualJobResult).isEqualTo(expectedJobResult);
+  }
+
+  @Test
+  public void process_errorCountExceedsThreshold_quitsEarly() throws Exception {
+    ImmutableList<EncryptedReport> encryptedReports1 =
+        ImmutableList.of(
+            generateEncryptedReport(1, reportId1),
+            generateEncryptedReport(2, reportId2),
+            generateEncryptedReport(3, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(4, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(5, reportId3));
+    ImmutableList<EncryptedReport> encryptedReports2 =
+        ImmutableList.of(
+            generateEncryptedReport(6, reportId4),
+            generateEncryptedReport(7, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(8, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(9, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(10, String.valueOf(UUID.randomUUID())));
+    writeReports(reportsDirectory.resolve("reports_1.avro"), encryptedReports1);
+    writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports2);
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    fakeValidator.setReportIdShouldReturnError(
+        ImmutableSet.of(reportId1, reportId2, reportId3, reportId4));
+    ImmutableMap<String, String> jobParams =
+        ImmutableMap.of(JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE, "20");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                    .build())
+            .build();
+
+    JobResult actualJobResult = processor.process(ctx);
+
+    // Job quits on error count 4 > threshold 2 (20% threshold of 10 reports)
+    JobResult expectedJobResult =
+        this.expectedJobResult.toBuilder()
+            .setResultInfo(
+                resultInfoBuilder
+                    .setReturnCode(
+                        AggregationWorkerReturnCode.REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD.name())
+                    .setReturnMessage(RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE)
+                    .setErrorSummary(
+                        ErrorSummary.newBuilder()
+                            .addAllErrorCounts(
+                                ImmutableList.of(
+                                    ErrorCount.newBuilder()
                                         .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
                                         .setDescription(
                                             ErrorCounter.DECRYPTION_ERROR.getDescription())
@@ -853,6 +926,86 @@ public class ConcurrentAggregationProcessorTest {
                     .build())
             .build();
     assertThat(actualJobResult).isEqualTo(expectedJobResult);
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isEmpty();
+    assertFalse(resultLogger.hasLogged());
+  }
+
+  @Test
+  public void process_errorCountWithinThreshold_succeedsWithErrors() throws Exception {
+    ImmutableList<EncryptedReport> encryptedReports1 =
+        ImmutableList.of(
+            generateEncryptedReport(1, reportId1),
+            generateEncryptedReport(2, reportId2),
+            generateEncryptedReport(3, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(4, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(5, reportId3));
+    ImmutableList<EncryptedReport> encryptedReports2 =
+        ImmutableList.of(
+            generateEncryptedReport(6, reportId4),
+            generateEncryptedReport(7, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(8, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(9, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(10, String.valueOf(UUID.randomUUID())));
+    writeReports(reportsDirectory.resolve("reports_1.avro"), encryptedReports1);
+    writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports2);
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
+    fakeValidator.setReportIdShouldReturnError(
+        ImmutableSet.of(reportId1, reportId2, reportId3, reportId4));
+    ImmutableMap<String, String> jobParams =
+        ImmutableMap.of(JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE, "50.0");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                    .build())
+            .build();
+
+    JobResult actualJobResult = processor.process(ctx);
+
+    // Job succeeds because error count 4 < threshold 5
+    JobResult expectedJobResult =
+        this.expectedJobResult.toBuilder()
+            .setResultInfo(
+                resultInfoBuilder
+                    .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
+                    .setReturnMessage(RESULT_SUCCESS_WITH_ERRORS_MESSAGE)
+                    .setErrorSummary(
+                        ErrorSummary.newBuilder()
+                            .addAllErrorCounts(
+                                ImmutableList.of(
+                                    ErrorCount.newBuilder()
+                                        .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                        .setDescription(
+                                            ErrorCounter.DECRYPTION_ERROR.getDescription())
+                                        .setCount(4L)
+                                        .build(),
+                                    ErrorCount.newBuilder()
+                                        .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                        .setDescription(NUM_REPORTS_WITH_ERRORS.getDescription())
+                                        .setCount(4L)
+                                        .build()))
+                            .build())
+                    .build())
+            .build();
+    assertThat(actualJobResult).isEqualTo(expectedJobResult);
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(3), /* metric= */ 9, /* unnoisedMetric= */ 9L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(4), /* metric= */ 16, /* unnoisedMetric= */ 16L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(7), /* metric= */ 49, /* unnoisedMetric= */ 49L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(8), /* metric= */ 64, /* unnoisedMetric= */ 64L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(9), /* metric= */ 81, /* unnoisedMetric= */ 81L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(10),
+                /* metric= */ 100,
+                /* unnoisedMetric= */ 100L));
   }
 
   @Test
@@ -1202,8 +1355,12 @@ public class ConcurrentAggregationProcessorTest {
       bind(Boolean.class).annotatedWith(DomainOptional.class).toInstance(domainOptional);
       bind(Boolean.class).annotatedWith(EnableThresholding.class).toInstance(domainOptional);
       bind(OutputDomainProcessor.class).to(TextOutputDomainProcessor.class);
+
+      // Otel collector
+      install(new OtlpJsonLoggingOTelConfigurationModule());
       bind(Boolean.class).annotatedWith(EnableStackTraceInResponse.class).toInstance(true);
       bind(Integer.class).annotatedWith(MaxDepthOfStackTrace.class).toInstance(3);
+      bind(double.class).annotatedWith(ReportErrorThresholdPercentage.class).toInstance(10.0);
     }
 
     @Provides

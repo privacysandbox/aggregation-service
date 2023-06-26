@@ -368,7 +368,7 @@ public class AwsWorkerContinuousSmokeTest {
                 .get(0)
                 .get("count")
                 .asInt())
-        .isEqualTo(1000);
+        .isEqualTo(10000);
     assertThat(
             result
                 .get("result_info")
@@ -406,6 +406,67 @@ public class AwsWorkerContinuousSmokeTest {
     // all reports are filtered out.
     // Noised metric in both debug reports and summary reports should be noise value instead of 0.
     aggregatedDebugFacts.forEach(fact -> assertThat(fact.unnoisedMetric().get()).isEqualTo(0));
+  }
+
+  @Test
+  public void aggregate_withDebugReportsInNonDebugMode_errorsExceedsThreshold_quitsEarly()
+      throws Exception {
+    var inputKey =
+        String.format(
+            "%s/%s/test-inputs/10k_test_input_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var domainKey =
+        String.format(
+            "%s/%s/test-inputs/10k_test_domain_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var outputKey =
+        String.format(
+            "%s/%s/test-outputs/10k_test_output_errorsExceedsThreshold.avro",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        AwsWorkerContinuousTestHelper.createJobRequest(
+            getTestDataBucket(),
+            inputKey,
+            getTestDataBucket(),
+            outputKey,
+            /* debugRun= */ true,
+            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
+            /* outputDomainPrefix= */ Optional.of(domainKey),
+            /* reportErrorThresholdPercentage= */ 10);
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isEqualTo(AggregationWorkerReturnCode.REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD.name());
+    assertThat(
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("count")
+                .asInt())
+        .isAtLeast(1000);
+    assertThat(
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("category")
+                .asText())
+        .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.name());
+    assertThat(
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("description")
+                .asText())
+        .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.getDescription());
+    assertThat(
+            AwsWorkerContinuousTestHelper.checkS3FileExists(
+                s3BlobStorageClient, getTestDataBucket(), outputKey))
+        .isFalse();
   }
 
   @Test

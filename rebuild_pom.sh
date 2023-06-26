@@ -24,14 +24,14 @@
 set -eu
 
 # Bazel query to return direct jvm_import dependencies in the java directory.
-QUERY="kind(\"jvm_import\", let project = //java/...:* in deps(\$project, 1) except \$project)"
+readonly QUERY="kind(\"jvm_import\", let project = //java/...:* in deps(\$project, 1) except \$project)"
 # Grep filter for the spec build rule lines we want from bazel query output.
-FILTER='jars = \["@maven//:v1/https/repo1.maven.org/maven2/'
+readonly FILTER='jars = \["@maven//:v1/https/repo1.maven.org/maven2/'
 
 # Example input string:
 #  jars = ["@maven//:v1/https/repo1.maven.org/maven2/com/google/guava/guava/30.1.1-jre/guava-30.1.1-jre.jar"],
 # Converts the above input line into a proper maven <dependency/> XML stanza
-TO_XML_STANZA=$(cat <<-"EOF"
+TO_XML_STANZA="$(cat <<-"EOF"
 # Strip file name, extract version + remainder
 s#maven2/(.+)/([^/]+)\/[^/]+\.jar.+##;
 $version = $2;
@@ -46,11 +46,12 @@ $group =~ s#/#.#g;
 
 print "<dependency><artifactId>$artifact</artifactId><groupId>$group</groupId><version>$version</version></dependency>\n"
 EOF
-           )
+)"
 
-DEPS=$(bazel query "$QUERY" --output=build | grep "$FILTER" | perl -ne "$TO_XML_STANZA")
+DEPS="$(bazel query "${QUERY}" --output=build | grep "${FILTER}" | perl -ne "${TO_XML_STANZA}")"
 
-OUT=$(cat <<-EOF
+{
+cat <<-EOF
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
@@ -64,21 +65,18 @@ OUT=$(cat <<-EOF
     <testSourceDirectory>\${project.basedir}/javatests</testSourceDirectory>
     <plugins>
       <plugin>
-	<groupId>org.apache.maven.plugins</groupId>
-	<artifactId>maven-compiler-plugin</artifactId>
-	<version>3.8.0</version>
-	<configuration>
-	  <release>11</release>
-	</configuration>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.8.0</version>
+        <configuration>
+          <release>11</release>
+        </configuration>
       </plugin>
     </plugins>
   </build>
-
   <dependencies>
-      ${DEPS}
+    ${DEPS}
   </dependencies>
 </project>
 EOF
-)
-
-echo $OUT | xmllint --format - > pom.xml
+} | xmllint --format - >pom.xml

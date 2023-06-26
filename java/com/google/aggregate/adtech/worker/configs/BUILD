@@ -21,6 +21,7 @@ java_library(
     srcs = [
         "PrivacyParametersSupplier.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/external:guava",

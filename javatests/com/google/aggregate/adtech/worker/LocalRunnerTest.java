@@ -16,16 +16,18 @@
 
 package com.google.aggregate.adtech.worker;
 
-import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromString;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.fail;
 
 import com.beust.jcommander.ParameterException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.common.math.Stats;
 import com.google.common.util.concurrent.ServiceManager;
+import com.google.privacysandbox.otel.OTelConfiguration;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,8 +60,8 @@ public class LocalRunnerTest {
   private final String ATTRIBUTION_DATASET_3 = "attribution_3";
   private final String ATTRIBUTION_DATASET_4 = "attribution_4";
 
-  private final String FLEDGE_DATASET_1 = "fledge_1";
-  private final String FLEDGE_DATASET_2 = "fledge_2";
+  private final String PROTECTED_AUDIENCE_DATASET_1 = "protected_audience_1";
+  private final String PROTECTED_AUDIENCE_DATASET_2 = "protected_audience_2";
 
   private final String THRESHOLDING_DATASET_1 = "thresholding_1";
 
@@ -70,6 +72,7 @@ public class LocalRunnerTest {
 
   @Before
   public void setUp() throws IOException {
+    OTelConfiguration.resetForTest();
     workingDirectory = testWorkingDir.getRoot().toPath();
     outputDirectoryPath = Path.of("worker/testing/data/library/");
     baseDirectory = Path.of("worker/testing/data/library/");
@@ -545,8 +548,8 @@ public class LocalRunnerTest {
   @Test
   public void testMainMethodJsonOutput_fledge_set1_constantNoise_withDomain()
       throws IOException, TimeoutException, InterruptedException {
-    String pathToAvro = getInputBatchAvro(FLEDGE_DATASET_1).toString();
-    String pathToDomain = getDomainAvroFile(FLEDGE_DATASET_1).toString();
+    String pathToAvro = getInputBatchAvro(PROTECTED_AUDIENCE_DATASET_1).toString();
+    String pathToDomain = getDomainAvroFile(PROTECTED_AUDIENCE_DATASET_1).toString();
     String outputDirectory = outputDirectoryPath.toString();
     Path expectedOutputJson = getExpectedOutputJson(OUTPUT_SET_1);
     String[] cli =
@@ -568,7 +571,6 @@ public class LocalRunnerTest {
         convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
     List<AggregatedFact> expectedOutput =
         convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(expectedOutputJson)));
-
     assertThat(output).containsExactlyElementsIn(expectedOutput);
   }
 
@@ -576,8 +578,8 @@ public class LocalRunnerTest {
   @Test
   public void testMainMethodJsonOutput_fledge_set1_constantNoise_skipDomain()
       throws IOException, TimeoutException, InterruptedException {
-    String pathToAvro = getInputBatchAvro(FLEDGE_DATASET_1).toString();
-    String pathToDomain = getDomainAvroFile(FLEDGE_DATASET_1).toString();
+    String pathToAvro = getInputBatchAvro(PROTECTED_AUDIENCE_DATASET_1).toString();
+    String pathToDomain = getDomainAvroFile(PROTECTED_AUDIENCE_DATASET_1).toString();
     String outputDirectory = outputDirectoryPath.toString();
     Path expectedOutputJson = getExpectedOutputJson(OUTPUT_SET_1);
     String[] cli =
@@ -607,8 +609,8 @@ public class LocalRunnerTest {
   /** Test aggregation that no domain specified and skip_domain set works. */
   @Test
   public void skipDomain_noDomainFile() throws IOException, TimeoutException, InterruptedException {
-    String pathToAvro = getInputBatchAvro(FLEDGE_DATASET_1).toString();
-    String pathToDomain = getDomainAvroFile(FLEDGE_DATASET_1).toString();
+    String pathToAvro = getInputBatchAvro(PROTECTED_AUDIENCE_DATASET_1).toString();
+    String pathToDomain = getDomainAvroFile(PROTECTED_AUDIENCE_DATASET_1).toString();
     String outputDirectory = outputDirectoryPath.toString();
     Path expectedOutputJson = getExpectedOutputJson(OUTPUT_SET_1);
     String[] cli =
@@ -639,8 +641,8 @@ public class LocalRunnerTest {
   @Test
   public void testMainMethodJsonOutput_fledge_set2_withNoise_epsilon64()
       throws IOException, TimeoutException, InterruptedException {
-    String pathToAvro = getInputBatchAvro(FLEDGE_DATASET_2).toString();
-    String pathToDomain = getDomainAvroFile(FLEDGE_DATASET_2).toString();
+    String pathToAvro = getInputBatchAvro(PROTECTED_AUDIENCE_DATASET_2).toString();
+    String pathToDomain = getDomainAvroFile(PROTECTED_AUDIENCE_DATASET_2).toString();
     String outputDirectory = outputDirectoryPath.toString();
     String[] cli =
         new String[] {
@@ -674,8 +676,8 @@ public class LocalRunnerTest {
   @Test
   public void testMainMethodJsonOutput_fledge_set2_constantNoise()
       throws IOException, TimeoutException, InterruptedException {
-    String pathToAvro = getInputBatchAvro(FLEDGE_DATASET_2).toString();
-    String pathToDomain = getDomainAvroFile(FLEDGE_DATASET_2).toString();
+    String pathToAvro = getInputBatchAvro(PROTECTED_AUDIENCE_DATASET_2).toString();
+    String pathToDomain = getDomainAvroFile(PROTECTED_AUDIENCE_DATASET_2).toString();
     String outputDirectory = outputDirectoryPath.toString();
     String[] cli =
         new String[] {
@@ -709,10 +711,15 @@ public class LocalRunnerTest {
         .iterator()
         .forEachRemaining(
             entry -> {
-              writtenResults.add(
-                  AggregatedFact.create(
-                      createBucketFromString(entry.get("bucket").asText()),
-                      entry.get("metric").asLong()));
+              try {
+                writtenResults.add(
+                    AggregatedFact.create(
+                        NumericConversions.uInt128FromBytes(
+                            entry.get("bucket").binaryValue()),
+                        entry.get("metric").asLong()));
+              } catch (IOException e) {
+                fail(e.getMessage());
+              }
             });
     return writtenResults;
   }

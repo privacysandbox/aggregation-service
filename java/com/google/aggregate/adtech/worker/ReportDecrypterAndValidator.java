@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory.CipherCreationException;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter.DecryptionException;
 import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
@@ -27,6 +28,7 @@ import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.validation.ReportValidator;
 import com.google.common.collect.ImmutableList;
+import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import java.util.Optional;
 import java.util.Set;
@@ -83,13 +85,32 @@ public final class ReportDecrypterAndValidator {
     } catch (DecryptionException e) {
       logger.error("Report Decryption Failure", e);
       String detailedErrorMessage = String.format("Report Decryption Failure, cause: %s", e);
+      ErrorMessage.Builder errorMessageBuilder = ErrorMessage.builder();
+
+      // DecryptionKeyService Error
+      if (e.getCause() instanceof CipherCreationException) {
+        ErrorReason reason = ((CipherCreationException) e.getCause()).reason;
+        errorMessageBuilder.setCategory(errorCounterFromCipherCreationException(reason));
+      } else {
+        errorMessageBuilder.setCategory(ErrorCounter.DECRYPTION_ERROR);
+      }
+
+      errorMessageBuilder.setDetailedErrorMessage(detailedErrorMessage);
       return DecryptionValidationResult.builder()
-          .addErrorMessage(
-              ErrorMessage.builder()
-                  .setCategory(ErrorCounter.DECRYPTION_ERROR)
-                  .setDetailedErrorMessage(detailedErrorMessage)
-                  .build())
+          .addErrorMessage(errorMessageBuilder.build())
           .build();
+    }
+  }
+
+  private static ErrorCounter errorCounterFromCipherCreationException(ErrorReason reason) {
+    switch (reason) {
+      case KEY_DECRYPTION_ERROR:
+        return ErrorCounter.DECRYPTION_KEY_FETCH_ERROR;
+      case KEY_NOT_FOUND:
+        return ErrorCounter.DECRYPTION_KEY_NOT_FOUND;
+      case INTERNAL:
+      default:
+        return ErrorCounter.SERVICE_ERROR;
     }
   }
 }

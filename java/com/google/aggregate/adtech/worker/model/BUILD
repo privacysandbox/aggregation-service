@@ -33,6 +33,7 @@ java_library(
         "Report.java",
         "SharedInfo.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/protocol/avro:avro_report",

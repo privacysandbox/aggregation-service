@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker.decryption;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.acai.Acai;
@@ -26,6 +27,7 @@ import com.google.aggregate.adtech.worker.decryption.RecordDecrypter.DecryptionE
 import com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionCipherFactory;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.model.Report;
+import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.aggregate.adtech.worker.model.serdes.PayloadSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.SharedInfoSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.cbor.CborPayloadSerdes;
@@ -121,6 +123,71 @@ public class DeserializingReportDecrypterTest {
         .hasCauseThat()
         .hasMessageThat()
         .contains("Decrypted payload could not be deserialized");
+  }
+
+  @Test
+  public void decryptSingleReport_withSourceRegistrationTimeZero() throws Exception {
+    Report report =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* dummyValue= */ 1, /* reportId= */ "report_id", /* reportVersion */ "");
+    String sharedInfo =
+        "{\"source_registration_time\":0,\"version\":\"\",\"privacy_budget_key\":\"1\",\"reporting_origin\":\"1\",\"attribution_destination\":\"1\",\"report_id\":\"report_id\",\"scheduled_report_time\":1.000000000}";
+    EncryptedReport encryptedReport =
+        EncryptedReport.builder()
+            .setPayload(
+                encryptionCipher.encryptReport(
+                    payloadSerdes.reverse().convert(Optional.of(report.payload())), sharedInfo))
+            .setKeyId(DECRYPTION_KEY_ID)
+            .setSharedInfo(sharedInfo)
+            .build();
+
+    Report decryptedReport = deserializingReportDecrypter.decryptSingleReport(encryptedReport);
+
+    SharedInfo deserializedSharedInfo = sharedInfoSerdes.convert(sharedInfo).get();
+    assertThat(decryptedReport.sharedInfo()).isEqualTo(deserializedSharedInfo);
+  }
+
+  @Test
+  public void decryptSingleReport_withSourceRegistrationTimeNegative() throws Exception {
+    Report report =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* dummyValue= */ 1, /* reportId= */ "report_id", /* reportVersion */ "");
+    String sharedInfo =
+        "{\"source_registration_time\":-1,\"version\":\"\",\"privacy_budget_key\":\"1\",\"reporting_origin\":\"1\",\"attribution_destination\":\"1\",\"report_id\":\"report_id\",\"scheduled_report_time\":1.000000000}";
+    EncryptedReport encryptedReport =
+        EncryptedReport.builder()
+            .setPayload(
+                encryptionCipher.encryptReport(
+                    payloadSerdes.reverse().convert(Optional.of(report.payload())), sharedInfo))
+            .setKeyId(DECRYPTION_KEY_ID)
+            .setSharedInfo(sharedInfo)
+            .build();
+
+    Report decryptedReport = deserializingReportDecrypter.decryptSingleReport(encryptedReport);
+
+    SharedInfo deserializedSharedInfo = sharedInfoSerdes.convert(sharedInfo).get();
+    assertThat(decryptedReport.sharedInfo()).isEqualTo(deserializedSharedInfo);
+  }
+
+  @Test
+  public void decryptSingleReport_withNoSourceRegistrationTime() throws Exception {
+    Report report =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* dummyValue= */ 1, /* reportId= */ "report_id", /* reportVersion */ "");
+    String sharedInfo =
+        "{\"version\":\"\",\"privacy_budget_key\":\"1\",\"reporting_origin\":\"1\",\"attribution_destination\":\"1\",\"report_id\":\"report_id\",\"scheduled_report_time\":1.000000000}";
+    EncryptedReport encryptedReport =
+        EncryptedReport.builder()
+            .setPayload(
+                encryptionCipher.encryptReport(
+                    payloadSerdes.reverse().convert(Optional.of(report.payload())), sharedInfo))
+            .setKeyId(DECRYPTION_KEY_ID)
+            .setSharedInfo(sharedInfo)
+            .build();
+
+    Report decryptedReport = deserializingReportDecrypter.decryptSingleReport(encryptedReport);
+
+    assertTrue(decryptedReport.sharedInfo().sourceRegistrationTime().isEmpty());
   }
 
   private void encryptReport() throws Exception {

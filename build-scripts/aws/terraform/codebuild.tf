@@ -40,6 +40,15 @@ resource "aws_s3_bucket" "artifacts_output" {
 resource "aws_s3_bucket_acl" "artifacts_output" {
   bucket = aws_s3_bucket.artifacts_output.id
   acl    = "private"
+  depends_on = [aws_s3_bucket_ownership_controls.artifacts_output_ownership_controls]
+}
+
+resource "aws_s3_bucket_ownership_controls" "artifacts_output_ownership_controls" {
+  bucket = aws_s3_bucket.artifacts_output.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
 }
 
 # Create and manage ECR Repository for build container

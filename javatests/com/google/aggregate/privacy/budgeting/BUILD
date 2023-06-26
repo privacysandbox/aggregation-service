@@ -27,8 +27,8 @@ java_test(
 )
 
 java_test(
-    name = "FledgePrivacyBudgetKeyGeneratorTest",
-    srcs = ["FledgePrivacyBudgetKeyGeneratorTest.java"],
+    name = "ProtectedAudiencePrivacyBudgetKeyGeneratorTest",
+    srcs = ["ProtectedAudiencePrivacyBudgetKeyGeneratorTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/privacy/budgeting:privacy_budget_key_generator",

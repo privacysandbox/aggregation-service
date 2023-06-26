@@ -20,6 +20,7 @@ java_library(
     name = "fake_job_result_generator",
     testonly = True,
     srcs = ["FakeJobResultGenerator.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:clients_blobstorageclient_model",
@@ -35,6 +36,7 @@ java_library(
     name = "noop_job_processor",
     testonly = True,
     srcs = ["NoopJobProcessor.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/exceptions",
@@ -47,6 +49,7 @@ java_library(
     name = "fake_record_reader_factory",
     testonly = True,
     srcs = ["FakeRecordReaderFactory.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/model",
@@ -60,11 +63,13 @@ java_library(
     name = "fake_record_decrypter",
     testonly = True,
     srcs = ["FakeRecordDecrypter.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":fake_report_generator",
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/decryption",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/external:clients_cryptoclient",
         "//java/external:guava",
     ],
 )
@@ -73,6 +78,7 @@ java_library(
     name = "fake_report_generator",
     testonly = True,
     srcs = ["FakeReportGenerator.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/model",
@@ -87,6 +93,7 @@ java_library(
     srcs = [
         "FakeValidator.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/model",
@@ -101,6 +108,7 @@ java_library(
     name = "fake_decryption_key_service",
     testonly = True,
     srcs = ["FakeDecryptionKeyService.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/decryption/hybrid",
         "//java/com/google/aggregate/adtech/worker/selector",
@@ -117,6 +125,7 @@ java_library(
         "InMemoryResultLoggerModule.java",
         "MaterializedAggregationResults.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/exceptions",
@@ -131,6 +140,7 @@ java_library(
 java_library(
     name = "avro_results_file_reader",
     srcs = ["AvroResultsFileReader.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/util",
@@ -144,6 +154,7 @@ java_library(
 java_library(
     name = "fake_private_key_fetching_service",
     srcs = ["FakePrivateKeyFetchingService.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:clients_cryptoclient",
     ],
@@ -152,6 +163,7 @@ java_library(
 java_library(
     name = "local_aggregation_worker_runner",
     srcs = ["LocalAggregationWorkerRunner.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker:worker_runner",

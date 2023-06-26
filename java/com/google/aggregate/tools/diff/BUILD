@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "result_diff",
     srcs = ["ResultDiffer.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
@@ -45,6 +46,7 @@ java_library(
         "DiffRunnerArgs.java",
         "DiffRunnerResult.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":result_diff",
         "//java/com/google/aggregate/adtech/worker",

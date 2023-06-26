@@ -23,6 +23,7 @@ java_library(
         "NoopDecryptionCipherFactory.java",
         "NoopDecryptionModule.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/decryption",
         "//java/com/google/aggregate/adtech/worker/model",

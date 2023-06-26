@@ -16,6 +16,8 @@
 
 package com.google.aggregate.adtech.worker.util;
 
+import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR_MESSAGE;
+import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_WITH_ERRORS_MESSAGE;
 import static com.google.common.truth.Truth.assertThat;
@@ -42,6 +44,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -58,6 +61,15 @@ public class JobResultHelperTest {
 
   private static final Timestamp TIMESTAMP =
       ProtoUtil.toProtoTimestamp(Instant.parse("1926-12-31T00:00:00Z"));
+
+  private static final AggregationJobProcessException pbsError =
+      new AggregationJobProcessException(
+          AggregationWorkerReturnCode.PRIVACY_BUDGET_ERROR,
+          "Exception while consuming privacy budget.");
+
+  private static final AggregationJobProcessException pbsExhausted =
+      new AggregationJobProcessException(
+          AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED, "Privacy Budget exhausted.");
 
   @Inject private JobResultHelper jobResultHelper;
 
@@ -80,12 +92,12 @@ public class JobResultHelperTest {
   }
 
   @Test
-  public void getJobResultOnCompletion_withAllSuccessfulReports_returnsSuccessCode() {
+  public void getJobResult_withAllSuccessfulReports_returnsSuccessCode() {
     // Arrange
     ErrorSummary errorSummary = ErrorSummary.getDefaultInstance();
 
     // Act
-    JobResult actualJobResult = jobResultHelper.createJobResultOnCompletion(job, errorSummary);
+    JobResult actualJobResult = jobResultHelper.createJobResult(job, errorSummary);
 
     // Assert
     JobResult expectedJobResult =
@@ -103,7 +115,7 @@ public class JobResultHelperTest {
   }
 
   @Test
-  public void getJobResultOnCompletion_withSomeFailedReports_returnsSuccessWithErrorCode() {
+  public void getJobResult_withSomeFailedReports_returnsSuccessWithErrorCode() {
     // Arrange
     ErrorSummary errorSummary =
         ErrorSummary.newBuilder()
@@ -120,7 +132,7 @@ public class JobResultHelperTest {
             .build();
 
     // Act
-    JobResult actualJobResult = jobResultHelper.createJobResultOnCompletion(job, errorSummary);
+    JobResult actualJobResult = jobResultHelper.createJobResult(job, errorSummary);
 
     // Assert
     JobResult expectedJobResult =
@@ -174,14 +186,17 @@ public class JobResultHelperTest {
   }
 
   @Test
-  public void getJobResultOnCompletion_withErrorCodeDebugSuccessWithPrivacyBudgetError() {
+  public void getJobResult_withErrorCodeDebugSuccessWithPrivacyBudgetError() {
     // Arrange
     ErrorSummary errorSummary = ErrorSummary.getDefaultInstance();
 
     // Act
     JobResult actualJobResult =
-        jobResultHelper.createJobResultOnCompletion(
-            job, errorSummary, AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR);
+        jobResultHelper.createJobResult(
+            job,
+            errorSummary,
+            AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR,
+            Optional.empty());
 
     // Assert
     JobResult expectedJobResult =
@@ -192,6 +207,61 @@ public class JobResultHelperTest {
                     .setErrorSummary(errorSummary)
                     .setReturnCode(
                         AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR.name())
+                    .setReturnMessage(RESULT_DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR_MESSAGE)
+                    .setFinishedAt(TIMESTAMP)
+                    .build())
+            .build();
+    assertThat(actualJobResult).isEqualTo(expectedJobResult);
+  }
+
+  @Test
+  public void getJobResult_withErrorCodeDebugSuccessWithPrivacyBudgetExhausted() {
+    // Arrange
+    ErrorSummary errorSummary = ErrorSummary.getDefaultInstance();
+
+    // Act
+    JobResult actualJobResult =
+        jobResultHelper.createJobResult(
+            job,
+            errorSummary,
+            AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED,
+            Optional.empty());
+
+    // Assert
+    JobResult expectedJobResult =
+        JobResult.builder()
+            .setJobKey(job.jobKey())
+            .setResultInfo(
+                ResultInfo.newBuilder()
+                    .setErrorSummary(errorSummary)
+                    .setReturnCode(
+                        AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED
+                            .name())
+                    .setReturnMessage(RESULT_DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED_MESSAGE)
+                    .setFinishedAt(TIMESTAMP)
+                    .build())
+            .build();
+    assertThat(actualJobResult).isEqualTo(expectedJobResult);
+  }
+
+  @Test
+  public void getJobResult_withUnsupportedReturnCode() {
+    // Arrange
+    ErrorSummary errorSummary = ErrorSummary.getDefaultInstance();
+
+    // Act
+    JobResult actualJobResult =
+        jobResultHelper.createJobResult(
+            job, errorSummary, AggregationWorkerReturnCode.INVALID_JOB, Optional.empty());
+
+    // Assert
+    JobResult expectedJobResult =
+        JobResult.builder()
+            .setJobKey(job.jobKey())
+            .setResultInfo(
+                ResultInfo.newBuilder()
+                    .setErrorSummary(errorSummary)
+                    .setReturnCode(AggregationWorkerReturnCode.INVALID_JOB.name())
                     .setReturnMessage(RESULT_SUCCESS_MESSAGE)
                     .setFinishedAt(TIMESTAMP)
                     .build())

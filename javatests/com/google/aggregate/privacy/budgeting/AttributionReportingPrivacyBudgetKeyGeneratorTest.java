@@ -18,10 +18,13 @@ package com.google.aggregate.privacy.budgeting;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
+import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
 import com.google.aggregate.adtech.worker.model.SharedInfo;
 import java.time.Instant;
+import java.util.NoSuchElementException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -109,7 +112,7 @@ public class AttributionReportingPrivacyBudgetKeyGeneratorTest {
    * ensures the budget key generator hash is stable.
    */
   @Test
-  public void testAttributionReportingPrivacyBudgetKeyGeneratorForTwoSharedInfos() {
+  public void validate_PrivacyBudgetKey_AttributionReportingAPI_forSameSharedInfos() {
     SharedInfo.Builder sharedInfoBuilder1 =
         SharedInfo.builder()
             .setVersion(VERSION_0_1)
@@ -136,5 +139,60 @@ public class AttributionReportingPrivacyBudgetKeyGeneratorTest {
         attributionReportingPrivacyBudgetKeyGenerator.generatePrivacyBudgetKey(si2).get();
 
     assertEquals(privacyBudgetKey1, privacyBudgetKey2);
+  }
+
+  @Test
+  public void validate_withSourceRegistrationTimeZero() {
+    SharedInfo.Builder sharedInfoBuilder1 =
+        SharedInfo.builder()
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
+            .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
+            .setScheduledReportTime(Instant.ofEpochSecond(1234486400))
+            .setSourceRegistrationTime(Instant.ofEpochSecond(0));
+    SharedInfo sharedInfo = sharedInfoBuilder1.build();
+
+    String privacyBudgetKey1 =
+        attributionReportingPrivacyBudgetKeyGenerator.generatePrivacyBudgetKey(sharedInfo).get();
+
+    assertThat(privacyBudgetKey1).isNotEmpty();
+  }
+
+  @Test
+  public void validate_withSourceRegistrationTimeNegative() {
+    SharedInfo.Builder sharedInfoBuilder1 =
+        SharedInfo.builder()
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
+            .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
+            .setScheduledReportTime(Instant.ofEpochSecond(1234486400))
+            .setSourceRegistrationTime(Instant.ofEpochSecond(-900));
+    SharedInfo sharedInfo = sharedInfoBuilder1.build();
+
+    String privacyBudgetKey1 =
+        attributionReportingPrivacyBudgetKeyGenerator.generatePrivacyBudgetKey(sharedInfo).get();
+
+    assertThat(privacyBudgetKey1).isNotEmpty();
+  }
+
+  @Test
+  public void validate_withoutSourceRegistrationTime_throwsException() {
+    SharedInfo.Builder sharedInfoBuilder1 =
+        SharedInfo.builder()
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
+            .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
+            .setScheduledReportTime(Instant.ofEpochSecond(1234486400));
+    SharedInfo sharedInfo = sharedInfoBuilder1.build();
+
+    assertThrows(
+        NoSuchElementException.class,
+        () ->
+            attributionReportingPrivacyBudgetKeyGenerator
+                .generatePrivacyBudgetKey(sharedInfo)
+                .get());
   }
 }

@@ -22,6 +22,7 @@ java_library(
         "GuavaObjectMapper.java",
         "TimeObjectMapper.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:jackson_core",
         "//java/external:jackson_databind",

@@ -21,6 +21,7 @@ java_library(
     srcs = [
         "OutputDomainProcessor.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/util",
@@ -35,6 +36,7 @@ java_library(
 java_library(
     name = "text_domain",
     srcs = ["TextOutputDomainProcessor.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":domain",
         "//java/com/google/aggregate/adtech/worker",
@@ -53,6 +55,7 @@ java_library(
 java_library(
     name = "avro_domain",
     srcs = ["AvroOutputDomainProcessor.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":domain",
         "//java/com/google/aggregate/adtech/worker",

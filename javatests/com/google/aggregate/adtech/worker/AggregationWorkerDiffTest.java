@@ -27,6 +27,7 @@ import com.google.aggregate.tools.diff.ResultDiffer;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapDifference;
 import com.google.inject.AbstractModule;
+import com.google.privacysandbox.otel.OTelConfiguration;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigInteger;
@@ -69,6 +70,7 @@ public class AggregationWorkerDiffTest {
 
   @Before
   public void setUp() throws Exception {
+    OTelConfiguration.resetForTest();
     reportsDirectory = testWorkingDir.getRoot().toPath().resolve("reports");
     domainDirectory = testWorkingDir.getRoot().toPath().resolve("domain");
     Files.createDirectory(reportsDirectory);
@@ -133,10 +135,8 @@ public class AggregationWorkerDiffTest {
   // with the given golden.
   private MapDifference<BigInteger, AggregatedFact> diff() throws Exception {
     ImmutableList<AggregatedFact> goldenFacts = resultsFileReader.readAvroResultsFile(golden);
-    LocalAggregationWorkerRunner workerRunner =
-        LocalAggregationWorkerRunner.create(testWorkingDir.getRoot().toPath());
 
-    workerRunner.updateArgs(
+    String[] args =
         new String[] {
           "--local_file_single_puller_path",
           reportPath.toString(),
@@ -149,8 +149,9 @@ public class AggregationWorkerDiffTest {
           "4",
           "--local_output_domain_path",
           domainPath.toString(),
-        });
-
+        };
+    LocalAggregationWorkerRunner workerRunner =
+        LocalAggregationWorkerRunner.create(testWorkingDir.getRoot().toPath(), args);
     workerRunner.run();
     ImmutableList<AggregatedFact> testFacts = workerRunner.waitForAggregation();
 

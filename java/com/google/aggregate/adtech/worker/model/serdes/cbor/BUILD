@@ -22,6 +22,7 @@ java_library(
         "CborPayloadSerdes.java",
         "EnhancedCborMapper.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model/serdes",

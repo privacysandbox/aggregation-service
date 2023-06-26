@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.decryption;
 
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
+import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 
 /**
  * Interface to fetch the decryption cipher to decrypt an enrypted report. This can have multiple
@@ -29,8 +30,15 @@ public interface DecryptionCipherFactory {
 
   final class CipherCreationException extends Exception {
 
+    public ErrorReason reason;
+
     public CipherCreationException(Throwable cause) {
       super(cause);
+    }
+
+    public CipherCreationException(Throwable cause, ErrorReason reason) {
+      super(cause);
+      this.reason = reason;
     }
   }
 }

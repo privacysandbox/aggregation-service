@@ -18,9 +18,11 @@ package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
+import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import java.util.Map;
 import java.util.Optional;
@@ -61,5 +63,27 @@ public final class JobValidator {
                 + " refer to the API documentation for output domain parameters at"
                 + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/API.md",
             jobKey));
+    String reportErrorThreshold =
+        jobParams.getOrDefault(JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE, null);
+    checkArgument(
+        reportErrorThreshold == null || validPercentValue(reportErrorThreshold),
+        String.format(
+            "Job parameters for the job '%s' should have a valid value between 0 and 100 for"
+                + " 'report_error_threshold_percentage' parameter.",
+            jobKey));
+  }
+
+  /**
+   * Validates that the string representation has a valid percentage value.
+   *
+   * @param percentageInString
+   */
+  private static boolean validPercentValue(String percentageInString) {
+    try {
+      NumericConversions.getPercentageValue(percentageInString);
+      return true;
+    } catch (IllegalArgumentException iae) {
+      return false;
+    }
   }
 }

@@ -24,11 +24,13 @@ java_library(
         "JobUtils.java",
         "NumericConversions.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker:annotations",
         "//java/com/google/aggregate/adtech/worker:return_code",
         "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/external:clients_jobclient_model",
+        "//java/external:error_prone_anntotations",
         "//java/external:javax_inject",
         "//java/external:operator_protos",
         "//java/external:scp_shared_proto",

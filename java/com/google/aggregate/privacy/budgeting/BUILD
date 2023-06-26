@@ -20,11 +20,12 @@ java_library(
     name = "privacy_budget_key_generator",
     srcs = [
         "AttributionReportingPrivacyBudgetKeyGenerator.java",
-        "FledgePrivacyBudgetKeyGenerator.java",
         "PrivacyBudgetKeyGenerator.java",
         "PrivacyBudgetKeyGeneratorFactory.java",
+        "ProtectedAudiencePrivacyBudgetKeyGenerator.java",
         "SharedStoragePrivacyBudgetKeyGenerator.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:guava",

@@ -17,6 +17,40 @@ load("@rules_java//java:defs.bzl", "java_library", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
+    name = "AwsWorkerPrivateAggregationAPITest",
+    timeout = "long",
+    srcs = ["AwsWorkerPrivateAggregationAPITest.java"],
+    tags = ["manual"],
+    runtime_deps = [
+        "//java/external:slf4j_simple",
+    ],
+    deps = [
+        ":aws_worker_continuous_test_helper",
+        "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/aggregation/concurrent",
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/protocol/avro:avro_debug_results",
+        "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
+        "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
+        "//java/com/google/aggregate/tools/diff:result_diff",
+        "//java/external:acai",
+        "//java/external:aws_regions",
+        "//java/external:aws_s3",
+        "//java/external:aws_url_connection_client",
+        "//java/external:clients_blobstorageclient_aws",
+        "//java/external:clients_blobstorageclient_model",
+        "//java/external:frontend_java_proto",
+        "//java/external:google_truth",
+        "//java/external:guice",
+        "//java/external:jackson_databind",
+        "//java/external:jackson_datatype_jsr310",
+        "//java/external:slf4j",
+    ],
+)
+
+java_test(
     name = "AwsWorkerContinuousSmokeTest",
     timeout = "long",
     srcs = ["AwsWorkerContinuousSmokeTest.java"],
@@ -47,6 +81,39 @@ java_test(
         "//java/external:jackson_databind",
         "//java/external:jackson_datatype_jsr310",
         "//java/external:slf4j",
+    ],
+)
+
+java_test(
+    name = "AwsWorkerPerformanceRegressionTest",
+    timeout = "long",
+    srcs = ["AwsWorkerPerformanceRegressionTest.java"],
+    tags = ["manual"],
+    runtime_deps = [
+        "//java/external:slf4j_simple",
+    ],
+    deps = [
+        ":aws_worker_continuous_test_helper",
+        "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/aggregation/concurrent",
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/protocol/avro:avro_debug_results",
+        "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
+        "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
+        "//java/com/google/aggregate/tools/diff:result_diff",
+        "//java/external:acai",
+        "//java/external:aws_regions",
+        "//java/external:aws_s3",
+        "//java/external:aws_url_connection_client",
+        "//java/external:clients_blobstorageclient_aws",
+        "//java/external:clients_blobstorageclient_model",
+        "//java/external:frontend_java_proto",
+        "//java/external:google_truth",
+        "//java/external:guice",
+        "//java/external:jackson_databind",
+        "//java/external:jackson_datatype_jsr310",
     ],
 )
 
@@ -165,6 +232,7 @@ java_test(
 java_library(
     name = "aws_worker_continuous_test_helper",
     srcs = ["AwsWorkerContinuousTestHelper.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
@@ -197,6 +265,7 @@ java_library(
 java_test(
     name = "AggregationWorkerTest",
     srcs = ["AggregationWorkerTest.java"],
+    runtime_deps = ["//telemetry/debug/java/com/google/privacysandbox/otel:otel_debug"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/configs",
@@ -212,6 +281,8 @@ java_test(
         "//java/external:google_truth",
         "//java/external:google_truth8",
         "//java/external:guice",
+        "//java/external:opentelemetry_api",
+        "//telemetry/common/java/com/google/privacysandbox/otel:otel_common",
     ],
 )
 
@@ -227,6 +298,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/testing:fake_validator",
         "//java/com/google/aggregate/adtech/worker/validation",
         "//java/external:acai",
+        "//java/external:clients_cryptoclient",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
@@ -336,6 +408,7 @@ java_test(
     data = [
         "//worker/testing/data/library:test_data",
     ],
+    runtime_deps = ["//telemetry/debug/java/com/google/privacysandbox/otel:otel_debug"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker:worker_runner",
@@ -358,5 +431,7 @@ java_test(
         "//java/external:jackson_databind",
         "//java/external:jcommander",
         "//java/external:jimfs",
+        "//java/external:opentelemetry_api",
+        "//telemetry/common/java/com/google/privacysandbox/otel:otel_common",
     ],
 )

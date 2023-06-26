@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker.util;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
+import com.google.errorprone.annotations.Var;
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -118,6 +119,41 @@ public final class NumericConversions {
   /** Simple utility to create BigInteger from string rep from string */
   public static BigInteger createBucketFromString(String bucket) {
     return NumericConversions.uInt128FromBytes(bucket.getBytes(US_ASCII));
+  }
+
+  /**
+   * Converts string representation of percentage value to double.
+   *
+   * @param percentageInString
+   */
+  public static double getPercentageValue(String percentageInString) {
+    @Var String percentageInStringTrimmed = percentageInString.trim();
+    if (percentageInStringTrimmed == null || percentageInStringTrimmed.isEmpty()) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Invalid string representation of percentage value. The string is empty: %s",
+              percentageInString));
+    }
+    if (percentageInStringTrimmed.endsWith("%")) {
+      percentageInStringTrimmed =
+          percentageInStringTrimmed.substring(0, percentageInStringTrimmed.length() - 1);
+    }
+
+    double percentValue;
+    try {
+      percentValue = Double.parseDouble(percentageInStringTrimmed);
+    } catch (NumberFormatException nfe) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Invalid string representation of percentage value: %s", percentageInString),
+          nfe);
+    }
+    if (percentValue < 0 || percentValue > 100) {
+      throw new IllegalArgumentException(
+          String.format("Invalid value for percentage: %s", percentageInString));
+    }
+
+    return percentValue;
   }
 
   /** This class should not be instantiated */

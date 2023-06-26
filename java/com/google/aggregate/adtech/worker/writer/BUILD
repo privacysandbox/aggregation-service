@@ -19,5 +19,6 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "writer",
     srcs = ["LocalResultFileWriter.java"],
+    javacopts = ["-Xep:Var"],
     deps = ["//java/com/google/aggregate/adtech/worker/model"],
 )

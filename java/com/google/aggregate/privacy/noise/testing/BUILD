@@ -36,6 +36,7 @@ java_library(
         "ConstantNoiseModule.java",
         "FakeNoiseApplierSupplier.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":noise_tester_java_proto",
         "//java/com/google/aggregate/privacy/noise",

@@ -21,6 +21,7 @@ java_library(
     srcs = [
         "AggregationEngine.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":single_fact_aggregation",
         "//java/com/google/aggregate/adtech/worker/model",
@@ -33,6 +34,7 @@ java_library(
 java_library(
     name = "single_fact_aggregation",
     srcs = ["SingleFactAggregation.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
     ],

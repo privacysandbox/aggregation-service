@@ -24,6 +24,7 @@ import com.beust.jcommander.JCommander;
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.ErrorCounter;
+import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.aggregate.adtech.worker.testing.InMemoryResultLogger;
 import com.google.aggregate.adtech.worker.testing.MaterializedAggregationResults;
 import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule.ConstantNoiseApplier;
@@ -39,6 +40,7 @@ import com.google.common.util.concurrent.ServiceManager;
 import com.google.crypto.tink.hybrid.HybridConfig;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
+import com.google.privacysandbox.otel.OTelConfiguration;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.operator.protos.shared.backend.ErrorCountProto.ErrorCount;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
@@ -49,6 +51,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.concurrent.TimeoutException;
 import javax.inject.Inject;
@@ -96,6 +99,8 @@ public class AggregationWorkerHermeticTest {
 
   @Before
   public void setUp() throws Exception {
+    // TODO[b/275585065]: Avoid using GlobalOpenTelemetry directly.
+    OTelConfiguration.resetForTest();
     Path testWorkingDirPath = testWorkingDir.getRoot().toPath();
     stopwatchFile = testWorkingDirPath.resolve("stopwatches.txt");
     hybridKey = testWorkingDirPath.resolve("hybrid.key");
@@ -242,6 +247,91 @@ public class AggregationWorkerHermeticTest {
   }
 
   @Test
+  public void worker_protectedAudienceApiTest_domainRequired_constantNoising() throws Exception {
+    args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false, /* outputDomain= */ true, /* domainOptional= */ false);
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .setNoEncryption(false)
+            .setApiType(SharedInfo.PROTECTED_AUDIENCE_API)
+            .build());
+
+    Files.copy(reportsAvro, reportShardsDir.resolve("reports.avro"));
+
+    AwsHermeticTestHelper.writeDomainAvroFile(domainWriterFactory, domainAvro, "11");
+    Files.move(domainAvro, domainShardsDir.resolve("domain_1.avro"));
+    AwsHermeticTestHelper.writeDomainAvroFile(domainWriterFactory, domainAvro, "33");
+    Files.move(domainAvro, domainShardsDir.resolve("domain_2.avro"));
+    AwsHermeticTestHelper.writeDomainAvroFile(domainWriterFactory, domainAvro, "55");
+    Files.move(domainAvro, domainShardsDir.resolve("domain_3.avro"));
+
+    setupLocalAggregationWorker(args);
+    Injector injector = worker.getInjector();
+    FakeNoiseApplierSupplier noiserSupplier = injector.getInstance(FakeNoiseApplierSupplier.class);
+    noiserSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(10));
+
+    runWorker();
+
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(11), /* metric= */ 10, /* unnoisedMetric= */ 0L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(33), /* metric= */ 43, /* unnoisedMetric= */ 33L);
+    AggregatedFact expectedFact3 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(55), /* metric= */ 13, /* unnoisedMetric= */ 3L);
+    assertThat(factList).containsExactly(expectedFact1, expectedFact2, expectedFact3);
+  }
+
+  @Test
+  public void worker_sharedStorageApiTest_domainOptional_constantNoising() throws Exception {
+    args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false, /* outputDomain= */ false, /* domainOptional= */ true);
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .setNoEncryption(false)
+            .setApiType(SharedInfo.SHARED_STORAGE_API)
+            .build());
+
+    Files.copy(reportsAvro, reportShardsDir.resolve("reports.avro"));
+
+    setupLocalAggregationWorker(args);
+    Injector injector = worker.getInjector();
+    FakeNoiseApplierSupplier noiserSupplier = injector.getInstance(FakeNoiseApplierSupplier.class);
+    noiserSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(10));
+
+    runWorker();
+
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(22), /* metric= */ 66, /* unnoisedMetric= */ 56L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(33), /* metric= */ 43, /* unnoisedMetric= */ 33L);
+    AggregatedFact expectedFact3 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(44), /* metric= */ 133, /* unnoisedMetric= */ 123L);
+    AggregatedFact expectedFact4 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(55), /* metric= */ 13, /* unnoisedMetric= */ 3L);
+    assertThat(factList)
+        .containsExactly(expectedFact1, expectedFact2, expectedFact3, expectedFact4);
+  }
+
+  @Test
   public void localTestConstantNoising() throws Exception {
     AwsHermeticTestHelper.generateAvroReportsFromTextList(
         SimulationTestParams.builder()
@@ -274,12 +364,6 @@ public class AggregationWorkerHermeticTest {
             /* key= */ createBucketFromInt(55), /* metric= */ 13, /* unnoisedMetric= */ 3L);
     assertThat(factList)
         .containsExactly(expectedFact1, expectedFact2, expectedFact3, expectedFact4);
-    // The name of the job is empty on both sides of '|' because this is a fully local job. The
-    // name 'simple' is coming form the simple aggregation processor. This is just a quick check to
-    // ensure the stopwatches are exported correctly.
-    assertThat(AwsHermeticTestHelper.stopwatchNamesRecorded(stopwatchFile))
-        .containsExactly(
-            "shard-decrypt-0", "concurrent-request", "shard-aggregation-0", "shard-read-0");
   }
 
   @Test
@@ -773,8 +857,220 @@ public class AggregationWorkerHermeticTest {
     assertThat(factList).containsExactly(expectedFact1, expectedFact2, expectedFact3);
   }
 
+  @Test
+  public void aggregate_withSourceRegistrationTimeValueZeroAndNegative_succeeds() throws Exception {
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .setSourceRegistrationTime(Instant.EPOCH) // Equivalent to 0 in json
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_1.avro"));
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .setSourceRegistrationTime(Instant.EPOCH.minusSeconds(600))
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_2.avro"));
+    setupLocalAggregationWorker(args);
+
+    runWorker();
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(22), /* metric= */ 112, /* unnoisedMetric= */ 112L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(33), /* metric= */ 66, /* unnoisedMetric= */ 66L);
+    AggregatedFact expectedFact3 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(44), /* metric= */ 246, /* unnoisedMetric= */ 246L);
+    AggregatedFact expectedFact4 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(55), /* metric= */ 6, /* unnoisedMetric= */ 6L);
+    assertThat(factList)
+        .containsExactly(expectedFact1, expectedFact2, expectedFact3, expectedFact4);
+  }
+
+  @Test
+  public void aggregate_withDecryptionErrors_withThreshold10Percent_failsEarly() throws Exception {
+    // 8 reports with non-deserializable SharedInfo and empty payload.
+    ImmutableList<AvroReportRecord> invalidAvroReportRecords =
+        ImmutableList.of(
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-10c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-10c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-30c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-40c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-50c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-60c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-70c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-80c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"));
+    generateCustomizedAvroReport(invalidAvroReportRecords);
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard.avro"));
+    String[] args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false,
+            /* outputDomain= */ false,
+            /* domainOptional= */ true,
+            /* reportErrorThresholdPercentage= */ "10");
+    setupLocalAggregationWorker(args);
+
+    runWorker();
+
+    String actualResultSerialized = Files.readString(resultFile);
+    ResultInfo.Builder builder = ResultInfo.newBuilder();
+    JSON_PARSER.merge(actualResultSerialized, builder);
+    ResultInfo actualResult = builder.build();
+
+    assertThat(actualResult)
+        .isEqualTo(
+            ResultInfo.newBuilder()
+                .setErrorSummary(
+                    ErrorSummary.newBuilder()
+                        .addAllErrorCounts(
+                            ImmutableList.of(
+                                ErrorCount.newBuilder()
+                                    .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                    .setDescription(ErrorCounter.DECRYPTION_ERROR.getDescription())
+                                    .setCount(8L)
+                                    .build(),
+                                ErrorCount.newBuilder()
+                                    .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                    .setDescription(
+                                        ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
+                                    .setCount(8L)
+                                    .build()))
+                        .build())
+                .setFinishedAt(actualResult.getFinishedAt())
+                .setReturnMessage(
+                    "Aggregation job failed early because the number of reports excluded from"
+                        + " aggregation exceeded threshold.")
+                .setReturnCode(
+                    AggregationWorkerReturnCode.REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD.name())
+                .build());
+  }
+
+  @Test
+  public void aggregate_withErrorsWithinThreshold_completesTheJob() throws Exception {
+    // 4 reports with non-deserializable SharedInfo and empty payload.
+    ImmutableList<AvroReportRecord> invalidAvroReportRecords =
+        ImmutableList.of(
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-10c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-20c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-30c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"),
+            createAvroReportRecord(
+                /* keyId= */ "416abdc0-0697-4021-9300-40c1224ba204",
+                /* payload= */ new byte[] {},
+                /* sharedInfo= */ "sharedInfo"));
+    generateCustomizedAvroReport(invalidAvroReportRecords);
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard.avro"));
+    // 7 valid reports
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_1.avro"));
+    String[] args =
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false,
+            /* outputDomain= */ false,
+            /* domainOptional= */ true,
+            /* reportErrorThresholdPercentage= */ "40.0");
+    setupLocalAggregationWorker(args);
+
+    runWorker();
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    String actualResultSerialized = Files.readString(resultFile);
+    ResultInfo.Builder builder = ResultInfo.newBuilder();
+    JSON_PARSER.merge(actualResultSerialized, builder);
+    ResultInfo actualResult = builder.build();
+    assertThat(actualResult)
+        .isEqualTo(
+            ResultInfo.newBuilder()
+                .setErrorSummary(
+                    ErrorSummary.newBuilder()
+                        .addAllErrorCounts(
+                            ImmutableList.of(
+                                ErrorCount.newBuilder()
+                                    .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                    .setDescription(ErrorCounter.DECRYPTION_ERROR.getDescription())
+                                    .setCount(4L)
+                                    .build(),
+                                ErrorCount.newBuilder()
+                                    .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                    .setDescription(
+                                        ErrorCounter.NUM_REPORTS_WITH_ERRORS.getDescription())
+                                    .setCount(4L)
+                                    .build()))
+                        .build())
+                .setFinishedAt(actualResult.getFinishedAt())
+                .setReturnMessage(
+                    "Aggregation job successfully processed but some reports have errors.")
+                .setReturnCode(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name())
+                .build());
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(22), /* metric= */ 56, /* unnoisedMetric= */ 56L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(33), /* metric= */ 33, /* unnoisedMetric= */ 33L);
+    AggregatedFact expectedFact3 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(44), /* metric= */ 123, /* unnoisedMetric= */ 123L);
+    assertThat(factList).containsExactly(expectedFact1, expectedFact2, expectedFact3);
+  }
+
   private String[] getLocalAggregationWorkerArgs(
       boolean noEncryption, boolean outputDomain, boolean domainOptional) throws Exception {
+    return getLocalAggregationWorkerArgs(noEncryption, outputDomain, domainOptional, "100");
+  }
+
+  private String[] getLocalAggregationWorkerArgs(
+      boolean noEncryption,
+      boolean outputDomain,
+      boolean domainOptional,
+      String reportErrorThresholdPercentage)
+      throws Exception {
     // Create the local key
     HybridConfig.register();
     ImmutableList.Builder<String> argsBuilder =
@@ -814,7 +1110,9 @@ public class AggregationWorkerHermeticTest {
                 "--noising_delta",
                 "1e-4",
                 "--noising_l1_sensitivity",
-                "4");
+                "4",
+                "--report_error_threshold_percentage",
+                reportErrorThresholdPercentage);
     if (domainOptional) {
       argsBuilder.add("--domain_optional");
     }

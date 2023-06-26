@@ -128,7 +128,9 @@ public class AwsWorkerContinuousTestHelper {
       Optional<String> outputDomainPrefix) {
     return createDefaultJobRequestBuilder(
             inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
-        .putAllJobParameters(getJobParams(false, outputDomainBucketName, outputDomainPrefix))
+        .putAllJobParameters(
+            getJobParams(
+                false, outputDomainBucketName, outputDomainPrefix, /* reportErrorThreshold= */ 100))
         .build();
   }
 
@@ -142,7 +144,32 @@ public class AwsWorkerContinuousTestHelper {
       Optional<String> outputDomainPrefix) {
     return createDefaultJobRequestBuilder(
             inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
-        .putAllJobParameters(getJobParams(debugRun, outputDomainBucketName, outputDomainPrefix))
+        .putAllJobParameters(
+            getJobParams(
+                debugRun,
+                outputDomainBucketName,
+                outputDomainPrefix,
+                /* reportErrorThreshold= */ 100))
+        .build();
+  }
+
+  public static CreateJobRequest createJobRequest(
+      String inputDataBlobBucket,
+      String inputDataBlobPrefix,
+      String outputDataBlobBucket,
+      String outputDataBlobPrefix,
+      Boolean debugRun,
+      Optional<String> outputDomainBucketName,
+      Optional<String> outputDomainPrefix,
+      int reportErrorThresholdPercentage) {
+    return createDefaultJobRequestBuilder(
+            inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
+        .putAllJobParameters(
+            getJobParams(
+                debugRun,
+                outputDomainBucketName,
+                outputDomainPrefix,
+                reportErrorThresholdPercentage))
         .build();
   }
 
@@ -171,13 +198,16 @@ public class AwsWorkerContinuousTestHelper {
   private static ImmutableMap<String, String> getJobParams(
       Boolean debugRun,
       Optional<String> outputDomainBucketName,
-      Optional<String> outputDomainPrefix) {
+      Optional<String> outputDomainPrefix,
+      int reportErrorThresholdPercentage) {
     ImmutableMap.Builder<String, String> jobParams = ImmutableMap.builder();
     jobParams.put("attribution_report_to", getAttributionReportTo());
 
     if (debugRun) {
       jobParams.put("debug_run", "true");
     }
+    jobParams.put(
+        "report_error_threshold_percentage", String.valueOf(reportErrorThresholdPercentage));
     if (outputDomainPrefix.isPresent() && outputDomainBucketName.isPresent()) {
       jobParams.put("output_domain_blob_prefix", outputDomainPrefix.get());
       jobParams.put("output_domain_bucket_name", outputDomainBucketName.get());

@@ -22,7 +22,6 @@ import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.cryptoclient.DecryptionKeyService;
 import com.google.scp.operator.cpio.cryptoclient.DecryptionKeyService.KeyFetchException;
-import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import java.security.AccessControlException;
 
 /**
@@ -51,10 +50,12 @@ public final class HybridDecryptionCipherFactory implements DecryptionCipherFact
       var decryptionKey = decryptionKeyService.getDecrypter(encryptedReport.keyId());
       return HybridDecryptionCipher.of(decryptionKey);
     } catch (KeyFetchException e) {
-      if (e.getReason() == ErrorReason.PERMISSION_DENIED) {
-        throw new AccessControlException("Permission denied in fetching decryption keys.");
+      switch (e.getReason()) {
+        case PERMISSION_DENIED:
+          throw new AccessControlException("Permission denied in fetching decryption keys.");
+        default:
+          throw new CipherCreationException(e, e.getReason());
       }
-      throw new CipherCreationException(e);
     }
   }
 }

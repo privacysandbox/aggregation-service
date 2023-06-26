@@ -36,21 +36,17 @@ public final class LocalAggregationWorkerRunner {
 
   private AggregationWorker worker;
   private ServiceManager serviceManager;
-  private AggregationWorkerArgs aggregationWorkerArgs = new AggregationWorkerArgs();
-
-  private LocalAggregationWorkerRunner(String[] args) {
-    updateArgs(args);
+  private LocalAggregationWorkerRunner(AggregationWorkerArgs args) {
+    createRunner(args);
   }
 
   /**
-   * Creates an aggregation worker runner from a path where runner stores the worker results. By
-   * default all the input and output are expected under the rootDir. To specify or override the
-   * Path of each file, call {@link #updateArgs(String[])} with related {@link
-   * AggregationWorkerArgs} flags to update.
+   * Creates an aggregation worker runner from a path and args.
    *
    * @param rootDir Path that stores the worker results.
+   * @param newArgs Args to create the runner.
    */
-  public static LocalAggregationWorkerRunner create(Path rootDir) {
+  public static LocalAggregationWorkerRunner create(Path rootDir, String[] newArgs) {
     String[] args =
         new String[] {
           "--job_client",
@@ -85,23 +81,28 @@ public final class LocalAggregationWorkerRunner {
           rootDir.resolve("domain.txt").toAbsolutePath().toString(),
           "--simulation_inputs",
         };
-
-    return new LocalAggregationWorkerRunner(args);
+    AggregationWorkerArgs cliArgs = new AggregationWorkerArgs();
+    JCommander jCommander = JCommander.newBuilder().allowParameterOverwriting(true).addObject(cliArgs).build();
+    jCommander.parse(args);
+    jCommander.parse(newArgs);
+    return new LocalAggregationWorkerRunner(cliArgs);
   }
 
-  public LocalAggregationWorkerRunner updateArgs(String[] newArgs) {
-    JCommander.newBuilder().addObject(aggregationWorkerArgs).build().parse(newArgs);
-    AggregationWorkerModule guiceModule = new AggregationWorkerModule(aggregationWorkerArgs);
+  /** Create LocalAggregationWorkerRunner from AggregationWorkerArgs. */
+  private LocalAggregationWorkerRunner createRunner(AggregationWorkerArgs args) {
+    AggregationWorkerModule guiceModule = new AggregationWorkerModule(args);
     worker = AggregationWorker.fromModule(guiceModule);
     serviceManager = worker.createServiceManager();
     return this;
   }
 
+  /** Service manager starts the service and the job would start processing. */
   public void run() {
     serviceManager.startAsync();
     serviceManager.awaitStopped();
   }
 
+  /** Wait for the aggregation job complete and return the aggregated results. */
   public ImmutableList<AggregatedFact> waitForAggregation()
       throws ResultLogException, TimeoutException {
     InMemoryResultLogger logger = worker.getInjector().getInstance(InMemoryResultLogger.class);

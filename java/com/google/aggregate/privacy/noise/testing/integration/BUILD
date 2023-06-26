@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "noised_samples_generator",
     srcs = ["NoisedSamplesGenerator.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/privacy/noise",
         "//java/com/google/aggregate/privacy/noise/testing:noise_tester_java_proto",
@@ -31,6 +32,7 @@ java_library(
     srcs = [
         "DpNoiseTester.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":noised_samples_generator",
         "//java/com/google/aggregate/privacy/noise",
@@ -46,5 +48,6 @@ java_library(
 java_library(
     name = "dp_noise_tester_params_supplier",
     srcs = ["DpNoiseTesterParamsSupplier.java"],
+    javacopts = ["-Xep:Var"],
     deps = ["//java/com/google/aggregate/privacy/noise/testing:noise_tester_java_proto"],
 )

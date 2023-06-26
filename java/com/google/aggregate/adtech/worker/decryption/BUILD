@@ -25,11 +25,13 @@ java_library(
         "DeserializingReportDecrypter.java",
         "RecordDecrypter.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model/serdes",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
+        "//java/external:clients_cryptoclient",
         "//java/external:guava",
         "//java/external:guice",
     ],

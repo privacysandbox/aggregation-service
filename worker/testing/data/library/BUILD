@@ -24,8 +24,8 @@ exports_files([
     "input_set_attribution_3/*",
     "input_set_attribution_4/*",
     "input_set_attribution_5/*",
-    "input_set_fledge_1/*",
-    "input_set_fledge_2/*",
+    "input_set_protected_audience_1/*",
+    "input_set_protected_audience_2/*",
     "input_set_thresholding_1/*",
 ])
 
@@ -41,8 +41,8 @@ filegroup(
         "input_set_attribution_3/*",
         "input_set_attribution_4/*",
         "input_set_attribution_5/*",
-        "input_set_fledge_1/*",
-        "input_set_fledge_2/*",
+        "input_set_protected_audience_1/*",
+        "input_set_protected_audience_2/*",
         "input_set_thresholding_1/*",
     ]),
 )

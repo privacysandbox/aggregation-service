@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v0.51.13"  # version updated on 2023-04-26
+COORDINATOR_VERSION = "v0.51.15"  # version updated on 2023-06-05
 
 JACKSON_VERSION = "2.12.2"
 
@@ -32,6 +32,8 @@ GOOGLE_GAX_VERSION = "2.4.0"
 TINK_VERSION = "1.5.0"
 
 AUTO_SERVICE_VERSION = "1.0"
+
+OTEL_VERSION = "1.+"
 
 load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
 
@@ -60,6 +62,13 @@ http_archive(
 
 git_repository(
     name = "com_google_adm_cloud_scp",
+    patch_args = [
+        # Needed to import Git-based patches.
+        "-p1",
+    ],
+    patches = [
+        "//build_defs/scp:scp-0.51.15.patch",
+    ],
     remote = "https://github.com/privacysandbox/control-plane-shared-libraries",
     tag = COORDINATOR_VERSION,
 )
@@ -67,6 +76,20 @@ git_repository(
 load("@com_google_adm_cloud_scp//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS", "import_tink_git")
 
 import_tink_git(repo_name = "@com_google_adm_cloud_scp")
+
+OTEL_ARTIFACTS = [
+    "com.google.errorprone:error_prone_annotations:2.+",
+    "io.opentelemetry:opentelemetry-api:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-exporter-logging:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-exporter-logging-otlp:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-exporter-otlp:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-common:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-metrics:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-testing:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-trace:" + OTEL_VERSION,
+    "io.opentelemetry.contrib:opentelemetry-aws-xray:" + OTEL_VERSION,
+]
 
 maven_install(
     artifacts = [
@@ -101,6 +124,7 @@ maven_install(
         "commons-logging:commons-logging:1.1.1",
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
         "com.google.http-client:google-http-client-jackson2:1.40.0",
+        "io.reactivex.rxjava3:rxjava:3.1.5",
         #"com.google.crypto.tink:tink:" + TINK_VERSION, # Using Tink from github master branch until new version releases
         "com.google.cloud:google-cloud-monitoring:3.4.1",
         "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.4.1",
@@ -155,9 +179,11 @@ maven_install(
         "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
-    ] + TINK_MAVEN_ARTIFACTS,
+    ] + OTEL_ARTIFACTS + TINK_MAVEN_ARTIFACTS,
     repositories = [
         "https://repo1.maven.org/maven2",
+        "https://maven.google.com",
+        "https://jcenter.bintray.com",
     ],
 )
 
@@ -289,8 +315,8 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 # Distroless image for running Java.
 container_pull(
     name = "java_base",
-    # Using SHA-256 for reproducibility. The tag is latest-amd64.
-    digest = "sha256:901215ab3ae619500f184668461cf901830e7a9707f8f9c016d9c08d8060db5a",
+    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-06-12.
+    digest = "sha256:1e4181aaff242e2b305bb4abbe811eb122d68ffd7fd87c25c19468a1bc387ce6",
     registry = "gcr.io",
     repository = "distroless/java17-debian11",
 )
@@ -313,6 +339,16 @@ container_pull(
     # Using SHA-256 for reproducibility.
     # TODO: use digest instead of tag, currently it's not working.
     tag = "latest",
+)
+
+# Pulls AWS Otel Collector
+container_pull(
+    name = "aws_otel_collector",
+    # latest as of 2023-06-12.
+    digest = "sha256:f06aa8c7cd49e38cd5cdc568efc28435863766dc28d191a5191b1653bbd4fbd2",
+    registry = "public.ecr.aws",
+    repository = "aws-observability/aws-otel-collector",
+    tag = "v0.30.0",
 )
 
 #############
@@ -434,8 +470,8 @@ http_file(
 
 git_repository(
     name = "com_github_google_rpmpack",
-    # Lastest commit in main branch as of 2021-11-29
-    commit = "d0ed9b1b61b95992d3c4e83df3e997f3538a7b6c",
+    # Lastest commit in main branch as of 2022-11-20
+    commit = "98b63d62fd7793b55131f19984972293f29af659",
     remote = "https://github.com/google/rpmpack.git",
     shallow_since = "1637822718 +0200",
 )
@@ -461,11 +497,11 @@ http_archive(
 # Needed for reproducibly building AL2 binaries (e.g. //cc/aws/proxy)
 container_pull(
     name = "amazonlinux_2",
-    # Latest as of 2022-09-14.
-    digest = "sha256:ba4ab64a757797930ebb0cf40a41da433cb0531877a3a2376f5427e3fdf93694",
+    # Latest as of 2023-06-12.
+    digest = "sha256:cd3d9deffbb15db51382022a67ad717c02e0573c45c312713c046e4c2ac07771",
     registry = "index.docker.io",
     repository = "amazonlinux",
-    tag = "2.0.20220805.0",
+    tag = "2.0.20230530.0",
 )
 
 ################################################################################

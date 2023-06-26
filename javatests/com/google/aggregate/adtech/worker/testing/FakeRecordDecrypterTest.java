@@ -20,10 +20,12 @@ import static com.google.aggregate.adtech.worker.testing.FakeReportGenerator.gen
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory.CipherCreationException;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter.DecryptionException;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.common.io.ByteSource;
+import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import org.junit.Before;
@@ -47,9 +49,22 @@ public class FakeRecordDecrypterTest {
 
   @Test
   public void throwsWhenInstructed() {
-    decrypter.setShouldThrow(true);
+    decrypter.setShouldThrow(/* shouldThrow= */ true, /* reason= */ null);
 
-    assertThrows(DecryptionException.class, () -> decrypter.decryptSingleReport(null));
+    DecryptionException e =
+        assertThrows(DecryptionException.class, () -> decrypter.decryptSingleReport(null));
+    assertThat(e.getCause()).isInstanceOf(IllegalStateException.class);
+  }
+
+  @Test
+  public void throwsWithCorrectReason() {
+    decrypter.setShouldThrow(/* shouldThrow= */ true, /* reason= */ ErrorReason.PERMISSION_DENIED);
+
+    DecryptionException e =
+        assertThrows(DecryptionException.class, () -> decrypter.decryptSingleReport(null));
+    assertThat(e.getCause()).isInstanceOf(CipherCreationException.class);
+    assertThat(((CipherCreationException) e.getCause()).reason)
+        .isEqualTo(ErrorReason.PERMISSION_DENIED);
   }
 
   @Test

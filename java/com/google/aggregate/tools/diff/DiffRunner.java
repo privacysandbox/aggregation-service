@@ -135,8 +135,7 @@ public final class DiffRunner {
       ImmutableList<String> args, Path tempDir) {
     try {
       LocalAggregationWorkerRunner localAggregationWorker =
-          LocalAggregationWorkerRunner.create(/* rootDir= */ tempDir);
-      localAggregationWorker.updateArgs(args.toArray(new String[0]));
+          LocalAggregationWorkerRunner.create(/* rootDir= */ tempDir, args.toArray(new String[0]));
       localAggregationWorker.run();
       ImmutableList<AggregatedFact> resultAggregatedFacts =
           localAggregationWorker.waitForAggregation();

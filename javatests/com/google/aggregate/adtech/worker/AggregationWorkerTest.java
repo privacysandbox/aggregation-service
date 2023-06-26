@@ -33,6 +33,8 @@ import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.Nois
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingL1Sensitivity;
 import com.google.aggregate.adtech.worker.testing.FakeJobResultGenerator;
 import com.google.aggregate.adtech.worker.testing.NoopJobProcessor;
+import com.google.privacysandbox.otel.OTelConfiguration;
+import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
@@ -69,6 +71,7 @@ public class AggregationWorkerTest {
 
   @Before
   public void setUp() {
+    OTelConfiguration.resetForTest();
     worker = AggregationWorker.fromModule(new TestEnv());
     serviceManager = worker.createServiceManager();
 
@@ -191,6 +194,7 @@ public class AggregationWorkerTest {
     @Override
     protected void configure() {
       install(new WorkerModule());
+      install(new OtlpJsonLoggingOTelConfigurationModule());
       bind(ConstantJobClient.class).in(Singleton.class);
       bind(OneTimePullBackoff.class).in(Singleton.class);
       bind(NoopJobProcessor.class).in(Singleton.class);

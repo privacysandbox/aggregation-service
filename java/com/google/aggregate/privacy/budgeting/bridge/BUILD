@@ -21,6 +21,7 @@ java_library(
     srcs = [
         "PrivacyBudgetingServiceBridge.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
@@ -33,6 +34,7 @@ java_library(
     srcs = [
         "HttpPrivacyBudgetingServiceBridge.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":privacy_budgeting_service_bridge",
         "//java/external:clients_distributed_privacy_budgeting",
@@ -47,6 +49,7 @@ java_library(
     srcs = [
         "UnlimitedPrivacyBudgetingServiceBridge.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":privacy_budgeting_service_bridge",
         "//java/external:guava",
@@ -59,6 +62,7 @@ java_library(
     srcs = [
         "FakePrivacyBudgetingServiceBridge.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":privacy_budgeting_service_bridge",
         "//java/external:guava",

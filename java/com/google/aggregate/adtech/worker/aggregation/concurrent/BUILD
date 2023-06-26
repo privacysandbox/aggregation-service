@@ -21,6 +21,7 @@ java_library(
     srcs = [
         "ConcurrentAggregationProcessor.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/aggregation/domain",
@@ -43,8 +44,10 @@ java_library(
         "//java/external:guava",
         "//java/external:javax_inject",
         "//java/external:operator_protos",
+        "//java/external:rxjava",
         "//java/external:scp_shared_proto",
         "//java/external:shared_model",
         "//java/external:slf4j",
+        "//telemetry/common/java/com/google/privacysandbox/otel:otel_common",
     ],
 )

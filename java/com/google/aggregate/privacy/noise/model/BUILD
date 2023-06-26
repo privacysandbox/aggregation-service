@@ -22,6 +22,7 @@ java_library(
         "NoisedAggregatedResultSet.java",
         "NoisedAggregationResult.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",

@@ -22,6 +22,7 @@ java_library(
         "LocalNioPathAvroReaderFactory.java",
         "LocalNioPathAvroRecordReader.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/model",

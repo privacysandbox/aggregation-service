@@ -16,7 +16,7 @@
 
 package com.google.aggregate.adtech.worker;
 
-import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INVALID_JOB;
+import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
@@ -30,6 +30,8 @@ import com.google.aggregate.perf.StopwatchExporter.StopwatchExportException;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.privacysandbox.otel.OTelConfiguration;
+import com.google.privacysandbox.otel.Timer;
 import com.google.scp.operator.cpio.jobclient.JobClient;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
@@ -59,6 +61,8 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
   private final ListeningExecutorService nonBlockingThreadPool;
   private final ListeningExecutorService blockingThreadPool;
 
+  private final OTelConfiguration oTelConfiguration;
+
   // Tracks whether the service should be pulling more jobs. Once the shutdown of the service
   // is initiated, this is switched to false.
   private volatile boolean moreNewRequests;
@@ -75,6 +79,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
       MetricClient metricClient,
       StopwatchRegistry stopwatchRegistry,
       StopwatchExporter stopwatchExporter,
+      OTelConfiguration oTelConfiguration,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @BenchmarkMode boolean benchmarkMode,
@@ -86,6 +91,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     this.moreNewRequests = true;
     this.stopwatchRegistry = stopwatchRegistry;
     this.stopwatchExporter = stopwatchExporter;
+    this.oTelConfiguration = oTelConfiguration;
     this.nonBlockingThreadPool = nonBlockingThreadPool;
     this.blockingThreadPool = blockingThreadPool;
     this.benchmarkMode = benchmarkMode;
@@ -96,6 +102,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
   @Override
   protected void run() {
     logger.info("Aggregation worker started");
+    oTelConfiguration.createProdMemoryUtilizationRatioGauge();
 
     while (moreNewRequests) {
       Optional<Job> job = Optional.empty();
@@ -119,7 +126,12 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
           continue;
         }
 
-        JobResult jobResult = jobProcessor.process(job.get());
+        Job currentJob = job.get();
+        JobResult jobResult = null;
+        String jobID = toJobKeyString(currentJob.jobKey());
+        try (Timer t = oTelConfiguration.createProdTimerStarted("total_execution", jobID)) {
+          jobResult = jobProcessor.process(currentJob);
+        }
         jobClient.markJobCompleted(jobResult);
         recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
       } catch (AggregationJobProcessException e) {
@@ -189,7 +201,10 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     try {
       JobResult jobErrorResult =
           jobResultHelper.createJobResult(
-              job, INVALID_JOB.name(), iae.getMessage(), ErrorSummary.getDefaultInstance());
+              job,
+              ErrorSummary.getDefaultInstance(),
+              AggregationWorkerReturnCode.INVALID_JOB,
+              Optional.of(iae.getMessage()));
       jobClient.markJobCompleted(jobErrorResult);
       try {
         CustomMetric metric =
@@ -223,7 +238,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
         String.format("%s caught in WorkerPullWorkService: ", e.getClass().getSimpleName()), e);
     try {
       recordWorkerJobMetric(JOB_ERROR_METRIC_NAME, "JobHandlingError");
-      jobClient.appendJobErrorMessage(job.jobKey(), e.getMessage());
+      jobClient.appendJobErrorMessage(job.jobKey(), jobResultHelper.getDetailedExceptionMessage(e));
     } catch (Exception ex) {
       logger.error(
           String.format(

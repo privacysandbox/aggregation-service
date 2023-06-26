@@ -38,6 +38,7 @@ java_library(
         "WorkerModule.java",
         "WorkerPullWorkService.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/aggregation/domain",
         "//java/com/google/aggregate/adtech/worker/aggregation/domain:avro_domain",
@@ -78,6 +79,7 @@ java_library(
         "//java/external:scp_shared_proto",
         "//java/external:shared_model",
         "//java/external:slf4j",
+        "//telemetry/common/java/com/google/privacysandbox/otel:otel_common",
     ],
 )
 
@@ -99,6 +101,7 @@ java_library(
         "WorkerModule.java",
         "WorkerPullWorkService.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/aggregation/engine",
         "//java/com/google/aggregate/adtech/worker/configs",
@@ -118,6 +121,7 @@ java_library(
         "//java/external:aws_regions",
         "//java/external:clients_blobstorageclient_aws",
         "//java/external:clients_blobstorageclient_model",
+        "//java/external:clients_cryptoclient",
         "//java/external:clients_jobclient",
         "//java/external:clients_jobclient_model",
         "//java/external:clients_lifecycleclient_aws",
@@ -130,6 +134,7 @@ java_library(
         "//java/external:scp_shared_proto",
         "//java/external:shared_model",
         "//java/external:slf4j",
+        "//telemetry/common/java/com/google/privacysandbox/otel:otel_common",
     ],
 )
 
@@ -154,6 +159,7 @@ java_library(
         "ResultLoggerModuleSelector.java",
         "StopwatchExportSelector.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":worker",
         "//java/com/google/aggregate/adtech/worker/aggregation/concurrent",
@@ -215,6 +221,7 @@ java_library(
         "//java/external:javax_inject",
         "//java/external:jcommander",
         "//java/external:slf4j",
+        "//telemetry/common/java/com/google/privacysandbox/otel:otel_common",
     ],
 )
 
@@ -223,6 +230,7 @@ java_library(
     srcs = [
         "AggregationWorkerReturnCode.java",
     ],
+    javacopts = ["-Xep:Var"],
 )
 
 java_library(
@@ -230,6 +238,7 @@ java_library(
     srcs = [
         "Annotations.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:guice",
     ],
@@ -244,22 +253,29 @@ java_binary(
         "//licenses",
     ],
     runtime_deps = [
+        # //telemetry needs to be before worker
+        "//telemetry/debug/java/com/google/privacysandbox/otel:otel_debug",
         ":worker_runner",
         "//java/external:commons_logging",
         "//java/external:slf4j_simple",
     ],
 )
 
-java_binary(
-    name = "WorkerRunner",
-    classpath_resources = ["//java/com/google/aggregate:slf4jconfig_prod"],
-    main_class = "com.google.aggregate.adtech.worker.AggregationWorkerRunner",
-    runtime_deps = [
-        ":worker_runner",
-        "//java/external:commons_logging",
-        "//java/external:slf4j_simple",
-    ],
-)
+[
+    java_binary(
+        name = "WorkerRunner_{}".format(otel_lib),
+        classpath_resources = ["//java/com/google/aggregate:slf4jconfig_prod"],
+        main_class = "com.google.aggregate.adtech.worker.AggregationWorkerRunner",
+        runtime_deps = [
+            # //telemetry library should be before :worker_runner
+            "//telemetry/{t}/java/com/google/privacysandbox/otel:otel_{t}".format(t = otel_lib),
+            ":worker_runner",
+            "//java/external:commons_logging",
+            "//java/external:slf4j_simple",
+        ],
+    )
+    for otel_lib in ("prod", "debug")
+]
 
 # The uber-JAR for the LocalTestingTool.
 alias(
@@ -270,5 +286,11 @@ alias(
 # The uber-JAR for the aggregation worker.
 alias(
     name = "WorkerRunnerDeploy",
-    actual = ":WorkerRunner_deploy.jar",
+    actual = ":WorkerRunner_prod_deploy.jar",
+)
+
+# The uber-JAR for the aggregation worker.
+alias(
+    name = "WorkerRunnerDeployDebug",
+    actual = ":WorkerRunner_debug_deploy.jar",
 )

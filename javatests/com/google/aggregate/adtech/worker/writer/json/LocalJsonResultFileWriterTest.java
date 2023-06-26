@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker.writer.json;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,10 +30,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.inject.AbstractModule;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
@@ -62,6 +65,7 @@ public class LocalJsonResultFileWriterTest {
 
     results =
         ImmutableList.of(
+            AggregatedFact.create(new BigInteger("123123123123"), 60L),
             AggregatedFact.create(NumericConversions.createBucketFromInt(123), 50L),
             AggregatedFact.create(NumericConversions.createBucketFromInt(456), 30L),
             AggregatedFact.create(NumericConversions.createBucketFromInt(789), 40L));
@@ -81,11 +85,15 @@ public class LocalJsonResultFileWriterTest {
         .iterator()
         .forEachRemaining(
             entry -> {
-              writtenResults.add(
-                  AggregatedFact.create(
-                      NumericConversions.uInt128FromBytes(
-                          entry.get("bucket").asText().getBytes(StandardCharsets.US_ASCII)),
-                      entry.get("metric").asLong()));
+              try {
+                writtenResults.add(
+                    AggregatedFact.create(
+                        NumericConversions.uInt128FromBytes(
+                            entry.get("bucket").binaryValue()),
+                        entry.get("metric").asLong()));
+              } catch (IOException e) {
+                fail(e.getMessage());
+              }
             });
     assertThat(writtenResults).containsExactly(results.toArray());
   }

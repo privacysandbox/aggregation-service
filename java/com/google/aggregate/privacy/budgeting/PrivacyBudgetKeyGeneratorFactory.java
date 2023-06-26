@@ -17,7 +17,7 @@
 package com.google.aggregate.privacy.budgeting;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.FLEDGE_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 
 import java.util.HashMap;
@@ -42,9 +42,11 @@ public final class PrivacyBudgetKeyGeneratorFactory {
           ATTRIBUTION_REPORTING_API, new AttributionReportingPrivacyBudgetKeyGenerator());
       privacyBudgetKeyGenerator =
           Optional.of(privacyBudgetKeyGeneratorMap.get(ATTRIBUTION_REPORTING_API));
-    } else if (api.get().equals(FLEDGE_API)) {
-      privacyBudgetKeyGeneratorMap.putIfAbsent(FLEDGE_API, new FledgePrivacyBudgetKeyGenerator());
-      privacyBudgetKeyGenerator = Optional.of(privacyBudgetKeyGeneratorMap.get(FLEDGE_API));
+    } else if (api.get().equals(PROTECTED_AUDIENCE_API)) {
+      privacyBudgetKeyGeneratorMap.putIfAbsent(
+          PROTECTED_AUDIENCE_API, new ProtectedAudiencePrivacyBudgetKeyGenerator());
+      privacyBudgetKeyGenerator =
+          Optional.of(privacyBudgetKeyGeneratorMap.get(PROTECTED_AUDIENCE_API));
     } else if (api.get().equals(SHARED_STORAGE_API)) {
       privacyBudgetKeyGeneratorMap.putIfAbsent(
           SHARED_STORAGE_API, new SharedStoragePrivacyBudgetKeyGenerator());

@@ -16,8 +16,8 @@ syntax = "proto2";
 
 package aggregate_api_configs;
 
-option java_package = "com.google.aggregate.privacy.noise.proto";
 option java_outer_classname = "Params";
+option java_package = "com.google.aggregate.privacy.noise.proto";
 
 // Config for privacy parameters
 message PrivacyParameters {
@@ -37,14 +37,16 @@ message PrivacyParameters {
 }
 
 message NoiseParameters {
-  enum Distribution { LAPLACE = 1; }
+  enum Distribution {
+    LAPLACE = 1;
+  }
 
   // Distribution of the noising algo.
-  optional Distribution distribution = 1;  // Required.
+  optional Distribution distribution = 1; // Required.
 
   // Privacy loss parameter.
   // Inversely proportional to amount of noise added.
-  optional double epsilon = 2 [deprecated = true];  // Required.
+  optional double epsilon = 2 [deprecated = true]; // Required.
 
   // Sensitivity for noising aggregation count.
   optional NoiseSensitivity count_noise_sensitivity = 4 [deprecated = true];

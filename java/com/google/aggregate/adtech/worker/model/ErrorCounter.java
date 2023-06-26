@@ -32,11 +32,15 @@ public enum ErrorCounter {
           + " in the Aggregation job parameters. Aggregation request job parameters must have"
           + " attribution_report_to set to report's shared_info.reporting_origin value."),
   DECRYPTION_ERROR(
-      "Unable to decrypt the report. This may be caused by: misconfiguration of an "
-          + "ad tech service, running the Aggregation Service enclave in debug mode, "
-          + "tampered reports, corrupt keys, or other such issues."),
+      "Unable to decrypt the report. This may be caused by: tampered aggregatable report shared"
+          + " info, corrupt encrypted report, or other such issues."),
   DEBUG_NOT_ENABLED(
       "Reports without shared_info.debug_mode enabled cannot be processed in a debug run."),
+  DECRYPTION_KEY_NOT_FOUND("Could not find decryption key on private key endpoint."),
+  DECRYPTION_KEY_FETCH_ERROR(
+      "Fetching the decryption key for report decryption failed. This can happen using an"
+          + " unapproved aggregation service binary, running the aggregation service binary in"
+          + " debug mode, key corruption or service availability issues."),
   NUM_REPORTS_WITH_ERRORS(
       "Total number of reports that had an error. These reports were not considered in aggregation."
           + " See additional error messages for details on specific reasons."),
@@ -45,6 +49,7 @@ public enum ErrorCounter {
           "Report's shared_info.scheduled_report_time is too old, reports cannot be older than %s"
               + " days.",
           SharedInfo.MAX_REPORT_AGE.toDays())),
+  SERVICE_ERROR("Internal error occurred during operation."),
   UNSUPPORTED_OPERATION(
       String.format(
           "Report's operation is unsupported. Supported operations are %s.",

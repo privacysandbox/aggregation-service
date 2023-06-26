@@ -23,5 +23,8 @@ public final class JobUtils {
 
   public static final String JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME = "output_domain_bucket_name";
 
+  public static final String JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE =
+      "report_error_threshold_percentage";
+
   private JobUtils() {}
 }

@@ -21,6 +21,7 @@ java_library(
     srcs = [
         "AvroRecordReader.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:avro",
     ],
@@ -31,6 +32,7 @@ java_library(
     srcs = [
         "AvroRecordWriter.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":avro_schema_supplier",
         "//java/external:autovalue",
@@ -49,6 +51,7 @@ java_library(
         "AvroOutputDomainWriter.java",
         "AvroOutputDomainWriterFactory.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":avro_output_domain_schema_supplier",
         ":avro_record_reader",
@@ -72,6 +75,7 @@ java_library(
         "AvroReportsReader.java",
         "AvroReportsReaderFactory.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":avro_record_reader",
         ":avro_record_writer",
@@ -94,6 +98,7 @@ java_library(
         "AvroDebugResultsWriterFactory.java",
         "AvroReadExceptionChecker.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":avro_debug_results_schema_supplier",
         ":avro_record_reader",
@@ -111,6 +116,7 @@ java_library(
 java_library(
     name = "avro_output_domain_schema_supplier",
     srcs = ["AvroOutputDomainSchemaSupplier.java"],
+    javacopts = ["-Xep:Var"],
     resources = [
         "//protocol/avro:output_domain.avsc",
     ],
@@ -123,6 +129,7 @@ java_library(
 java_library(
     name = "avro_reports_schema_supplier",
     srcs = ["AvroReportsSchemaSupplier.java"],
+    javacopts = ["-Xep:Var"],
     resources = [
         "//protocol/avro:reports.avsc",
     ],
@@ -135,6 +142,7 @@ java_library(
 java_library(
     name = "avro_results_schema_supplier",
     srcs = ["AvroResultsSchemaSupplier.java"],
+    javacopts = ["-Xep:Var"],
     resources = [
         "//protocol/avro:results.avsc",
     ],
@@ -147,6 +155,7 @@ java_library(
 java_library(
     name = "avro_debug_results_schema_supplier",
     srcs = ["AvroDebugResultsSchemaSupplier.java"],
+    javacopts = ["-Xep:Var"],
     resources = [
         "//protocol/avro:debug_results.avsc",
     ],
@@ -159,6 +168,7 @@ java_library(
 java_library(
     name = "avro_schema_supplier",
     srcs = ["AvroSchemaSupplier.java"],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/external:avro",
         "//java/external:guava",
@@ -183,6 +193,7 @@ java_library(
     srcs = [
         "AvroResultsDeserializerRunner.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         ":avro_results_schema_supplier",
         "//java/com/google/aggregate/adtech/worker/model",

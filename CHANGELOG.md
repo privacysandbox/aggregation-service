@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.11.0](https://github.com/privacysandbox/aggregation-service/compare/v0.10.0...v0.11.0) (2023-06-21)
+
+### Changes
+
+-   Upgraded control plane shared library dependency to
+    [v0.51.15](https://github.com/privacysandbox/control-plane-shared-libraries/tree/v0.51.15)
+-   Updated Privacy Budget Client to retry on certain retryable http status codes in addition to
+    IOExceptions.
+-   Custom return messages for each PrivacyBudget related error for debug jobs.
+-   Added stacktrace to return messages shown to adtechs in case of unhandled/unexpected exceptions.
+-   Use of RxJava to read report files. Memory optimization to add back pressure.
+-   Added 2 new error codes around report decryption - DECRYPTION_KEY_NOT_FOUND,
+    DECRYPTION_KEY_FETCH_ERROR, SERVICE_ERROR.
+-   Sample build script fixes that address issues
+    [#16](https://github.com/privacysandbox/aggregation-service/issues/16) and
+    [#17](https://github.com/privacysandbox/aggregation-service/issues/17)
+-   Fail the job early when report error count exceeds threshold. More details
+    [here](./docs/api.md).
+-   Updated return message for PRIVACY_BUDGET_EXHAUSTED return code.
+-   Add support for reading files larger than 2.5 GB.
+-   Fix Base64 encoding for bucket in JSON format results.
+
 ## [0.10.0](https://github.com/privacysandbox/aggregation-service/compare/v0.9.0...v0.10.0) (2023-05-10)
 
 ### Changes

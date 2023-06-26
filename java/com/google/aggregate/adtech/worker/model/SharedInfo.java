@@ -49,10 +49,10 @@ public abstract class SharedInfo {
   public static final String LATEST_VERSION = VERSION_0_1;
   public static final boolean DEFAULT_DEBUG_MODE = false;
   public static final String ATTRIBUTION_REPORTING_API = "attribution-reporting";
-  public static final String FLEDGE_API = "fledge";
+  public static final String PROTECTED_AUDIENCE_API = "protected-audience";
   public static final String SHARED_STORAGE_API = "shared-storage";
   public static final ImmutableSet<String> SUPPORTED_APIS =
-      ImmutableSet.of(ATTRIBUTION_REPORTING_API, FLEDGE_API, SHARED_STORAGE_API);
+      ImmutableSet.of(ATTRIBUTION_REPORTING_API, PROTECTED_AUDIENCE_API, SHARED_STORAGE_API);
   // Max age of reports accepted for aggregation.
   public static final Duration MAX_REPORT_AGE = Duration.of(90, DAYS);
   public static final ImmutableSet<String> SUPPORTED_OPERATIONS =

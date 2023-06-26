@@ -474,5 +474,103 @@ public class SharedInfoSerdesTest {
                 .build());
   }
 
+  @Test
+  public void convert_withSourceRegistrationTimeZero() {
+    String sharedInfoJsonString =
+        "{\"source_registration_time\":0,\"privacy_budget_key\":\"test_privacy_budget_key\",\""
+            + "report_id\":\"cbc6fb00-c946-4eb6-a401-aac133f7f0b8\",\"reporting_origin\":"
+            + "\"https://example.com\",\"scheduled_report_time\":\"1648673933\","
+            + "\"version\":\"\"}";
+
+    Optional<SharedInfo> deserialized = sharedInfoSerdes.convert(sharedInfoJsonString);
+
+    assertThat(deserialized)
+        .hasValue(
+            SharedInfo.builder()
+                .setSourceRegistrationTime(Instant.ofEpochSecond(0))
+                .setPrivacyBudgetKey("test_privacy_budget_key")
+                .setVersion("")
+                .setReportId("cbc6fb00-c946-4eb6-a401-aac133f7f0b8")
+                .setReportingOrigin("https://example.com")
+                .setScheduledReportTime(Instant.ofEpochSecond(1648673933))
+                .build());
+  }
+
+  @Test
+  public void convert_withSourceRegistrationTimeNegative() {
+    String sharedInfoJsonString =
+        "{\"source_registration_time\":-1,\"privacy_budget_key\":\"test_privacy_budget_key\",\""
+            + "report_id\":\"cbc6fb00-c946-4eb6-a401-aac133f7f0b8\",\"reporting_origin\":"
+            + "\"https://example.com\",\"scheduled_report_time\":\"1648673933\","
+            + "\"version\":\"\"}";
+
+    Optional<SharedInfo> deserialized = sharedInfoSerdes.convert(sharedInfoJsonString);
+
+    assertThat(deserialized)
+        .hasValue(
+            SharedInfo.builder()
+                .setSourceRegistrationTime(Instant.ofEpochSecond(-1))
+                .setPrivacyBudgetKey("test_privacy_budget_key")
+                .setVersion("")
+                .setReportId("cbc6fb00-c946-4eb6-a401-aac133f7f0b8")
+                .setReportingOrigin("https://example.com")
+                .setScheduledReportTime(Instant.ofEpochSecond(1648673933))
+                .build());
+  }
+
+  @Test
+  public void convert_withSourceRegistrationTimeMinValue() {
+    String sharedInfoJsonString =
+        "{\"source_registration_time\":-31557014167219199,\"privacy_budget_key\":\"test_privacy_budget_key\",\""
+            + "report_id\":\"cbc6fb00-c946-4eb6-a401-aac133f7f0b8\",\"reporting_origin\":"
+            + "\"https://example.com\",\"scheduled_report_time\":\"1648673933\",\"version\":\"\"}";
+
+    Optional<SharedInfo> deserialized = sharedInfoSerdes.convert(sharedInfoJsonString);
+
+    assertThat(deserialized)
+        .hasValue(
+            SharedInfo.builder()
+                .setSourceRegistrationTime(Instant.ofEpochSecond(-31557014167219199L))
+                .setPrivacyBudgetKey("test_privacy_budget_key")
+                .setVersion("")
+                .setReportId("cbc6fb00-c946-4eb6-a401-aac133f7f0b8")
+                .setReportingOrigin("https://example.com")
+                .setScheduledReportTime(Instant.ofEpochSecond(1648673933))
+                .build());
+  }
+
+  @Test
+  public void convert_withInvalidValueForSourceRegistrationTime_failsParsing() {
+    // Setting source_registration_time value higher than maximum limit.
+    String sharedInfoJsonString =
+        "{\"source_registration_time\":31556889864403200,\"privacy_budget_key\":\"test_privacy_budget_key\",\""
+            + "report_id\":\"cbc6fb00-c946-4eb6-a401-aac133f7f0b8\",\"reporting_origin\":"
+            + "\"https://example.com\",\"scheduled_report_time\":\"1648673933\",\"version\":\"\"}";
+
+    Optional<SharedInfo> deserialized = sharedInfoSerdes.convert(sharedInfoJsonString);
+
+    assertThat(deserialized).isEmpty();
+  }
+
+  @Test
+  public void convert_withSourceRegistrationNotSet() {
+    String sharedInfoJsonString =
+        "{\"privacy_budget_key\":\"test_privacy_budget_key\",\""
+            + "report_id\":\"cbc6fb00-c946-4eb6-a401-aac133f7f0b8\",\"reporting_origin\":"
+            + "\"https://example.com\",\"scheduled_report_time\":\"1648673933\",\"version\":\"\"}";
+
+    Optional<SharedInfo> deserialized = sharedInfoSerdes.convert(sharedInfoJsonString);
+
+    assertThat(deserialized)
+        .hasValue(
+            SharedInfo.builder()
+                .setPrivacyBudgetKey("test_privacy_budget_key")
+                .setVersion("")
+                .setReportId("cbc6fb00-c946-4eb6-a401-aac133f7f0b8")
+                .setReportingOrigin("https://example.com")
+                .setScheduledReportTime(Instant.ofEpochSecond(1648673933))
+                .build());
+  }
+
   private static final class TestEnv extends AbstractModule {}
 }

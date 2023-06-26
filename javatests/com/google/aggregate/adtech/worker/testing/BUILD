@@ -71,6 +71,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:fake_record_decrypter",
         "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
+        "//java/external:clients_cryptoclient",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",

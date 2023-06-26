@@ -21,6 +21,7 @@ java_library(
     srcs = [
         "NoOpStopwatchExporter.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/perf",
     ],
@@ -31,6 +32,7 @@ java_library(
     srcs = [
         "PlainFileStopwatchExporter.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/perf",
         "//java/external:guava",
@@ -44,6 +46,7 @@ java_library(
     srcs = [
         "AwsStopwatchExporter.java",
     ],
+    javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/perf",
         "//java/external:clients_blobstorageclient_aws",

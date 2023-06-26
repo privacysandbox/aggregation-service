@@ -23,12 +23,13 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PER
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_WRITE_ERROR;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.SUCCESS;
+import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
-import static com.google.common.util.concurrent.Futures.whenAllSucceed;
-import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
@@ -36,6 +37,7 @@ import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.ErrorSummaryAggregator;
 import com.google.aggregate.adtech.worker.JobProcessor;
 import com.google.aggregate.adtech.worker.ReportDecrypterAndValidator;
@@ -54,6 +56,7 @@ import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.util.DebugSupportHelper;
 import com.google.aggregate.adtech.worker.util.JobResultHelper;
+import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
@@ -61,7 +64,6 @@ import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBrid
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
 import com.google.aggregate.privacy.noise.model.NoisedAggregatedResultSet;
 import com.google.aggregate.privacy.noise.model.NoisedAggregationResult;
-import com.google.aggregate.protocol.avro.AvroReportsReader;
 import com.google.aggregate.protocol.avro.AvroReportsReaderFactory;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -71,10 +73,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.MapDifference.ValueDifference;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Streams;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.privacysandbox.otel.OTelConfiguration;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
@@ -82,6 +84,9 @@ import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobSto
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
+import io.reactivex.rxjava3.core.Flowable;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -90,7 +95,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import org.apache.avro.AvroRuntimeException;
@@ -106,13 +113,24 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   // Key to indicate whether this is a debug job
   public static final String JOB_PARAM_DEBUG_RUN = "debug_run";
 
-  // Limit on how many invalid reports are collected; if a batch has a lot of invalid records, not
-  // all of them will necessarily be captured.
-  private static final int MAX_INVALID_REPORTS_COLLECTED = 1000;
+  private static final int NUM_CPUS = Runtime.getRuntime().availableProcessors();
+  // In aggregation service, reading is much faster than decryption, and most of the time, it waits
+  // for decryption to complete to continue reading. Therefore, set the number of read concurrent
+  // thread to NUM_CPUS / 4.
+  private static final int NUM_READ_THREADS = (int) Math.ceil((double) NUM_CPUS / 4);
+  // Decryption is a CPU-bound operation so put more CPU resources here.
+  private static final int NUM_PROCESS_THREADS = NUM_CPUS;
+
+  // Buffer size for reading data on the same thread
+  // TODO(b/279061816): Research on optimal value for MAX_REPORTS_READ_BUFFER_SIZE and
+  // MAX_REPORTS_PROCESS_BUFFER_SIZE
+  private final int MAX_REPORTS_READ_BUFFER_SIZE = 1000;
+  // Buffer size for decrypting and aggregating data on the same thread
+  private final int MAX_REPORTS_PROCESS_BUFFER_SIZE = 1000;
 
   public static final String PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE =
       "Insufficient privacy budget for one or more aggregatable reports. No aggregatable report can"
-          + " appear in more than one batch or contribute to more than one summary report.";
+          + " appear in more than one aggregation job.";
   private static final Logger logger =
       LoggerFactory.getLogger(ConcurrentAggregationProcessor.class);
 
@@ -131,7 +149,8 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   private final ListeningExecutorService nonBlockingThreadPool;
   private final boolean domainOptional;
   private final boolean enableThresholding;
-  // Provider<Boolean> used so the value can be dynamically changed in tests
+  private final OTelConfiguration oTelConfiguration;
+  private final double defaultReportErrorThresholdPercentage;
 
   @Inject
   ConcurrentAggregationProcessor(
@@ -145,11 +164,13 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       AvroRecordEncryptedReportConverter encryptedReportConverter,
       StopwatchRegistry stopwatches,
       PrivacyBudgetingServiceBridge privacyBudgetingServiceBridge,
+      OTelConfiguration oTelConfiguration,
       JobResultHelper jobResultHelper,
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       @DomainOptional Boolean domainOptional,
-      @EnableThresholding Boolean enableThresholding) {
+      @EnableThresholding Boolean enableThresholding,
+      @ReportErrorThresholdPercentage double defaultReportErrorThresholdPercentage) {
     this.reportDecrypterAndValidator = reportDecrypterAndValidator;
     this.engineProvider = engineProvider;
     this.outputDomainProcessor = outputDomainProcessor;
@@ -164,7 +185,9 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     this.blockingThreadPool = blockingThreadPool;
     this.nonBlockingThreadPool = nonBlockingThreadPool;
     this.domainOptional = domainOptional;
+    this.oTelConfiguration = oTelConfiguration;
     this.enableThresholding = enableThresholding;
+    this.defaultReportErrorThresholdPercentage = defaultReportErrorThresholdPercentage;
   }
 
   /**
@@ -199,6 +222,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     ListenableFuture<ImmutableSet<BigInteger>> outputDomain;
     Optional<DataLocation> outputDomainLocation = Optional.empty();
     Map<String, String> jobParams = job.requestInfo().getJobParameters();
+
     if (jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME)
         && jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX)
         && (!jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME).isEmpty()
@@ -237,60 +261,50 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     }
 
     try {
-      // List of futures, one for each data shard; a shard is read into a list of encrypted reports.
-      ImmutableList<ListenableFuture<ImmutableList<EncryptedReport>>> shardReads =
-          Streams.mapWithIndex(
-                  dataShards.stream(),
-                  (shard, shardIndex) -> readShardAsync(job, shard, shardIndex))
-              .collect(toImmutableList());
-
-      ImmutableList<ListenableFuture<ImmutableList<DecryptionValidationResult>>> decryptedShards =
-          Streams.mapWithIndex(
-                  shardReads.stream(),
-                  (shard, shardIndex) -> decryptShardAsync(job, shard, shardIndex))
-              .collect(toImmutableList());
-
-      ImmutableList<ListenableFuture<ImmutableList<DecryptionValidationResult>>>
-          invalidReportsPerShards =
-              decryptedShards.stream()
-                  .map(this::collectInvalidReportsAsync)
-                  .collect(toImmutableList());
-
-      ListenableFuture<List<ImmutableList<DecryptionValidationResult>>>
-          invalidReportsPerShardUnified = Futures.successfulAsList(invalidReportsPerShards);
-
-      // TODO(b/199208370): Aggregate errors if there are too many.
-      ListenableFuture<ImmutableList<DecryptionValidationResult>> invalidReportsFuture =
-          Futures.transform(
-              invalidReportsPerShardUnified,
-              invalidReportPerShardList ->
-                  invalidReportPerShardList.stream()
-                      .flatMap(ImmutableList::stream)
-                      .limit(MAX_INVALID_REPORTS_COLLECTED)
-                      .collect(toImmutableList()),
-              nonBlockingThreadPool);
-
+      double reportErrorThresholdPercentage = getReportErrorThresholdPercentage(jobParams);
       AggregationEngine aggregationEngine = engineProvider.get();
+      // TODO(b/218924983) Estimate report counts to enable failing early on report errors reaching
+      // threshold.
+      ErrorSummaryAggregator errorAggregator =
+          ErrorSummaryAggregator.createErrorSummaryAggregator(
+              Optional.empty(), reportErrorThresholdPercentage);
+      AtomicLong totalReportCount = new AtomicLong(0);
 
-      // List of futures for each decrypted shard: each future finishes when all the reports from
-      // the
-      // shard have been consumed by the aggregation engine.
-      ImmutableList<ListenableFuture<Void>> shardAggregatedFutures =
-          Streams.mapWithIndex(
-                  decryptedShards.stream(),
-                  (shard, shardIndex) -> aggregateShardAsync(aggregationEngine, shard, shardIndex))
-              .collect(toImmutableList());
+      Flowable.fromStream(dataShards.stream())
+          // This would open connections with data and max concurrency is NUM_READ_THREADS.
+          .flatMap(
+              dataLocation ->
+                  readData(dataLocation).subscribeOn(Schedulers.from(blockingThreadPool)),
+              false,
+              NUM_READ_THREADS,
+              MAX_REPORTS_READ_BUFFER_SIZE)
+          // Specify the number of reports are grouped into a list.
+          .buffer(MAX_REPORTS_PROCESS_BUFFER_SIZE)
+          .doOnNext(encryptedReports -> totalReportCount.addAndGet(encryptedReports.size()))
+          .flatMap(
+              encryptedReportList ->
+                  Flowable.just(encryptedReportList)
+                      .subscribeOn(Schedulers.from(nonBlockingThreadPool))
+                      .map(
+                          encryptedReports ->
+                              processData(
+                                  encryptedReports, job, aggregationEngine, errorAggregator)),
+              NUM_PROCESS_THREADS)
+          .blockingSubscribe();
 
-      // Combines the futures above to produce a future that completes when all reports from all
-      // shards have been run through the aggregation engine.
-      ListenableFuture<Void> aggregationCompletion =
-          whenAllSucceed(shardAggregatedFutures).call(() -> null, directExecutor());
+      ErrorSummary errorSummary = errorAggregator.createErrorSummary();
 
-      ListenableFuture<ImmutableMap<BigInteger, AggregatedFact>> aggregationFuture =
-          Futures.transform(
-              aggregationCompletion,
-              unused -> aggregationEngine.makeAggregation(),
-              nonBlockingThreadPool);
+      if (errorAggregator.countsAboveThreshold(totalReportCount.get())) {
+        processingStopwatch.stop();
+        return jobResultHelper.createJobResult(
+            job,
+            errorSummary,
+            AggregationWorkerReturnCode.REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD,
+            Optional.of(RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE));
+      }
+
+      ListenableFuture aggregationFuture =
+          Futures.immediateFuture(aggregationEngine.makeAggregation());
 
       ListenableFuture<NoisedAggregatedResultSet> aggregationFinalFuture =
           Futures.whenAllSucceed(outputDomain, aggregationFuture)
@@ -301,29 +315,21 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
                   nonBlockingThreadPool);
 
       NoisedAggregatedResultSet noisedResultSet = aggregationFinalFuture.get();
-
-      ImmutableList<DecryptionValidationResult> invalidReports = invalidReportsFuture.get();
       processingStopwatch.stop();
 
-      // Create error summary from the list of errors from decryption/validation
-      ErrorSummary errorSummary = ErrorSummaryAggregator.createErrorSummary(invalidReports);
-
-      AggregationWorkerReturnCode defaultCode = AggregationWorkerReturnCode.SUCCESS;
-      try {
-        consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
-      } catch (AggregationJobProcessException e) {
-        if (debugRun) {
-          defaultCode = AggregationWorkerReturnCode.getDebugEquivalent(e.getCode());
-        } else {
-          throw e;
-        }
-      }
-
-      // Log debug results if it is debug-run job
+      AggregationWorkerReturnCode jobCode = SUCCESS;
       if (debugRun) {
+        try {
+          consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
+        } catch (AggregationJobProcessException e) {
+          jobCode = AggregationWorkerReturnCode.getDebugEquivalent(e.getCode());
+        }
+
         NoisedAggregationResult noisedDebugResult = noisedResultSet.noisedDebugResult().get();
         DataLocation debugLocation =
             resultLogger.logDebugResults(noisedDebugResult.noisedAggregatedFacts().stream(), job);
+      } else {
+        consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
       }
 
       // Log summary results
@@ -331,7 +337,8 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
           resultLogger.logResults(
               noisedResultSet.noisedResult().noisedAggregatedFacts().stream(), job);
 
-      return jobResultHelper.createJobResultOnCompletion(job, errorSummary, defaultCode);
+      return jobResultHelper.createJobResult(
+          job, errorSummary, jobCode, /* message= */ Optional.empty());
     } catch (ResultLogException e) {
       throw new AggregationJobProcessException(
           RESULT_WRITE_ERROR, "Exception occured while writing result.", e);
@@ -341,43 +348,54 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     } catch (AccessControlException e) {
       throw new AggregationJobProcessException(
           PERMISSION_ERROR, "Exception because of missing permission.", e);
-
-    } catch (ExecutionException e) {
-      // Error occurred in data read
+    } catch (ConcurrentShardReadException e) {
       // TODO(b/197999001) report exception in some monitoring counter
-      if ((e.getCause() instanceof ConcurrentShardReadException)) {
-        throw new AggregationJobProcessException(
-            INPUT_DATA_READ_FAILED, "Exception while reading reports input data.", e.getCause());
-      }
+      throw new AggregationJobProcessException(
+          INPUT_DATA_READ_FAILED, "Exception while reading reports input data.");
+    } catch (ExecutionException e) {
       if ((e.getCause() instanceof DomainReadException)) {
         throw new AggregationJobProcessException(
             INPUT_DATA_READ_FAILED, "Exception while reading domain input data.", e.getCause());
       }
-
       if (e.getCause() instanceof AccessControlException) {
         throw new AggregationJobProcessException(
             PERMISSION_ERROR, "Exception because of missing permission.", e.getCause());
       }
-
       throw e;
     }
   }
 
+  private double getReportErrorThresholdPercentage(Map<String, String> jobParams) {
+    String jobParamsReportErrorThresholdPercentage =
+        jobParams.getOrDefault(JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE, null);
+    if (jobParamsReportErrorThresholdPercentage != null) {
+      return NumericConversions.getPercentageValue(jobParamsReportErrorThresholdPercentage);
+    }
+    logger.info(
+        String.format(
+            "Job parameters didn't have a report error threshold configured. Taking the default"
+                + " percentage value %f",
+            defaultReportErrorThresholdPercentage));
+    return defaultReportErrorThresholdPercentage;
+  }
+
   private void consumePrivacyBudgetUnits(ImmutableList<PrivacyBudgetUnit> budgetsToConsume, Job job)
       throws AggregationJobProcessException {
-    ImmutableList<PrivacyBudgetUnit> missingPrivacyBudgetUnits = ImmutableList.of();
+    if (budgetsToConsume.isEmpty()) {
+      return;
+    }
+
+    ImmutableList<PrivacyBudgetUnit> missingPrivacyBudgetUnits;
 
     try {
       // Only send request to PBS if there are units to consume budget for, the list of units
       // can be empty if all reports failed decryption
-      if (!budgetsToConsume.isEmpty()) {
-        missingPrivacyBudgetUnits =
-            privacyBudgetingServiceBridge.consumePrivacyBudget(
-                /* budgetsToConsume= */ budgetsToConsume,
-                /* attributionReportTo= */ job.requestInfo()
-                    .getJobParameters()
-                    .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
-      }
+      missingPrivacyBudgetUnits =
+          privacyBudgetingServiceBridge.consumePrivacyBudget(
+              /* budgetsToConsume= */ budgetsToConsume,
+              /* attributionReportTo= */ job.requestInfo()
+                  .getJobParameters()
+                  .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
     } catch (PrivacyBudgetingServiceBridgeException e) {
       String nestedMessage = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
       throw new AggregationJobProcessException(
@@ -512,84 +530,43 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     }
   }
 
-  private ListenableFuture<ImmutableList<EncryptedReport>> readShardAsync(
-      Job ctx, DataLocation shard, long shardIndex) {
-    return blockingThreadPool.submit(() -> readShard(ctx, shard, shardIndex));
+  private Flowable<EncryptedReport> readData(DataLocation shard) {
+    return Flowable.using(
+        () -> {
+          try {
+            return blobStorageClient.getBlob(shard);
+          } catch (BlobStorageClientException e) {
+            throw new ConcurrentShardReadException(e);
+          }
+        },
+        inputStream -> Flowable.fromStream(readInputStream(inputStream)),
+        InputStream::close);
   }
 
-  private ImmutableList<EncryptedReport> readShard(Job ctx, DataLocation shard, long shardIndex) {
-    Stopwatch avroStopwatch =
-        stopwatches.createStopwatch(String.format("shard-read-%d", shardIndex));
-    avroStopwatch.start();
-    try (InputStream shardStream = blobStorageClient.getBlob(shard);
-        AvroReportsReader reader = readerFactory.create(shardStream)) {
-      ImmutableList<EncryptedReport> shardReports =
-          reader.streamRecords().map(encryptedReportConverter).collect(toImmutableList());
-      avroStopwatch.stop();
-      return shardReports;
-    } catch (BlobStorageClientException | IOException | AvroRuntimeException e) {
+  private Stream<EncryptedReport> readInputStream(InputStream shardInputStream) {
+    try {
+      return readerFactory.create(shardInputStream).streamRecords().map(encryptedReportConverter);
+    } catch (IOException | AvroRuntimeException e) {
       throw new ConcurrentShardReadException(e);
     }
   }
 
-  private ListenableFuture<ImmutableList<DecryptionValidationResult>> decryptShardAsync(
-      Job ctx, ListenableFuture<ImmutableList<EncryptedReport>> shard, long shardIndex) {
-    return Futures.transform(
-        shard,
-        encryptedShard -> decryptShard(ctx, encryptedShard, shardIndex),
-        nonBlockingThreadPool);
-  }
-
-  private ImmutableList<DecryptionValidationResult> decryptShard(
-      Job ctx, ImmutableList<EncryptedReport> shard, long shardIndex) {
-    Stopwatch decryptionStopwatch =
-        stopwatches.createStopwatch(String.format("shard-decrypt-%d", shardIndex));
-    decryptionStopwatch.start();
-    ImmutableList<DecryptionValidationResult> results =
-        shard.stream()
-            .map(report -> reportDecrypterAndValidator.decryptAndValidate(report, ctx))
-            .collect(toImmutableList());
-    decryptionStopwatch.stop();
-    return results;
-  }
-
-  private ListenableFuture<ImmutableList<DecryptionValidationResult>> collectInvalidReportsAsync(
-      ListenableFuture<ImmutableList<DecryptionValidationResult>> shard) {
-    return Futures.transform(shard, this::collectInvalidReports, nonBlockingThreadPool);
-  }
-
-  private ImmutableList<DecryptionValidationResult> collectInvalidReports(
-      ImmutableList<DecryptionValidationResult> decryptedShard) {
-    return decryptedShard.stream()
-        .filter(decryptedReport -> decryptedReport.report().isEmpty())
-        .limit(MAX_INVALID_REPORTS_COLLECTED)
-        .collect(toImmutableList());
-  }
-
-  private ListenableFuture<Void> aggregateShardAsync(
+  private Observable processData(
+      List<EncryptedReport> reports,
+      Job job,
       AggregationEngine aggregationEngine,
-      ListenableFuture<ImmutableList<DecryptionValidationResult>> shard,
-      long shardIndex) {
-    return Futures.transform(
-        shard,
-        decryptedShard -> aggregateShard(aggregationEngine, decryptedShard, shardIndex),
-        nonBlockingThreadPool);
-  }
-
-  private Void aggregateShard(
-      AggregationEngine aggregationEngine,
-      ImmutableList<DecryptionValidationResult> decryptedShard,
-      long shardIndex) {
-    Stopwatch aggregateStopwatch =
-        stopwatches.createStopwatch(String.format("shard-aggregation-%d", shardIndex));
-    aggregateStopwatch.start();
-    decryptedShard.stream()
-        .map(DecryptionValidationResult::report)
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .forEach(aggregationEngine);
-    aggregateStopwatch.stop();
-    return null;
+      ErrorSummaryAggregator errorAggregator) {
+    reports.forEach(
+        report -> {
+          DecryptionValidationResult result =
+              reportDecrypterAndValidator.decryptAndValidate(report, job);
+          if (result.report().isPresent()) {
+            aggregationEngine.accept(result.report().get());
+          } else {
+            errorAggregator.add(result);
+          }
+        });
+    return Observable.empty();
   }
 
   /** Retrieve epsilon from nested optional fields */

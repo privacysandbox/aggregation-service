@@ -10,8 +10,8 @@ terraform {
   # state in a remote backend.
 
   # backend "s3" {
-  #   bucket = "<bucket name goes here, recommended suffix -mp-secondary>"
-  #   key    = "<key name goes here, recommended environment-name/domainrecords>.tfstate"
+  #   bucket = "<bucket name goes here>"
+  #   key    = "<key name goes here>"
   #   region = "us-east-1"
   # }
 
