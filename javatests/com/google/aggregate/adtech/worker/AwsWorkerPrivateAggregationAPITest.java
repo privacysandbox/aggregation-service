@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getOutputFileName;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.common.truth.Truth.assertThat;
@@ -139,7 +140,7 @@ public class AwsWorkerPrivateAggregationAPITest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -153,7 +154,7 @@ public class AwsWorkerPrivateAggregationAPITest {
     // Read debug output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFactsDebug =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // assert that debug job aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFactsDebug.size()).isAtLeast(20000);
@@ -224,7 +225,7 @@ public class AwsWorkerPrivateAggregationAPITest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -238,7 +239,7 @@ public class AwsWorkerPrivateAggregationAPITest {
     // Read debug output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFactsDebug =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // assert that debug job aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFactsDebug.size()).isAtLeast(20000);

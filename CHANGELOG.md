@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.12.0](https://github.com/privacysandbox/aggregation-service/compare/v0.11.0...v0.12.0) (2023-06-28)
+
+### Changes
+
+-   Added output file sharding feature.
+-   Fixed links in documents.
+-   Added input bucket encoding details in collecting.md
+-   Fixed fetch_terraform.sh script.
+-   Improved AWS credentials provider to include prefetching and caching of credentials.
+
 ## [0.11.0](https://github.com/privacysandbox/aggregation-service/compare/v0.10.0...v0.11.0) (2023-06-21)
 
 ### Changes

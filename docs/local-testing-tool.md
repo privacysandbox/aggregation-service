@@ -54,8 +54,8 @@ Simply pass any of the 3 kinds of supported reports as `--input_data_avro_file` 
 Follow the instructions on how to
 [collect and batch aggregatable reports](/docs/collecting.md#collecting-and-batching-aggregatable-reports).
 Create an output domain file: `output_domain.avro`. For testing you can use our
-[sample debug batch](./sampledata/output_debug_reports.avro) with the corresponding
-[output domain avro](./sampledata/output_domain.avro).
+[sample debug batch](/sampledata/output_debug_reports.avro) with the corresponding
+[output domain avro](/sampledata/output_domain.avro).
 
 To aggregate the resulting avro batch `output_debug_reports.avro` file into a summary report, run
 the following command:

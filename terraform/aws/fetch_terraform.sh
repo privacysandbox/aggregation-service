@@ -20,9 +20,16 @@
 
 set -o errexit
 
+function get_coordinator_version() {
+  local -r workspace_file="$1"
+  local -r ver_assign="$(grep -o '^COORDINATOR_VERSION = "v.*"' "${workspace_file}")"
+  local -r ver="${ver_assign#*\"}"
+  printf "%s\n" "${ver%\"}"
+}
+
 WORK_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 readonly WORKSPACE_DIR="${WORK_DIR}"/../..
-CONTROL_PLANE_SHARED_LIBRARIES_VERSION=$(grep -oP 'COORDINATOR_VERSION = "\Kv([0-9]+).([0-9]+).([0-9]+)' "${WORKSPACE_DIR}"/WORKSPACE)
+CONTROL_PLANE_SHARED_LIBRARIES_VERSION=$(get_coordinator_version "${WORKSPACE_DIR}"/WORKSPACE)
 VERSION="$(<"${WORKSPACE_DIR}"/VERSION)"
 AMI_NAME="aggregation-service-enclave_${VERSION}"
 AMI_OWNER="971056657085"
@@ -32,12 +39,17 @@ printf "Control plane shared version: %s\n" "${CONTROL_PLANE_SHARED_LIBRARIES_VE
 # fetch based on tag
 readonly CONTROL_PLANE_REPO_RELDIR=control-plane-shared-libraries
 readonly CONTROL_PLANE_REPO_DIR="${WORK_DIR}/${CONTROL_PLANE_REPO_RELDIR}"
-git clone https://github.com/privacysandbox/control-plane-shared-libraries "${CONTROL_PLANE_REPO_DIR}" || true
+if [[ -d ${CONTROL_PLANE_REPO_DIR} ]] && ! [[ -r ${CONTROL_PLANE_REPO_DIR}/.git/config ]]; then
+  rm -rf ${CONTROL_PLANE_REPO_DIR}
+fi
+if ! [[ -d ${CONTROL_PLANE_REPO_DIR} ]]; then
+  git clone https://github.com/privacysandbox/control-plane-shared-libraries "${CONTROL_PLANE_REPO_DIR}" || true
+fi
 git -C "${CONTROL_PLANE_REPO_DIR}" checkout "${CONTROL_PLANE_SHARED_LIBRARIES_VERSION}"
 git -C "${CONTROL_PLANE_REPO_DIR}" clean -df
 
 # remove existing symlinks
-rm -f "${WORK_DIR}"/{applications,modules,environments/shared,environments/demo}
+rm -rf "${WORK_DIR}"/{applications,modules,environments/shared,environments/demo}
 
 # symlink terraform folders
 mkdir -p "${WORK_DIR}"/environments

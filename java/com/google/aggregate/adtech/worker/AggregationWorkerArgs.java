@@ -385,6 +385,10 @@ public final class AggregationWorkerArgs {
               + " error, will fail the job. This can be overridden in job request.")
   private double reportErrorThresholdPercentage = 10.0;
 
+  @Parameter(names = "--output_shard_file_size_bytes", description =
+      "Size of one shard of the output file. The default value is 100,000,000. (100MB)")
+  private long outputShardFileSizeBytes = 100_000_000L; // 100MB
+
   ClientConfigSelector getClientConfigSelector() {
     return clientConfigSelector;
   }
@@ -657,5 +661,9 @@ public final class AggregationWorkerArgs {
 
   public int getMaximumDepthOfStackTrace() {
     return maximumDepthOfStackTrace;
+  }
+
+  public long getOutputShardFileSizeBytes() {
+    return outputShardFileSizeBytes;
   }
 }

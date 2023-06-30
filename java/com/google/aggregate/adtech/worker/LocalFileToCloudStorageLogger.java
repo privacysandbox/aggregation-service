@@ -28,8 +28,10 @@ import com.google.aggregate.adtech.worker.Annotations.DebugWriter;
 import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
@@ -43,6 +45,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
@@ -67,35 +70,55 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
     this.workingDirectory = workingDirectory;
   }
 
-  /** Write the results to a local file then write that local file to cloud storage */
+  /**
+   *  Write the results to a local file then write that local file to cloud storage
+   *  Local filename format: job-[debug]-[JobKey]-[ShardId]-[UUID].avro
+   *  Output filename format:
+   *      [Prefix]-[ShardId]-of-[NumShard][.avro if Prefix contains .avro extension]
+   *  Note: Prefix is provided by a user through a job parameter.
+   */
   @Override
-  public DataLocation logResults(Stream<AggregatedFact> results, Job ctx)
+  public void logResults(ImmutableList<AggregatedFact> results, Job ctx, boolean isDebugRun)
       throws ResultLogException {
-    String localFileName = getLocalFileName(ctx);
-    Path localResultsFilePath =
-        workingDirectory
-            .getFileSystem()
-            .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
+    int totalRecords = results.size();
+    int totalShards = OutputShardFileHelper.getNumShards(totalRecords);
+    long recordsPerShard = totalRecords / totalShards;
+    // remainingRecordsAtTheEnd is the number of records left over after dividing the number of
+    // "recordsCountPerShard" records evenly among the shards. remainingRecordsAtTheEnd will be
+    // added to the additional shard.
+    long remainingRecordsAtTheEnd = totalRecords % totalShards;
+    if (remainingRecordsAtTheEnd > 0) { totalShards++; }
+    String fileExtension = isDebugRun
+        ? localDebugResultFileWriter.getFileExtension()
+        : localResultFileWriter.getFileExtension();
+    IntStream shardIdStream = IntStream.range(1, totalShards + 1).parallel();
 
-    return writeFile(
-        results, ctx, localResultsFilePath, localResultFileWriter, /* isDebugFile = */ false);
-  }
-
-  @Override
-  public DataLocation logDebugResults(Stream<AggregatedFact> results, Job ctx)
-      throws ResultLogException {
-    String localDebugFileName = getLocalDebugFileName(ctx);
-    Path localDebugResultsFilePath =
-        workingDirectory
-            .getFileSystem()
-            .getPath(Paths.get(workingDirectory.toString(), localDebugFileName).toString());
-
-    return writeFile(
-        results,
-        ctx,
-        localDebugResultsFilePath,
-        localDebugResultFileWriter,
-        /* isDebugFile = */ true);
+    // Stream shardId to write and upload each shard in parallel.
+    // In every shard, ImmutableList.subList provides a view of a sharded portion
+    // of the results for each shard ID.
+    final int finalTotalShards = totalShards; // For lambda function.
+    shardIdStream.forEach(
+        shardId -> {
+          String localFileName = isDebugRun
+              ? getLocalDebugFileName(ctx, shardId, fileExtension)
+              : getLocalFileName(ctx, shardId, fileExtension);
+          Path localResultsFilePath =
+              workingDirectory
+                  .getFileSystem()
+                  .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
+          writeFile(
+              results.subList(
+                  Long.valueOf((shardId - 1) * recordsPerShard).intValue(),
+                  OutputShardFileHelper.getEndIndexOfShard(
+                      shardId, finalTotalShards, recordsPerShard, remainingRecordsAtTheEnd)).stream(),
+              ctx,
+              localResultsFilePath,
+              isDebugRun ? localDebugResultFileWriter : localResultFileWriter,
+              isDebugRun,
+              shardId,
+              finalTotalShards);
+        }
+    );
   }
 
   private DataLocation writeFile(
@@ -103,7 +126,9 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
       Job ctx,
       Path filePath,
       LocalResultFileWriter writer,
-      Boolean isDebugFile)
+      Boolean isDebugFile,
+      int shardId,
+      int numShards)
       throws ResultLogException {
     try {
       // Create the working directory if it doesn't exist
@@ -114,7 +139,9 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
 
       DataLocation resultLocation;
       String outputDataBlobBucket = ctx.requestInfo().getOutputDataBucketName();
-      String outputDataBlobPrefix = ctx.requestInfo().getOutputDataBlobPrefix();
+      String outputDataBlobPrefix =
+          OutputShardFileHelper.getOutputFileNameWithShardInfo(
+              ctx.requestInfo().getOutputDataBlobPrefix(), shardId, numShards);
 
       if (isDebugFile) {
         resultLocation =
@@ -143,20 +170,26 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
    * The local file name has a random UUID in it to prevent cases where an item is processed twice
    * by the same worker and clobbers other files being written.
    */
-  private String getLocalFileName(Job ctx) {
+  private static String getLocalFileName(Job ctx, int shardId, String fileExtension) {
+    // Example: job-JOBKEY-1-d12oc234-123d-4567-abc2-abcdefgh12i3.avro
     return "job-"
         + toJobKeyString(ctx.jobKey())
         + "-"
+        + shardId
+        + "-"
         + UUID.randomUUID()
-        + localResultFileWriter.getFileExtension();
+        + fileExtension;
   }
 
-  private String getLocalDebugFileName(Job ctx) {
+  private static String getLocalDebugFileName(Job ctx, int shardId, String fileExtension) {
+    // Example: job-debug-JOBKEY-1-d12oc234-123d-4567-abc2-abcdefgh12i3.avro
     return "job-debug-"
         + toJobKeyString(ctx.jobKey())
         + "-"
+        + shardId
+        + "-"
         + UUID.randomUUID()
-        + localDebugResultFileWriter.getFileExtension();
+        + fileExtension;
   }
 
   /**

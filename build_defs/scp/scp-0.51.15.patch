@@ -926,3 +926,250 @@ index e92d3fbda..8c85891ad 100644
      when(httpClient.getStatus()).thenReturn(IOReactorStatus.INACTIVE);
 --
 2.41.0.162.gfafddb0af9-goog
+diff --git a/java/com/google/scp/shared/aws/credsprovider/AwsSessionCredentialsProvider.java b/java/com/google/scp/shared/aws/credsprovider/AwsSessionCredentialsProvider.java
+--- a/java/com/google/scp/shared/aws/credsprovider/AwsSessionCredentialsProvider.java	(revision 21a8053a3b0c75e9522126b8051f5260ffba9d8b)
++++ b/java/com/google/scp/shared/aws/credsprovider/AwsSessionCredentialsProvider.java	(revision 62bd4ed9bcd33143db455ac5dc4bd20764b99b36)
+@@ -16,16 +16,65 @@
+
+ package com.google.scp.shared.aws.credsprovider;
+
++import java.lang.ref.Cleaner;
++import java.lang.ref.Cleaner.Cleanable;
++import java.util.Optional;
++import java.util.function.Supplier;
+ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+ import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
++import software.amazon.awssdk.services.sts.model.Credentials;
++import software.amazon.awssdk.utils.SdkAutoCloseable;
++
++/**
++ * An implementation of {@link AwsCredentialsProvider} that provides {@link AwsSessionCredentials}
++ * credentials by wrapping {@link AwsCredentialsProvider} that is expected to only provide {@link
++ * AwsSessionCredentials} and implicitly asserts on that expectation.
++ */
++public abstract class AwsSessionCredentialsProvider
++    implements AwsCredentialsProvider, SdkAutoCloseable {
++
++  private static final Cleaner cleaner = Cleaner.create();
++
++  private final AwsCredentialsProvider credentialsProvider;
++  private final Supplier<AwsSessionCredentials> fallback;
++  private final Optional<Cleanable> cleanable;
+
+-/** Interface for fetching temporary AWS credentials (AccessKeyId, SecretAccessKey, SessionToken) */
+-public interface AwsSessionCredentialsProvider extends AwsCredentialsProvider {
++  /**
++   * @param credentialsProvider Known {@link AwsSessionCredentials} providing provider.
++   * @param fallback Fallback {@link Credentials} supplier when the <code>credentialsProvider</code>
++   *     does not provide the expected {@link AwsSessionCredentials}.
++   */
++  protected AwsSessionCredentialsProvider(
++      AwsCredentialsProvider credentialsProvider, Supplier<Credentials> fallback) {
++    this.credentialsProvider = credentialsProvider;
++    this.fallback = () -> asSessionCredentials(fallback.get());
++    this.cleanable =
++        Optional.of(credentialsProvider)
++            .filter(SdkAutoCloseable.class::isInstance)
++            .map(SdkAutoCloseable.class::cast)
++            .map(provider -> cleaner.register(this, provider::close));
++  }
++
++  private static AwsSessionCredentials asSessionCredentials(Credentials credentials) {
++    return AwsSessionCredentials.create(
++        credentials.accessKeyId(), credentials.secretAccessKey(), credentials.sessionToken());
++  }
+
+   /**
+    * Returns a set of temporary credentials for the configured Role.
+    *
+    * <p>Credentials should be valid for at least 60 seconds from when provideCredentials is invoked.
+    */
+-  public AwsSessionCredentials resolveCredentials();
++  public AwsSessionCredentials resolveCredentials() {
++    var credentials = credentialsProvider.resolveCredentials();
++    if (credentials instanceof AwsSessionCredentials) {
++      return (AwsSessionCredentials) credentials;
++    }
++    return fallback.get();
++  }
++
++  @Override
++  public void close() {
++    cleanable.ifPresent(Cleanable::clean);
++  }
+ }
+Index: java/com/google/scp/shared/aws/credsprovider/BUILD
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/java/com/google/scp/shared/aws/credsprovider/BUILD b/java/com/google/scp/shared/aws/credsprovider/BUILD
+--- a/java/com/google/scp/shared/aws/credsprovider/BUILD	(revision 21a8053a3b0c75e9522126b8051f5260ffba9d8b)
++++ b/java/com/google/scp/shared/aws/credsprovider/BUILD	(revision 62bd4ed9bcd33143db455ac5dc4bd20764b99b36)
+@@ -21,6 +21,8 @@
+         "//java/external:aws_auth",
+         "//java/external:aws_regions",
+         "//java/external:aws_sts",
++        "//java/external:aws_utils",
+         "//java/external:guava",
++        "//java/external:javax_inject",
+     ],
+ )
+Index: java/com/google/scp/shared/aws/credsprovider/SelfAwsSessionCredentialsProvider.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/java/com/google/scp/shared/aws/credsprovider/SelfAwsSessionCredentialsProvider.java b/java/com/google/scp/shared/aws/credsprovider/SelfAwsSessionCredentialsProvider.java
+--- a/java/com/google/scp/shared/aws/credsprovider/SelfAwsSessionCredentialsProvider.java	(revision 21a8053a3b0c75e9522126b8051f5260ffba9d8b)
++++ b/java/com/google/scp/shared/aws/credsprovider/SelfAwsSessionCredentialsProvider.java	(revision 62bd4ed9bcd33143db455ac5dc4bd20764b99b36)
+@@ -17,9 +17,11 @@
+ package com.google.scp.shared.aws.credsprovider;
+
+ import java.util.Optional;
++import javax.inject.Singleton;
+ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+ import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
+ import software.amazon.awssdk.services.sts.StsClient;
++import software.amazon.awssdk.services.sts.auth.StsGetSessionTokenCredentialsProvider;
+
+ /**
+  * AWS Session credentials provider which returns the current credentials if they are already
+@@ -36,11 +38,11 @@
+  * do not have a session token and temporary credentials providers (e.g. instance profile
+  * credentials) which have a session token and cannot be used to directly fetch new session tokens.
+  */
+-public final class SelfAwsSessionCredentialsProvider implements AwsSessionCredentialsProvider {
++@Singleton
++public final class SelfAwsSessionCredentialsProvider extends AwsSessionCredentialsProvider {
+   /** Duration for which requested temporary credentials should be valid. */
+   private static final int DURATION_SECONDS = 1000;
+
+-  private final StsClient stsClient;
+   private final AwsCredentialsProvider credentialsProvider;
+
+   /**
+@@ -50,13 +52,23 @@
+    */
+   public SelfAwsSessionCredentialsProvider(
+       AwsCredentialsProvider processCredentialsProvider, StsClient stsClient) {
+-    this.stsClient = stsClient;
++    super(
++        // This provider will fail if stsClient is already configured to use session credentials
++        // because session credentials cannot be used with getSessionToken.
++        StsGetSessionTokenCredentialsProvider.builder()
++            .stsClient(stsClient)
++            .refreshRequest(request -> request.durationSeconds(DURATION_SECONDS))
++            .build(),
++        () ->
++            stsClient
++                .getSessionToken(request -> request.durationSeconds(DURATION_SECONDS))
++                .credentials());
+     this.credentialsProvider = processCredentialsProvider;
+   }
+
+   @Override
+   public AwsSessionCredentials resolveCredentials() {
+-    return resolveProcessCredentials().orElseGet(this::fetchNewSessionCredentials);
++    return resolveProcessCredentials().orElseGet(super::resolveCredentials);
+   }
+
+   /** Resolves current credentials and returns them if they are session credentials. */
+@@ -68,16 +80,4 @@
+     }
+     return Optional.empty();
+   }
+-
+-  /**
+-   * Fetches temporary credentials using STS. Will fail if stsClient is already configured to use
+-   * session credentials because session credentials cannot be used with getSessionToken.
+-   */
+-  private AwsSessionCredentials fetchNewSessionCredentials() {
+-    var credentials =
+-        stsClient.getSessionToken(req -> req.durationSeconds(DURATION_SECONDS)).credentials();
+-
+-    return AwsSessionCredentials.create(
+-        credentials.accessKeyId(), credentials.secretAccessKey(), credentials.sessionToken());
+-  }
+ }
+Index: java/com/google/scp/shared/aws/credsprovider/StsAwsSessionCredentialsProvider.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/java/com/google/scp/shared/aws/credsprovider/StsAwsSessionCredentialsProvider.java b/java/com/google/scp/shared/aws/credsprovider/StsAwsSessionCredentialsProvider.java
+--- a/java/com/google/scp/shared/aws/credsprovider/StsAwsSessionCredentialsProvider.java	(revision 21a8053a3b0c75e9522126b8051f5260ffba9d8b)
++++ b/java/com/google/scp/shared/aws/credsprovider/StsAwsSessionCredentialsProvider.java	(revision 62bd4ed9bcd33143db455ac5dc4bd20764b99b36)
+@@ -16,49 +16,45 @@
+
+ package com.google.scp.shared.aws.credsprovider;
+
+-import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
++import javax.inject.Singleton;
+ import software.amazon.awssdk.services.sts.StsClient;
+-import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
+-import software.amazon.awssdk.services.sts.model.Credentials;
++import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
+
+ /**
+  * Provides temporary AWS credentials using AWS Security Token Service (STS)
+  *
+  * <p>The credentials provided by this class are fetched directly from STS as oppposed to being
+  * reused from the credentials available from e.g. the EC2 instance metadata.
+- *
+- * <p>TODO: implement credential caching.
+  */
+-public final class StsAwsSessionCredentialsProvider implements AwsSessionCredentialsProvider {
++@Singleton
++public final class StsAwsSessionCredentialsProvider extends AwsSessionCredentialsProvider {
+
+   /** Duration for which requested credentials should be valid. */
+   private static final int DURATION_SECONDS = 1000;
+
+-  private final StsClient stsClient;
+-  private final String roleArn;
+-  private final String sessionName;
+-
+   /**
+    * @param roleArn the role to assume and provide credentials for.
+    * @param sessionName The name of the session associated with the credentials (visible in logs)
+    */
+   public StsAwsSessionCredentialsProvider(StsClient stsClient, String roleArn, String sessionName) {
+-    this.stsClient = stsClient;
+-    this.roleArn = roleArn;
+-    this.sessionName = sessionName;
+-  }
+-
+-  @Override
+-  public AwsSessionCredentials resolveCredentials() {
+-    AssumeRoleRequest request =
+-        AssumeRoleRequest.builder()
+-            .durationSeconds(DURATION_SECONDS)
+-            .roleArn(roleArn)
+-            .roleSessionName(sessionName)
+-            .build();
+-    Credentials credentials = stsClient.assumeRole(request).credentials();
+-
+-    return AwsSessionCredentials.create(
+-        credentials.accessKeyId(), credentials.secretAccessKey(), credentials.sessionToken());
++    super(
++        StsAssumeRoleCredentialsProvider.builder()
++            .stsClient(stsClient)
++            .refreshRequest(
++                request ->
++                    request
++                        .durationSeconds(DURATION_SECONDS)
++                        .roleArn(roleArn)
++                        .roleSessionName(sessionName))
++            .build(),
++        () ->
++            stsClient
++                .assumeRole(
++                    request ->
++                        request
++                            .durationSeconds(DURATION_SECONDS)
++                            .roleArn(roleArn)
++                            .roleSessionName(sessionName))
++                .credentials());
+   }
+ }

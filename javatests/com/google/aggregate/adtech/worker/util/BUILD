@@ -59,3 +59,12 @@ java_test(
         "@com_google_protobuf//:protobuf_java",
     ],
 )
+
+java_test(
+    name = "OutputShardFileHelperTest",
+    srcs = ["OutputShardFileHelperTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/external:google_truth",
+    ],
+)

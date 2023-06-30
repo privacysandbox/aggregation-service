@@ -27,6 +27,7 @@ import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingEpsilon;
@@ -216,6 +217,7 @@ public class AggregationWorkerTest {
       bind(boolean.class).annotatedWith(EnableStackTraceInResponse.class).toInstance(true);
       bind(int.class).annotatedWith(MaxDepthOfStackTrace.class).toInstance(32);
       bind(boolean.class).annotatedWith(DomainOptional.class).toInstance(true);
+      bind(long.class).annotatedWith(OutputShardFileSizeBytes.class).toInstance(360L);
     }
 
     @Provides

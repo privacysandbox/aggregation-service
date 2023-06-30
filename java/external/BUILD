@@ -831,3 +831,8 @@ alias(
     name = "opentelemetry_contrib_aws_xray",
     actual = "@maven//:io_opentelemetry_contrib_opentelemetry_aws_xray",
 )
+
+alias(
+    name = "scp_credsprovider",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/aws/credsprovider:credsprovider",
+)

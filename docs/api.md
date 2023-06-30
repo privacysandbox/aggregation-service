@@ -38,6 +38,13 @@ POST
 
   // The output data path in the bucket. Currently, single output file is
   // supported.
+  // The output file will be named as follows:
+  //     [OutputDataBlobPrefix]-[ShardId]-of-[TotalShards]
+  // In the case of a single shard, the output file will still apply the
+  // shard suffix information as "[OutputDataBlobPrefix]-1-of-1".
+  // If "output_data_blob_prefix" includes the Avro file extension (.avro),
+  // the output shard names will also include the Avro file extension at
+  // the end.
   "output_data_blob_prefix": <string>,
 
   // Storage bucket for output data.
@@ -62,6 +69,7 @@ POST
     // value can be varied so that tests with different epsilon
     // values can be performed during the origin trial.
     "debug_privacy_epsilon": <floating point, double>,
+
     // [Optional] The percentage of reports, if excluded from
     // aggregation due to an error, will fail the job.
     // Values can be from 0 to 100. If left empty, default value of 10%

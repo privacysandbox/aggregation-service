@@ -20,6 +20,7 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.DEB
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getOutputFileName;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readDebugResultsFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
@@ -143,6 +144,11 @@ public class AwsWorkerContinuousSmokeTest {
         && System.getenv("RUN_PRIVATE_AGGREGATION_TESTS").equalsIgnoreCase("true");
   }
 
+  private static boolean runMultiOutputShardTest() {
+    return System.getenv("RUN_MULTI_OUTPUT_SHARD_TEST") != null
+        && System.getenv("RUN_MULTI_OUTPUT_SHARD_TEST").equalsIgnoreCase("true");
+  }
+
   @Test
   public void createJobE2ETest() throws Exception {
     // End to end testing:
@@ -180,7 +186,7 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // TODO(b/228874552) assert that the output contains more values than just the output domain
     // values
@@ -223,7 +229,7 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // TODO(b/228874552) assert that the output contains more values than just the output domain
     // values
@@ -267,7 +273,7 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // If the domainOptional is true, the aggregatedFact keys would be more than domain keys
     // Otherwise, aggregatedFact keys would be equal to domain keys
@@ -315,7 +321,7 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // The "isAtLeast" assert is set here to accommodate domainOptional(True/False) conditions.
     assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
@@ -323,7 +329,8 @@ public class AwsWorkerContinuousSmokeTest {
     // Read debug results avro from s3.
     ImmutableList<AggregatedFact> aggregatedDebugFacts =
         readDebugResultsFromS3(
-            s3BlobStorageClient, readerFactory, getTestDataBucket(), getDebugFilePrefix(outputKey));
+            s3BlobStorageClient, readerFactory, getTestDataBucket(),
+            getOutputFileName(getDebugFilePrefix(outputKey)));
 
     // Debug facts count should be greater than or equal to the summary facts count because some
     // keys are filtered out due to thresholding or not in domain.
@@ -391,14 +398,15 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     assertThat(aggregatedFacts.size()).isEqualTo(DEBUG_DOMAIN_KEY_SIZE);
 
     // Read debug result from s3.
     ImmutableList<AggregatedFact> aggregatedDebugFacts =
         readDebugResultsFromS3(
-            s3BlobStorageClient, readerFactory, getTestDataBucket(), getDebugFilePrefix(outputKey));
+            s3BlobStorageClient, readerFactory, getTestDataBucket(),
+            getOutputFileName(getDebugFilePrefix(outputKey)));
 
     // Only contains keys in domain because all reports are filtered out.
     assertThat(aggregatedDebugFacts.size()).isEqualTo(DEBUG_DOMAIN_KEY_SIZE);
@@ -559,7 +567,7 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -610,7 +618,7 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -655,6 +663,61 @@ public class AwsWorkerContinuousSmokeTest {
     assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
         .isTrue();
   }
+
+  @Test
+  public void createJobE2ETestWithMultiOutputShard() throws Exception {
+    // End to end testing with multiple shard output:
+    //   Starts with a createJob request to API gateway with the test inputs pre-uploaded to s3
+    //   bucket.
+    //   Ends by calling getJob API to retrieve result information.
+    //   Assertions are made on result status (SUCCESS) and result avro (not empty) which sits in
+    //   the testing bucket. The output files must be sharded into 3 separate files.
+
+    // Skip this test for the case where build parameter cannot be set (ex> release image)
+    if (!runMultiOutputShardTest()) {
+      logger.info("Skipping multi output shard test");
+      return;
+    }
+
+    var inputKey =
+        String.format(
+            "%s/%s/test-inputs/30k_test_input.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var domainKey =
+        String.format(
+            "%s/%s/test-inputs/30k_test_domain.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var outputKey =
+        String.format(
+            "%s/%s/test-outputs/30k_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        AwsWorkerContinuousTestHelper.createJobRequest(
+            getTestDataBucket(),
+            inputKey,
+            getTestDataBucket(),
+            outputKey,
+            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
+            /* outputDomainPrefix= */ Optional.of(domainKey));
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
+    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
+        .isTrue();
+
+    // Read output avro from s3.
+    ImmutableList<AggregatedFact> aggregatedFactsInShard1 =
+        readResultsFromS3(
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(),
+            getOutputFileName(outputKey, 1, 2));
+    ImmutableList<AggregatedFact> aggregatedFactsInShard2 =
+        readResultsFromS3(
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(),
+            getOutputFileName(outputKey, 2, 2));
+
+    assertThat(aggregatedFactsInShard1.size()).isGreaterThan(14000);
+    assertThat(aggregatedFactsInShard2.size()).isGreaterThan(14000);
+  }
+
 
   private static class TestEnv extends AbstractModule {
 

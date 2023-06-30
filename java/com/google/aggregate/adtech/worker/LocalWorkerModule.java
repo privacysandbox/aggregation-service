@@ -25,6 +25,7 @@ import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
+import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
 import com.google.aggregate.adtech.worker.LibraryAnnotations.LocalOutputDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
@@ -144,6 +145,9 @@ public final class LocalWorkerModule extends AbstractModule {
     bind(double.class)
         .annotatedWith(ReportErrorThresholdPercentage.class)
         .toInstance(localWorkerArgs.getReportErrorThresholdPercentage());
+    bind(long.class)
+        .annotatedWith(OutputShardFileSizeBytes.class)
+        .toInstance(localWorkerArgs.getOutputShardFileSizeBytes());
   }
 
   @Provides

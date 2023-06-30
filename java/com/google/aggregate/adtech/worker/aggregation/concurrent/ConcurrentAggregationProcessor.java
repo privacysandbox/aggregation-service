@@ -326,16 +326,15 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
         }
 
         NoisedAggregationResult noisedDebugResult = noisedResultSet.noisedDebugResult().get();
-        DataLocation debugLocation =
-            resultLogger.logDebugResults(noisedDebugResult.noisedAggregatedFacts().stream(), job);
+        resultLogger.logResults(
+            noisedDebugResult.noisedAggregatedFacts(), job, /* isDebugRun= */ true);
       } else {
         consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
       }
 
       // Log summary results
-      DataLocation dataLocation =
-          resultLogger.logResults(
-              noisedResultSet.noisedResult().noisedAggregatedFacts().stream(), job);
+      resultLogger.logResults(
+          noisedResultSet.noisedResult().noisedAggregatedFacts(), job, /* isDebugRun= */ false);
 
       return jobResultHelper.createJobResult(
           job, errorSummary, jobCode, /* message= */ Optional.empty());

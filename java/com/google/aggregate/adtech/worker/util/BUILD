@@ -23,6 +23,7 @@ java_library(
         "JobResultHelper.java",
         "JobUtils.java",
         "NumericConversions.java",
+        "OutputShardFileHelper.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [

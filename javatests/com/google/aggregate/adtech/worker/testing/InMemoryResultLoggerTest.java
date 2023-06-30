@@ -21,6 +21,7 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import java.math.BigInteger;
@@ -45,9 +46,10 @@ public class InMemoryResultLoggerTest {
   public void getAggregation() throws ResultLogException {
     AggregatedFact fact1 = AggregatedFact.create(BigInteger.valueOf(1), /* metric= */ 5);
     AggregatedFact fact2 = AggregatedFact.create(BigInteger.valueOf(2), /* metric= */ 1);
-    Stream<AggregatedFact> fakeAggregatedFacts = Stream.of(fact1, fact2);
+    ImmutableList<AggregatedFact> fakeAggregatedFacts = ImmutableList.of(fact1, fact2);
 
-    inMemoryResultLogger.logResults(fakeAggregatedFacts, FakeJobGenerator.generate("foo"));
+    inMemoryResultLogger.logResults(
+        fakeAggregatedFacts, FakeJobGenerator.generate("foo"), /* isDebugRun= */ false);
 
     assertThat(
             inMemoryResultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
@@ -71,9 +73,10 @@ public class InMemoryResultLoggerTest {
   public void getDebugAggregation() throws ResultLogException {
     AggregatedFact fact1 = AggregatedFact.create(BigInteger.valueOf(1), /* metric= */ 5, 2L);
     AggregatedFact fact2 = AggregatedFact.create(BigInteger.valueOf(2), /* metric= */ 1, 1L);
-    Stream<AggregatedFact> fakeAggregatedFacts = Stream.of(fact1, fact2);
+    ImmutableList<AggregatedFact> fakeAggregatedFacts = ImmutableList.of(fact1, fact2);
 
-    inMemoryResultLogger.logDebugResults(fakeAggregatedFacts, FakeJobGenerator.generate("foo"));
+    inMemoryResultLogger.logResults(
+        fakeAggregatedFacts, FakeJobGenerator.generate("foo"), /* isDebugRun= */ true);
 
     assertThat(
             inMemoryResultLogger
@@ -98,12 +101,14 @@ public class InMemoryResultLoggerTest {
   @Test
   public void throwsWhenSetTo() {
     inMemoryResultLogger.setShouldThrow(true);
-    Stream<AggregatedFact> aggregatedFacts = Stream.empty();
+    ImmutableList<AggregatedFact> aggregatedFacts = ImmutableList.of();
     Job Job = FakeJobGenerator.generate("foo");
 
     assertThrows(
-        ResultLogException.class, () -> inMemoryResultLogger.logResults(aggregatedFacts, Job));
+        ResultLogException.class,
+        () -> inMemoryResultLogger.logResults(aggregatedFacts, Job, /* isDebugRun= */ false));
     assertThrows(
-        ResultLogException.class, () -> inMemoryResultLogger.logDebugResults(aggregatedFacts, Job));
+        ResultLogException.class,
+        () -> inMemoryResultLogger.logResults(aggregatedFacts, Job, /* isDebugRun= */ true));
   }
 }

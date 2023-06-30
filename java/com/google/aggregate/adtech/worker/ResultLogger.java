@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import java.util.stream.Stream;
@@ -26,8 +27,6 @@ import java.util.stream.Stream;
 public interface ResultLogger {
 
   /** Takes the aggregation results and logs them to results. */
-  DataLocation logResults(Stream<AggregatedFact> results, Job ctx) throws ResultLogException;
-
-  /** Takes the aggregation results and logs them to debug results. */
-  DataLocation logDebugResults(Stream<AggregatedFact> results, Job ctx) throws ResultLogException;
+  void logResults(
+      ImmutableList<AggregatedFact> results, Job ctx, boolean isDebugRun) throws ResultLogException;
 }

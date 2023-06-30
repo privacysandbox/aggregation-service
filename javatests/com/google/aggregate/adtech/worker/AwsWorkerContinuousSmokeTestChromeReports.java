@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getOutputFileName;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getS3Bucket;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getS3Key;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readDebugResultsFromS3;
@@ -156,8 +157,8 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
 
     // Read output avro from s3.
-    ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromS3(s3BlobStorageClient, avroResultsFileReader, outputBucket, outputKey);
+    ImmutableList<AggregatedFact> aggregatedFacts = readResultsFromS3(
+        s3BlobStorageClient, avroResultsFileReader, outputBucket, getOutputFileName(outputKey));
 
     // NOTE: this result assertion assumes constant noising, if run with a worker using other
     // noising then this will fail.

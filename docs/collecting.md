@@ -278,8 +278,11 @@ endpoint respectively.
 
 ## Process Avro batch files
 
-To process the above Avro files, you must specify the expected bucket keys in a domain file
-`output_domain.avro` with the following Avro schema.
+To process the above Avro files, you must specify the expected bucket keys in a domain file. The
+bucket values are 128-bit integer encoded as a 16-byte big-endian bytestring. `output_domain.avro`
+with the following Avro schema.
+
+The schema for output domain file is provided below -
 
 ### `output_domain.avsc`
 
@@ -322,14 +325,22 @@ java -jar avro-tools-1.11.1.jar fromjson \
 --schema-file output_domain.avsc output_domain.json > output_domain.avro
 ```
 
+Another sample of a valid output domain json file -
+
+```json
+{
+    "bucket": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0005Y"
+}
+```
+
 ### Produce a summary report locally
 
 Using the local testing tool, you now can generate a summary report.
-[See all flags and descriptions](./docs/API.md#local-testing-tool)
+[See all flags and descriptions](/docs/local-testing-tool.md#local-testing-tool-flags-and-descriptions)
 
 Follow the instructions in the
-[README.md#using-the-local-testing-tool](/README.md#using-the-local-testing-tool) to download the
-local testing tool.
+[using-the-local-testing-tool](/docs/local-testing-tool.md#using-the-local-testing-tool) to download
+the local testing tool.
 
 We will run the tool, without adding noise to the summary report, to receive the expected value of
 `32768` from the [sample aggregatable report](#aggregatable-report-sample).

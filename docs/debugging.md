@@ -3,10 +3,9 @@
 This document describes the debugging support for the Aggregation Service running in a TEE using
 encrypted payloads of aggregatable reports. This allows you to debug your production setup and
 understand how the encrypted payloads of aggregatable reports are processed. Reports with
-debug_cleartext_payload can be used with the
-[local testing tool](/README.md#using-the-local-testing-tool) and are helpful for understanding the
-content of reports and validating that registrations on the browser client or device are configured
-properly.
+debug_cleartext_payload can be used with the [local testing tool](/docs/local-testing-tool.md) and
+are helpful for understanding the content of reports and validating that registrations on the
+browser client or device are configured properly.
 
 To test the Aggregation Service, you can enable debug aggregation runs which use encrypted payloads
 of aggregatable reports to generate debug summary reports. When executing a debug run, no noise is

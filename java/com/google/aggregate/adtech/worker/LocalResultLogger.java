@@ -25,6 +25,7 @@ import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.jobclient.model.Job;
@@ -52,25 +53,15 @@ final class LocalResultLogger implements ResultLogger {
   }
 
   @Override
-  public DataLocation logResults(Stream<AggregatedFact> results, Job ctx)
+  public void logResults(ImmutableList<AggregatedFact> results, Job ctx, boolean isDebugRun)
       throws ResultLogException {
-    String localFileName = getLocalFileName(ctx);
+    String localFileName = isDebugRun ? getLocalDebugFileName(ctx) : getLocalFileName(ctx);
     Path localResultsFilePath =
         workingDirectory
             .getFileSystem()
             .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
-    return writeFile(results, ctx, localResultsFilePath, localResultFileWriter);
-  }
-
-  @Override
-  public DataLocation logDebugResults(Stream<AggregatedFact> results, Job ctx)
-      throws ResultLogException {
-    String localFileName = getLocalDebugFileName(ctx);
-    Path localResultsFilePath =
-        workingDirectory
-            .getFileSystem()
-            .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
-    return writeFile(results, ctx, localResultsFilePath, localDebugResultFileWriter);
+    writeFile(results.stream(), ctx, localResultsFilePath,
+        isDebugRun ? localDebugResultFileWriter : localResultFileWriter);
   }
 
   private DataLocation writeFile(

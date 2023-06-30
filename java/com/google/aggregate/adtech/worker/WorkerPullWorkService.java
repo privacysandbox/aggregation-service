@@ -16,12 +16,14 @@
 
 package com.google.aggregate.adtech.worker;
 
+import static com.google.aggregate.adtech.worker.util.OutputShardFileHelper.setOutputShardFileSizeBytes;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.aggregate.adtech.worker.util.JobResultHelper;
 import com.google.aggregate.adtech.worker.validation.JobValidator;
@@ -63,6 +65,8 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
 
   private final OTelConfiguration oTelConfiguration;
 
+  private final long outputShardFileSizeBytes;
+
   // Tracks whether the service should be pulling more jobs. Once the shutdown of the service
   // is initiated, this is switched to false.
   private volatile boolean moreNewRequests;
@@ -83,7 +87,8 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @BenchmarkMode boolean benchmarkMode,
-      @DomainOptional Boolean domainOptional) {
+      @DomainOptional Boolean domainOptional,
+      @OutputShardFileSizeBytes long outputShardFileSizeBytes) {
     this.jobClient = jobClient;
     this.jobProcessor = jobProcessor;
     this.jobResultHelper = jobResultHelper;
@@ -96,6 +101,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     this.blockingThreadPool = blockingThreadPool;
     this.benchmarkMode = benchmarkMode;
     this.domainOptional = domainOptional;
+    this.outputShardFileSizeBytes = outputShardFileSizeBytes;
   }
 
   // TODO(b/271323750) Implement unit tests
@@ -103,6 +109,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
   protected void run() {
     logger.info("Aggregation worker started");
     oTelConfiguration.createProdMemoryUtilizationRatioGauge();
+    setOutputShardFileSizeBytes(outputShardFileSizeBytes);
 
     while (moreNewRequests) {
       Optional<Job> job = Optional.empty();

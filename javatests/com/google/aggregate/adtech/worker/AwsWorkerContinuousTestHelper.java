@@ -93,6 +93,8 @@ public class AwsWorkerContinuousTestHelper {
   // Parses "s3://$bucket/$key" into two named groups: bucket and key.
   private static final Pattern S3_PATTERN = Pattern.compile("s3://(?<bucket>[^/]+)/(?<key>.+)");
 
+  private static final String AVRO_EXT = ".avro";
+
   private static Matcher parseS3Uri(String inputUri) {
     var matcher = S3_PATTERN.matcher(inputUri);
     if (!matcher.find()) {
@@ -117,6 +119,56 @@ public class AwsWorkerContinuousTestHelper {
   /** Helper for extracting an object key from an S3 URI. */
   public static String getS3Key(String s3Uri) {
     return parseS3Uri(s3Uri).group("key");
+  }
+
+  /** Helper for generating output file name from an output key assuming 1 shard in the output. */
+  public static String getOutputFileName(String outputKey) {
+    return getOutputFileName(outputKey, 1, 1);
+  }
+
+  /** Helper for generating output file name from an output key. */
+  public static String getOutputFileName(String outputKey, int shardId, int numShard) {
+    String outputSuffix = "-" + shardId + "-of-" + numShard;
+    return outputKey.endsWith(AVRO_EXT)
+        ? outputKey.substring(0, outputKey.length() - AVRO_EXT.length()) + outputSuffix + AVRO_EXT
+        : outputKey + outputSuffix;
+  }
+
+  public static CreateJobRequest createJobRequest(
+      String inputDataBlobBucket,
+      String inputDataBlobPrefix,
+      String outputDataBlobBucket,
+      String outputDataBlobPrefix,
+      String jobId,
+      Optional<String> outputDomainBucketName,
+      Optional<String> outputDomainPrefix) {
+    return createDefaultJobRequestBuilder(
+            inputDataBlobBucket,
+            inputDataBlobPrefix,
+            outputDataBlobBucket,
+            outputDataBlobPrefix,
+            jobId)
+        .putAllJobParameters(getJobParams(false, outputDomainBucketName, outputDomainPrefix, 100))
+        .build();
+  }
+
+  public static CreateJobRequest createJobRequest(
+      String inputDataBlobBucket,
+      String inputDataBlobPrefix,
+      String outputDataBlobBucket,
+      String outputDataBlobPrefix,
+      Boolean debugRun,
+      String jobId,
+      Optional<String> outputDomainBucketName,
+      Optional<String> outputDomainPrefix) {
+    return createDefaultJobRequestBuilder(
+            inputDataBlobBucket,
+            inputDataBlobPrefix,
+            outputDataBlobBucket,
+            outputDataBlobPrefix,
+            jobId)
+        .putAllJobParameters(getJobParams(debugRun, outputDomainBucketName, outputDomainPrefix, 100))
+        .build();
   }
 
   public static CreateJobRequest createJobRequest(
@@ -178,6 +230,20 @@ public class AwsWorkerContinuousTestHelper {
       String inputDataBlobPrefix,
       String outputDataBlobBucket,
       String outputDataBlobPrefix) {
+    return createDefaultJobRequestBuilder(
+        inputDataBlobBucket,
+        inputDataBlobPrefix,
+        outputDataBlobBucket,
+        outputDataBlobPrefix,
+        UUID.randomUUID().toString());
+  }
+
+  private static CreateJobRequest.Builder createDefaultJobRequestBuilder(
+      String inputDataBlobBucket,
+      String inputDataBlobPrefix,
+      String outputDataBlobBucket,
+      String outputDataBlobPrefix,
+      String jobIdString) {
     if (FRONTEND_API == null) {
       throw new IllegalStateException("Required environment variable FRONTEND_API not set");
     }
@@ -186,7 +252,7 @@ public class AwsWorkerContinuousTestHelper {
           "Required environment variable AWS_SECRET_ACCESS_KEY or AWS_ACCESS_KEY_ID not set");
     }
     return CreateJobRequest.newBuilder()
-        .setJobRequestId(UUID.randomUUID().toString())
+        .setJobRequestId(jobIdString)
         .setInputDataBucketName(inputDataBlobBucket)
         .setInputDataBlobPrefix(inputDataBlobPrefix)
         .setOutputDataBucketName(outputDataBlobBucket)
@@ -256,6 +322,12 @@ public class AwsWorkerContinuousTestHelper {
 
   public static void waitForJobCompletions(List<CreateJobRequest> jobRequests, Duration timeout)
       throws IOException, InterruptedException {
+    waitForJobCompletions(jobRequests, timeout, true);
+  }
+
+  public static void waitForJobCompletions(
+      List<CreateJobRequest> jobRequests, Duration timeout, boolean log)
+      throws IOException, InterruptedException {
     Instant waitMax = Instant.now().plus(timeout);
     while (!jobRequests.isEmpty() && Instant.now().isBefore(waitMax)) {
       Iterator<CreateJobRequest> jobRequestIterator = jobRequests.iterator();
@@ -270,11 +342,13 @@ public class AwsWorkerContinuousTestHelper {
             jobRequests.stream()
                 .map(CreateJobRequest::getJobRequestId)
                 .collect(Collectors.toList());
-        System.out.println(
-            "Waiting for worker to process... Remaining jobs: "
-                + remainingJobs
-                + " Remaining time: "
-                + Duration.between(Instant.now(), waitMax));
+        if (log) {
+          System.out.println(
+              "Waiting for worker to process... Remaining jobs: "
+                  + remainingJobs
+                  + " Remaining time: "
+                  + Duration.between(Instant.now(), waitMax));
+        }
         Thread.sleep(10_000);
       }
     }
@@ -291,6 +365,11 @@ public class AwsWorkerContinuousTestHelper {
 
   public static boolean isCompleted(CreateJobRequest createJobRequest)
       throws IOException, InterruptedException {
+    return getJobResult(createJobRequest).get("job_status").asText().equals("FINISHED");
+  }
+
+  public static JsonNode getJobResult(CreateJobRequest createJobRequest)
+      throws IOException, InterruptedException {
     String uri =
         String.format(
             GET_JOB_URI_PATTERN,
@@ -298,9 +377,7 @@ public class AwsWorkerContinuousTestHelper {
             API_GATEWAY_STAGE,
             API_GATEWAY_VERSION,
             createJobRequest.getJobRequestId());
-    JsonNode response = callGetJobAPI(uri);
-
-    return response.get("job_status").asText().equals("FINISHED");
+    return callGetJobAPI(uri);
   }
 
   public static JsonNode getJobResult(String uri) throws IOException {
@@ -392,6 +469,15 @@ public class AwsWorkerContinuousTestHelper {
     System.out.println(String.format("callCreateJobAPI response: %s", response.toPrettyString()));
 
     return response;
+  }
+
+  public static void createJob(CreateJobRequest createJobRequest)
+      throws IOException, InterruptedException {
+    String job = JsonFormat.printer().print(createJobRequest);
+
+    String createJobAPIUri =
+        String.format(CREATE_JOB_URI_PATTERN, FRONTEND_API, API_GATEWAY_STAGE, API_GATEWAY_VERSION);
+    callCreateJobAPI(createJobAPIUri, job);
   }
 
   public static JsonNode callGetJobAPI(String uri) throws IOException {

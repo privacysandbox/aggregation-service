@@ -19,6 +19,7 @@ package com.google.aggregate.adtech.worker.testing;
 import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import com.google.scp.operator.cpio.jobclient.model.Job;
@@ -46,7 +47,8 @@ public final class InMemoryResultLogger implements ResultLogger {
   }
 
   @Override
-  public DataLocation logResults(Stream<AggregatedFact> results, Job unused)
+  public void logResults(
+      ImmutableList<AggregatedFact> results, Job unused, boolean isDebugRun)
       throws ResultLogException {
     hasLogged = true;
 
@@ -54,29 +56,13 @@ public final class InMemoryResultLogger implements ResultLogger {
       throw new ResultLogException(new IllegalStateException("Was set to throw"));
     }
 
-    materializedAggregations = MaterializedAggregationResults.of(results);
-
-    // TODO: use logging instead of standard output
-    System.out.println("Materialized results: " + materializedAggregations);
-    // TODO: make type for in memory location for testing
-    return DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create("", ""));
-  }
-
-  @Override
-  public DataLocation logDebugResults(Stream<AggregatedFact> results, Job unused)
-      throws ResultLogException {
-    hasLogged = true;
-
-    if (shouldThrow) {
-      throw new ResultLogException(new IllegalStateException("Was set to throw"));
+    if (isDebugRun) {
+      materializedDebugAggregations = MaterializedAggregationResults.of(results.stream());
+      System.out.println("Materialized debug results: " + materializedDebugAggregations);
+    } else {
+      materializedAggregations = MaterializedAggregationResults.of(results.stream());
+      System.out.println("Materialized results: " + materializedAggregations);
     }
-
-    materializedDebugAggregations = MaterializedAggregationResults.of(results);
-
-    // TODO: use logging instead of standard output
-    System.out.println("Materialized results: " + materializedDebugAggregations);
-    // TODO: make type for in memory location for testing
-    return DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create("", ""));
   }
 
   /**

@@ -102,5 +102,11 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface ReportErrorThresholdPercentage {}
 
+  /** Annotation to set a size of shard with single key-value pair. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface OutputShardFileSizeBytes {}
+
   private Annotations() {}
 }
