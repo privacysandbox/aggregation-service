@@ -18,6 +18,7 @@ package com.google.aggregate.privacy.budgeting.bridge;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode;
 import java.time.Instant;
 
 /** Interface for consuming privacy budgeting. */
@@ -26,12 +27,12 @@ public interface PrivacyBudgetingServiceBridge {
   /**
    * Consumes privacy budget for the given IDs if budget is available for all budget units.
    *
-   * <p> Only consumes privacy budget if budgets are available for all provided units.
-   * Otherwise, no budgets are consumed and the first few units for which the budget was not
-   * available are returned.
+   * <p>Only consumes privacy budget if budgets are available for all provided units. Otherwise, no
+   * budgets are consumed and the first few units for which the budget was not available are
+   * returned.
    *
    * @return Empty list if budgets were consumed successfully. Otherwise, first few privacy budget
-   * units for which the privacy budget was not available.
+   *     units for which the privacy budget was not available.
    */
   ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
       ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo)
@@ -54,17 +55,30 @@ public interface PrivacyBudgetingServiceBridge {
 
   /** Exception that may happen when consuming the privacy budget. */
   final class PrivacyBudgetingServiceBridgeException extends Exception {
+    private final StatusCode statusCode;
 
     public PrivacyBudgetingServiceBridgeException() {
       super();
+      this.statusCode = StatusCode.UNKNOWN;
     }
 
     public PrivacyBudgetingServiceBridgeException(Throwable cause) {
       super(cause);
+      this.statusCode = StatusCode.UNKNOWN;
     }
 
     public PrivacyBudgetingServiceBridgeException(String message, Throwable cause) {
       super(message, cause);
+      this.statusCode = StatusCode.UNKNOWN;
+    }
+
+    public PrivacyBudgetingServiceBridgeException(StatusCode statusCode, Throwable cause) {
+      super(statusCode.name(), cause);
+      this.statusCode = statusCode;
+    }
+
+    public StatusCode getStatusCode() {
+      return this.statusCode;
     }
   }
 }

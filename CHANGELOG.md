@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0](https://github.com/privacysandbox/aggregation-service/compare/v0.12.0...v1.0.0) (2023-07-11)
+
+### Changes
+
+-   Updated document links for aws-aggregation-service.md.
+-   Updated comments in AMI BUILD file.
+
 ## [0.12.0](https://github.com/privacysandbox/aggregation-service/compare/v0.11.0...v0.12.0) (2023-06-28)
 
 ### Changes

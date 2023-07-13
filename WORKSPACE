@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v0.51.15"  # version updated on 2023-06-05
+COORDINATOR_VERSION = "v1.0.0"  # version updated on 2023-07-06
 
 JACKSON_VERSION = "2.12.2"
 
@@ -63,13 +63,13 @@ http_archive(
 git_repository(
     name = "com_google_adm_cloud_scp",
     patch_args = [
-        # Needed to import Git-based patches.
         "-p1",
     ],
+    remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
-        "//build_defs/scp:scp-0.51.15.patch",
+        "//build_defs/scp:v1.0.0-1.patch",
+        "//build_defs/scp:coordinator.patch",
     ],
-    remote = "https://github.com/privacysandbox/control-plane-shared-libraries",
     tag = COORDINATOR_VERSION,
 )
 
@@ -315,8 +315,8 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 # Distroless image for running Java.
 container_pull(
     name = "java_base",
-    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-06-12.
-    digest = "sha256:1e4181aaff242e2b305bb4abbe811eb122d68ffd7fd87c25c19468a1bc387ce6",
+    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-07-10.
+    digest = "sha256:052076466984fd56979c15a9c3b7433262b0ad9aae55bc0c53d1da8ffdd829c3",
     registry = "gcr.io",
     repository = "distroless/java17-debian11",
 )
@@ -392,28 +392,10 @@ rules_proto_toolchains()
 # Binary Runtime Dependencies #
 ###############################
 
-http_file(
-    name = "kmstool_enclave_cli",
-    downloaded_file_path = "kmstool_enclave_cli",
-    executable = True,
-    sha256 = "39ac7b55e30df69f963f8519686cd9e1ac3b815dd1f4cc85a35582bbc0fa6126",
-    urls = ["https://storage.googleapis.com/scp-dependencies/aws/2023-03-27/kmstool_enclave_cli"],
-)
+# Download the AWS enclave SDK repo and apply a patch for building the kmstool dependencies.
+load("@com_google_adm_cloud_scp//build_defs/shared:enclaves_kmstools.bzl", "import_aws_nitro_enclaves_sdk_c")
 
-http_file(
-    name = "kmstool_enclave",
-    downloaded_file_path = "kmstool_enclave",
-    executable = True,
-    urls = ["https://storage.googleapis.com/scp-dependencies/aws/2023-03-27/kmstool_enclave"],
-)
-
-http_file(
-    name = "libnsm",
-    downloaded_file_path = "libnsm.so",
-    executable = False,
-    sha256 = "df536a96458af26e4800b04aef0771a05728ed4fe7d24683cc4c1ea6bbd62d50",
-    urls = ["https://storage.googleapis.com/scp-dependencies/aws/2023-03-27/libnsm.so"],
-)
+import_aws_nitro_enclaves_sdk_c(repo_name = "@com_google_adm_cloud_scp")
 
 ###########################
 # Binary Dev Dependencies #
@@ -497,11 +479,11 @@ http_archive(
 # Needed for reproducibly building AL2 binaries (e.g. //cc/aws/proxy)
 container_pull(
     name = "amazonlinux_2",
-    # Latest as of 2023-06-12.
-    digest = "sha256:cd3d9deffbb15db51382022a67ad717c02e0573c45c312713c046e4c2ac07771",
+    # Latest as of 2023-07-10.
+    digest = "sha256:d41496df5f949d9b7567512efa42ecc21ec9dd2c49539f7452945ed435b0058a",
     registry = "index.docker.io",
     repository = "amazonlinux",
-    tag = "2.0.20230530.0",
+    tag = "2.0.20230612.0",
 )
 
 ################################################################################

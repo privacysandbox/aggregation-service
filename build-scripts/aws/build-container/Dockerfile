@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# bookworm-slim stable with latest security updates 2023-06-12
-FROM debian@sha256:b396b38adb888af839a4b967ba919c49086987126500d6cd8f662531e202d038
+# bookworm-slim stable with latest security updates 2023-07-10
+FROM debian@sha256:01bd742e2c269abf94e2fefb47b08b5b61c9a880b993417d23a1d0bd9fa60dc4
 
 RUN \
     # This makes add-apt-repository available.

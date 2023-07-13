@@ -19,6 +19,8 @@ package com.google.aggregate.adtech.worker.aggregation.concurrent;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INPUT_DATA_READ_FAILED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INVALID_JOB;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PERMISSION_ERROR;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_AUTHENTICATION_ERROR;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_AUTHORIZATION_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_WRITE_ERROR;
@@ -89,6 +91,7 @@ import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.aggregate.privacy.budgeting.bridge.FakePrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
+import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetingServiceBridgeException;
 import com.google.aggregate.privacy.budgeting.bridge.UnlimitedPrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.noise.Annotations.Threshold;
 import com.google.aggregate.privacy.noise.NoiseApplier;
@@ -117,6 +120,7 @@ import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.testing.FSBlobStorageClientModule;
 import com.google.scp.operator.cpio.cryptoclient.DecryptionKeyService;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
@@ -1121,6 +1125,42 @@ public class ConcurrentAggregationProcessorTest {
         .isEqualTo(
             "Exception while consuming privacy budget. Exception message: encountered fake privacy"
                 + " budget exception.");
+  }
+
+  @Test
+  public void aggregate_withPrivacyBudgeting_unauthenticatedException_failJob() throws Exception {
+    failJobOnPbsException = true;
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+
+    fakePrivacyBudgetingServiceBridge.setException(
+        new PrivacyBudgetingServiceBridgeException(
+            StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED, new IllegalStateException("fake")));
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(PRIVACY_BUDGET_AUTHENTICATION_ERROR);
+  }
+
+  @Test
+  public void aggregate_withPrivacyBudgeting_unauthorizedException_failJob() throws Exception {
+    failJobOnPbsException = true;
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+
+    fakePrivacyBudgetingServiceBridge.setException(
+        new PrivacyBudgetingServiceBridgeException(
+            StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHORIZED, new IllegalStateException("fake")));
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.process(ctx));
+    assertThat(ex.getCode()).isEqualTo(PRIVACY_BUDGET_AUTHORIZATION_ERROR);
   }
 
   @Test

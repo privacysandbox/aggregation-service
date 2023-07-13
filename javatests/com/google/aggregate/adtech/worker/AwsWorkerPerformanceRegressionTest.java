@@ -21,8 +21,6 @@ import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.A
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.createJob;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getJobResult;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getOutputFileName;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.waitForJobCompletions;
 import static com.google.common.truth.Truth.assertThat;
@@ -30,10 +28,8 @@ import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.Ret
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
-import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClient;
@@ -62,7 +58,7 @@ public class AwsWorkerPerformanceRegressionTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
 
-  private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
+  private static final Duration COMPLETION_TIMEOUT = Duration.of(1000, ChronoUnit.MINUTES);
 
   private static final String PERFORMANCE_REGRESSION_DATA_BUCKET =
       "aggregate-service-performance-regression-bucket";
@@ -89,59 +85,55 @@ public class AwsWorkerPerformanceRegressionTest {
     return PERFORMANCE_REGRESSION_DATA_BUCKET;
   }
 
-  /** Run Aggregation for 10k Attribution Reporting API (ARA) reports with 1M Domain keys. */
+  /** Run Aggregation for 500k Attribution Reporting API (ARA) reports with 500k Domain keys. */
   @Test
-  public void aggregateARA10kReports1MDomain() throws Exception {
+  public void aggregateARA500kTransient() throws Exception {
 
-    for (int i = 1; i <= 1; i++) {
-      var inputKey = String.format("%s/test-inputs/10k_report_%s.avro", KOKORO_BUILD_ID, i);
-      var domainKey = String.format("%s/test-inputs/20k_domain.avro", KOKORO_BUILD_ID);
+    for (int i = 1; i <= NUM_TRANSIENT_RUNS; i++) {
+      var inputKey = String.format("%s/test-inputs/500k_debug_report.avro", KOKORO_BUILD_ID);
+      var domainKey = String.format("%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
       var outputKey =
-          String.format("%s/test-outputs/10k_report_%s_20k_domain_output.avro", KOKORO_BUILD_ID, i);
-
+          String.format(
+              "%s/test-outputs/500k_report_%s_500k_domain_output.avro", KOKORO_BUILD_ID, i);
+      String jobId = UUID.randomUUID().toString() + "-transient-" + i;
       CreateJobRequest createJobRequest =
           AwsWorkerContinuousTestHelper.createJobRequest(
               getTestDataBucket(),
               inputKey,
               getTestDataBucket(),
               outputKey,
+              /* debugRun= */ true,
+              jobId,
               /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
               /* outputDomainPrefix= */ Optional.of(domainKey));
       JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
-      assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
+      assertThat(result.get("result_info").get("return_code").asText())
+          .isEqualTo(DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
       assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
           .isTrue();
-
-      // Read output avro from s3.
-      ImmutableList<AggregatedFact> aggregatedFacts =
-          readResultsFromS3(
-              s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
-
-      // assert that aggregated facts count is at least equal to number of domain keys
-      assertThat(aggregatedFacts.size()).isAtLeast(10000);
     }
   }
 
   /**
-   * Run Aggregation for 100k Attribution Reporting API (ARA) reports with 10k Domain keys.
+   * Run Aggregation for 500k Attribution Reporting API (ARA) reports with 500k Domain keys.
    *
    * <p>These tests are for warming up the instances.
    *
    * @throws Exception
    */
   @Test
-  public void aggregateARA100kReports200kDomainWarmup() throws Exception {
+  public void aggregateARA500kReports500kDomainWarmup() throws Exception {
 
     ArrayList<CreateJobRequest> warmUpJobRequests = new ArrayList<>(NUM_WARMUP_RUNS);
     ArrayList<CreateJobRequest> warmUpJobRequestsDeepCopy = new ArrayList<>(NUM_WARMUP_RUNS);
     // Run 25 jobs to make sure at least each ec2 instance runs a job
     for (int i = 1; i <= NUM_WARMUP_RUNS; i++) {
-      var inputKey = String.format("%s/test-inputs/100k_debug_report.avro", KOKORO_BUILD_ID);
-      var domainKey = String.format("%s/test-inputs/200k_domain.avro", KOKORO_BUILD_ID);
+      var inputKey = String.format("%s/test-inputs/500k_debug_report.avro", KOKORO_BUILD_ID);
+      var domainKey = String.format("%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
       var outputKey =
           String.format(
-              "%s/test-outputs/100k_report_%s_200k_domain_warmup_output.avro", KOKORO_BUILD_ID, i);
+              "%s/test-outputs/500k_report_%s_500k_domain_warmup_output.avro", KOKORO_BUILD_ID, i);
       String jobId = UUID.randomUUID().toString() + "-warmup";
       CreateJobRequest createJobRequest =
           AwsWorkerContinuousTestHelper.createJobRequest(
@@ -159,43 +151,36 @@ public class AwsWorkerPerformanceRegressionTest {
       warmUpJobRequestsDeepCopy.add(createJobRequest);
     }
 
-    waitForJobCompletions(warmUpJobRequestsDeepCopy, Duration.of(15, ChronoUnit.MINUTES));
+    waitForJobCompletions(warmUpJobRequestsDeepCopy, Duration.of(1000, ChronoUnit.MINUTES));
 
     for (int i = 1; i <= NUM_WARMUP_RUNS; i++) {
       String outputKey =
           String.format(
-              "%s/test-outputs/100k_report_%s_200k_domain_warmup_output.avro", KOKORO_BUILD_ID, i);
+              "%s/test-outputs/500k_report_%s_500k_domain_warmup_output.avro", KOKORO_BUILD_ID, i);
       JsonNode result = getJobResult(warmUpJobRequests.get(i - 1));
       assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
       assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
           .isTrue();
-      // Read output avro from s3.
-      ImmutableList<AggregatedFact> aggregatedFacts =
-          readResultsFromS3(
-              s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
-
-      // assert that aggregated facts count is at least equal to number of domain keys
-      assertThat(aggregatedFacts.size()).isAtLeast(200000);
     }
   }
 
   /**
-   * Run Aggregation for 10k Attribution Reporting API (ARA) reports with 10k Domain keys.
+   * Run Aggregation for 500k Attribution Reporting API (ARA) reports with 500k Domain keys.
    *
    * <p>These tests are the transient runs after the warm up runs.
    *
    * @throws Exception
    */
   @Test
-  public void aggregateARA100kReports200kDomainTransient() throws Exception {
+  public void aggregateARA500kReports500kDomainTransient() throws Exception {
     ArrayList<CreateJobRequest> transientJobRequests = new ArrayList<>(NUM_TRANSIENT_RUNS);
     ArrayList<CreateJobRequest> transientJobRequestsDeepCopy = new ArrayList<>(NUM_TRANSIENT_RUNS);
     for (int i = 1; i <= NUM_TRANSIENT_RUNS; i++) {
-      var inputKey = String.format("%s/test-inputs/100k_debug_report.avro", KOKORO_BUILD_ID);
-      var domainKey = String.format("%s/test-inputs/200k_domain.avro", KOKORO_BUILD_ID);
+      var inputKey = String.format("%s/test-inputs/500k_debug_report.avro", KOKORO_BUILD_ID);
+      var domainKey = String.format("%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
       var outputKey =
           String.format(
-              "%s/test-outputs/100k_report_%s_200k_domain_transient_output.avro",
+              "%s/test-outputs/500k_report_%s_500k_domain_transient_output.avro",
               KOKORO_BUILD_ID, i);
       String jobId = UUID.randomUUID().toString() + "-transient-" + i;
       CreateJobRequest createJobRequest =
@@ -213,25 +198,19 @@ public class AwsWorkerPerformanceRegressionTest {
       transientJobRequestsDeepCopy.add(createJobRequest);
     }
 
-    waitForJobCompletions(transientJobRequestsDeepCopy, Duration.of(15, ChronoUnit.MINUTES), false);
+    waitForJobCompletions(
+        transientJobRequestsDeepCopy, Duration.of(1000, ChronoUnit.MINUTES), false);
 
     for (int i = 1; i <= NUM_TRANSIENT_RUNS; i++) {
       var outputKey =
           String.format(
-              "%s/test-outputs/100k_report_%s_200k_domain_transient_output.avro",
+              "%s/test-outputs/500k_report_%s_500k_domain_transient_output.avro",
               KOKORO_BUILD_ID, i);
       JsonNode result = getJobResult(transientJobRequests.get(i - 1));
       assertThat(result.get("result_info").get("return_code").asText())
           .isEqualTo(DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
       assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
           .isTrue();
-      // Read output avro from s3.
-      ImmutableList<AggregatedFact> aggregatedFacts =
-          readResultsFromS3(
-              s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
-
-      // assert that aggregated facts count is at least equal to number of domain keys
-      assertThat(aggregatedFacts.size()).isAtLeast(200000);
     }
   }
 

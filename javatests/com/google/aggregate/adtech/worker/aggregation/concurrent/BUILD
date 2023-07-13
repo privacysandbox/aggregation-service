@@ -55,6 +55,7 @@ java_test(
         "//java/external:clients_blobstorageclient",
         "//java/external:clients_blobstorageclient_model",
         "//java/external:clients_cryptoclient",
+        "//java/external:clients_distributed_privacy_budgeting",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",

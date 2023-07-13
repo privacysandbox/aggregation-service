@@ -59,7 +59,9 @@ public final class HttpPrivacyBudgetingServiceBridge implements PrivacyBudgeting
       return budgetResponse.exhaustedPrivacyBudgetUnits().stream()
           .map(HttpPrivacyBudgetingServiceBridge::workerBudgetUnit)
           .collect(toImmutableList());
-    } catch (DistributedPrivacyBudgetClientException | DistributedPrivacyBudgetServiceException e) {
+    } catch (DistributedPrivacyBudgetServiceException e) {
+      throw new PrivacyBudgetingServiceBridgeException(e.getStatusCode(), e);
+    } catch (DistributedPrivacyBudgetClientException e) {
       throw new PrivacyBudgetingServiceBridgeException(e.getMessage(), e);
     }
   }

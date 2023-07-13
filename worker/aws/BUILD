@@ -28,7 +28,7 @@ exports_files([
 pkg_tar(
     name = "libnsm-tar",
     srcs = [
-        "@libnsm//file",
+        "@com_google_adm_cloud_scp//build_defs/aws/kmstool:libnsm.so",
     ],
     mode = "0644",
     package_dir = "/lib/x86_64-linux-gnu/",
@@ -130,6 +130,13 @@ worker_aws_deployment(
     ami_name = ":ami_name_flag",
     aws_region = ":aws_region_flag",
     jar_args = PROD_ENCLAVE_ARGS + [
+        # Coordinators regions
+        "--coordinator_a_region_override",
+        "us-east-1",
+        "--coordinator_b_region_override",
+        "us-east-1",
+
+        # Key service related arguments
         "--decryption_key_service",
         "AWS_ENCLAVE_CLI_MULTI_PARTY_DECRYPTION_KEY_SERVICE",
         "--coordinator_a_encryption_key_service_base_url",
@@ -138,11 +145,6 @@ worker_aws_deployment(
         "https://privatekeyservice-b.agg-2.aws.privacysandboxservices.com/v1alpha",
 
         # PBS related arguments
-        # PBS regions
-        "--coordinator_a_region_override",
-        "us-east-1",
-        "--coordinator_b_region_override",
-        "us-east-1",
         "--privacy_budgeting",
         "HTTP",
 

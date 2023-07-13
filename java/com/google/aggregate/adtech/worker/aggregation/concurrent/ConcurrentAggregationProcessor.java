@@ -20,6 +20,8 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INP
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INTERNAL_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.INVALID_JOB;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PERMISSION_ERROR;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_AUTHENTICATION_ERROR;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_AUTHORIZATION_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_WRITE_ERROR;
@@ -30,6 +32,8 @@ import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED;
+import static com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHORIZED;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
@@ -396,6 +400,28 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
                   .getJobParameters()
                   .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
     } catch (PrivacyBudgetingServiceBridgeException e) {
+      if (e.getStatusCode() != null) {
+        switch (e.getStatusCode()) {
+          case PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED:
+            throw new AggregationJobProcessException(
+                PRIVACY_BUDGET_AUTHENTICATION_ERROR,
+                "Aggregation service is not authenticated to call privacy budget service. This"
+                    + " could happen due to a misconfiguration during enrollment. Please contact"
+                    + " support for resolution.",
+                e);
+          case PRIVACY_BUDGET_CLIENT_UNAUTHORIZED:
+            throw new AggregationJobProcessException(
+                PRIVACY_BUDGET_AUTHORIZATION_ERROR,
+                "Aggregation service is not authorized to call privacy budget service. This could"
+                    + " happen if the createJob API job_paramaters.attribution_report_to does not"
+                    + " match the one registered at enrollment. Please verify and contact support"
+                    + " if needed.",
+                e);
+          default:
+            break;
+        }
+      }
+
       String nestedMessage = e.getCause() == null ? e.getMessage() : e.getCause().getMessage();
       throw new AggregationJobProcessException(
           PRIVACY_BUDGET_ERROR,

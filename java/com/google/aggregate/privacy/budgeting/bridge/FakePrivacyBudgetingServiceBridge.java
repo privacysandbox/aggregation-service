@@ -30,8 +30,7 @@ import java.util.Optional;
  * <p>This bridge supports programmatically setting the budget.
  */
 public final class FakePrivacyBudgetingServiceBridge implements PrivacyBudgetingServiceBridge {
-
-  private boolean shouldThrow;
+  private PrivacyBudgetingServiceBridgeException exception;
   private Optional<ImmutableList<PrivacyBudgetUnit>> lastBudgetsToConsumeSent = Optional.empty();
   private Optional<String> lastAttributionReportToSent = Optional.empty();
 
@@ -39,24 +38,36 @@ public final class FakePrivacyBudgetingServiceBridge implements PrivacyBudgeting
 
   public FakePrivacyBudgetingServiceBridge() {
     privacyBudgets = new HashMap<>();
-    shouldThrow = false;
   }
 
   public void setPrivacyBudget(PrivacyBudgetUnit budgetId, int budget) {
     privacyBudgets.put(budgetId, budget);
   }
 
+  /**
+   * If {@link #setShouldThrow} is called for at least once, {@link #consumePrivacyBudget} will
+   * throw a default exception when the method is called. If you need to override the exception that
+   * is being thrown by {@link #consumePrivacyBudget}, please use {@link #setException} instead.
+   */
   public void setShouldThrow() {
-    shouldThrow = true;
+    Exception e = new Exception("encountered fake privacy budget exception.");
+    setException(new PrivacyBudgetingServiceBridgeException(e.getMessage(), e));
+  }
+
+  /**
+   * If {@link #setException} method is called for at least once, {@link #consumePrivacyBudget} will
+   * throw the given exception when the method is called.
+   */
+  public void setException(PrivacyBudgetingServiceBridgeException e) {
+    this.exception = e;
   }
 
   @Override
   public ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
       ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo)
       throws PrivacyBudgetingServiceBridgeException {
-    if (shouldThrow) {
-      Exception e = new Exception("encountered fake privacy budget exception.");
-      throw new PrivacyBudgetingServiceBridgeException(e.getMessage(), e);
+    if (exception != null) {
+      throw exception;
     }
 
     lastBudgetsToConsumeSent = Optional.of(budgetsToConsume);

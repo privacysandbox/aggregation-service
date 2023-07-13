@@ -1,0 +1,4 @@
+diff --git a/cc/tools/build/build_container_params.bzl.prebuilt b/cc/tools/build/build_container_params.bzl
+similarity index 100%
+rename from cc/tools/build/build_container_params.bzl.prebuilt
+rename to cc/tools/build/build_container_params.bzl

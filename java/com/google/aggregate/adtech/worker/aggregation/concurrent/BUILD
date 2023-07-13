@@ -40,6 +40,7 @@ java_library(
         "//java/external:avro",
         "//java/external:clients_blobstorageclient",
         "//java/external:clients_blobstorageclient_model",
+        "//java/external:clients_distributed_privacy_budgeting",
         "//java/external:clients_jobclient_model",
         "//java/external:guava",
         "//java/external:javax_inject",

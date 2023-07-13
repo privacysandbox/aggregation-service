@@ -184,7 +184,7 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
 
     ```terraform
     ...
-    Plan: 190 to add, 0 to change, 0 to destroy.
+    Plan: 193 to add, 0 to change, 0 to destroy.
     ```
 
     you can continue to apply the changes (needs confirmation after the planning step)

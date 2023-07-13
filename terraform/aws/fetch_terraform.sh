@@ -37,13 +37,13 @@ printf "Aggregation server version: %s\n" "${VERSION}"
 printf "Control plane shared version: %s\n" "${CONTROL_PLANE_SHARED_LIBRARIES_VERSION}"
 
 # fetch based on tag
-readonly CONTROL_PLANE_REPO_RELDIR=control-plane-shared-libraries
+readonly CONTROL_PLANE_REPO_RELDIR=coordinator-services-and-shared-libraries
 readonly CONTROL_PLANE_REPO_DIR="${WORK_DIR}/${CONTROL_PLANE_REPO_RELDIR}"
 if [[ -d ${CONTROL_PLANE_REPO_DIR} ]] && ! [[ -r ${CONTROL_PLANE_REPO_DIR}/.git/config ]]; then
   rm -rf ${CONTROL_PLANE_REPO_DIR}
 fi
 if ! [[ -d ${CONTROL_PLANE_REPO_DIR} ]]; then
-  git clone https://github.com/privacysandbox/control-plane-shared-libraries "${CONTROL_PLANE_REPO_DIR}" || true
+  git clone https://github.com/privacysandbox/coordinator-services-and-shared-libraries "${CONTROL_PLANE_REPO_DIR}" || true
 fi
 git -C "${CONTROL_PLANE_REPO_DIR}" checkout "${CONTROL_PLANE_SHARED_LIBRARIES_VERSION}"
 git -C "${CONTROL_PLANE_REPO_DIR}" clean -df
@@ -62,8 +62,9 @@ ln -s ../"${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/aws/environments/demo
 # aggregation-service release version and use downloaded versioned prebuilt jars
 cat <<EOT >>"${WORK_DIR}"/environments/shared/release_params.auto.tfvars
 # Generated from release version - using prebuilt AMI
-# If you want use your self-built AMI, follow the README.md and change
-# ami_owners to ["self"]
+# If you want use your self-built AMI, follow the steps at
+# https://github.com/privacysandbox/aggregation-service/blob/main/docs/aws-aggregation-service.md#set-up-your-deployment-environment
+# and change ami_owners to ["self"]
 ami_name = "${AMI_NAME}"
 ami_owners = ["${AMI_OWNER}"]
 

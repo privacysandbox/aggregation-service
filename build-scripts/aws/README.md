@@ -98,4 +98,4 @@ Switch to `<repository_root>/terraform/aws`.
 Run `bash fetch_terraform.sh`.
 
 After downloading the artifacts and running above script continue with
-[Set up your deployment environment](/README.md#set-up-your-deployment-environment)
+[Set up your deployment environment](/docs/aws-aggregation-service.md#set-up-your-deployment-environment)

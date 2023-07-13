@@ -1,0 +1,12 @@
+diff --git a/operator/terraform/aws/modules/worker/main.tf b/operator/terraform/aws/modules/worker/main.tf
+index 47658ba8f..af3d7e5b7 100644
+--- a/operator/terraform/aws/modules/worker/main.tf
++++ b/operator/terraform/aws/modules/worker/main.tf
+@@ -252,6 +252,7 @@ data "aws_iam_policy_document" "enclave_policy_doc" {
+     actions = [
+       "logs:PutLogEvents",
+       "logs:CreateLogStream",
++      "logs:CreateLogGroup",
+       "xray:PutTelemetryRecords",
+       "xray:PutTraceSegments",
+     ]

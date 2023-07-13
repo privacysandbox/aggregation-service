@@ -85,7 +85,21 @@ public enum AggregationWorkerReturnCode {
    * threshold can be set in job.request_info.job_parameters for the key
    * "report_error_threshold_percentage".
    */
-  REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD;
+  REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD,
+
+  /**
+   * Aggregation service is not authenticated to call privacy budget service. This error is likely
+   * caused by incorrect IAM policy or role setup. This error is not transient and the job cannot be
+   * retried.
+   */
+  PRIVACY_BUDGET_AUTHENTICATION_ERROR,
+
+  /**
+   * Aggregation service is authenticated but unauthorized to call privacy budget service. This
+   * error is likely caused by incorrect setup during the onboarding process or config changes in
+   * privacy budget server. This error is not transient and the job cannot be retried.
+   */
+  PRIVACY_BUDGET_AUTHORIZATION_ERROR;
 
   /**
    * Convert the parameter failure code into the equivalent code for debug mode. Namely for privacy

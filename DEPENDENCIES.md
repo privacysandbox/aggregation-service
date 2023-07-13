@@ -5,7 +5,7 @@ The deployment of the Amazon Web Services
 on several packaged artifacts listed below. These artifacts can be downloaded with the
 [download_prebuilt_dependencies.sh](/terraform/aws/download_prebuilt_dependencies.sh) script. More
 information can be found in the
-[README](/README.md#download-terraform-scripts-and-prebuilt-dependencies).
+[README](/docs/aws-aggregation-service.md#download-terraform-scripts-and-prebuilt-dependencies).
 
 ## Packaged AWS Lambda Jars
 

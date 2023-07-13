@@ -15,6 +15,14 @@
 
 docker load -i /opt/otel/aws_otel_image.tar
 
+# Get terraform environment name and set it in collector workspace.
+token="$(curl -s --fail-with-body -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 120")"
+region="$(curl -s --fail-with-body http://169.254.169.254/latest/meta-data/placement/region -H "X-aws-ec2-metadata-token: ${token}")"
+instance_id="$(curl -s --fail-with-body http://169.254.169.254/latest/meta-data/instance-id -H "X-aws-ec2-metadata-token: ${token}")"
+tags="$(aws --region "${region}" ec2 describe-tags --filters Name=resource-id,Values="${instance_id}")"
+tags_kv="$(echo "${tags}" | jq "[.Tags[] | {key:.Key, value:.Value}] | from_entries")"
+env_name="$(echo "${tags_kv}" | jq -r ".environment")"
+
 declare COLLECTOR_IMAGE=public.ecr.aws/aws-observability/aws-otel-collector:v0.28.0
 declare -r COLLECTOR_NAME="otel-collector"
 declare -a DOCKER_FLAGS=(
@@ -24,6 +32,7 @@ declare -a DOCKER_FLAGS=(
   --volume /opt/otel/otel_collector_config.yaml:/otel_collector_config.yaml
   --user "$(id -u):$(id -g)"
   --network host
+  --env "ENV_NAME=${env_name}"
 )
 
 declare -a -r COLLECTOR_FLAGS=(

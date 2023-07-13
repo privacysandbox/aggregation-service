@@ -25,6 +25,7 @@ java_library(
     deps = [
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
+        "//java/external:clients_distributed_privacy_budgeting",
         "//java/external:guava",
     ],
 )
