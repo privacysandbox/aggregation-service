@@ -20,6 +20,7 @@ env:
 phases:
   install:
     commands:
+      - mkdir $HOME/.docker
       - nohup service docker start &
       - timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
   pre_build:
@@ -29,7 +30,7 @@ phases:
   build:
     commands:
       - echo Bazel Build started on `date`
-      - bazel run //worker/aws:worker_mp_aws_prod --//worker/aws:ami_name_flag=aggregation-service-enclave_$(cat VERSION)  --//worker/aws:aws_region_flag=$AWS_DEFAULT_REGION
+      - bazel run //worker/aws:worker_mp_aws_prod --sandbox_writable_path=$HOME/.docker --//worker/aws:ami_name_flag=aggregation-service-enclave_$(cat VERSION)  --//worker/aws:aws_region_flag=$AWS_DEFAULT_REGION
       - bash build-scripts/aws/set_ami_to_public.sh set_ami_to_public_by_prefix aggregation-service-enclave_$(cat VERSION) $AWS_DEFAULT_REGION $AWS_ACCOUNT_ID
       - cd build-scripts/aws && bash publish.sh
   post_build:
