@@ -91,13 +91,12 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
     String fileExtension = isDebugRun
         ? localDebugResultFileWriter.getFileExtension()
         : localResultFileWriter.getFileExtension();
-    IntStream shardIdStream = IntStream.range(1, totalShards + 1).parallel();
 
     // Stream shardId to write and upload each shard in parallel.
     // In every shard, ImmutableList.subList provides a view of a sharded portion
     // of the results for each shard ID.
     final int finalTotalShards = totalShards; // For lambda function.
-    shardIdStream.forEach(
+    IntStream.range(1, totalShards + 1).forEach(
         shardId -> {
           String localFileName = isDebugRun
               ? getLocalDebugFileName(ctx, shardId, fileExtension)

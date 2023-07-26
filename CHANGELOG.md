@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.1](https://github.com/privacysandbox/aggregation-service/compare/v1.0.0...v1.0.1) (2023-07-26)
+
+### Changes
+
+-   Fixed bug in summary report output sharding that caused aggregation service to stop processing
+    jobs.
+-   Fixed LocalTestingTool Otel registration to allow for parallel execution.
+-   Updated dependencies.
+
 ## [1.0.0](https://github.com/privacysandbox/aggregation-service/compare/v0.12.0...v1.0.0) (2023-07-11)
 
 ### Changes

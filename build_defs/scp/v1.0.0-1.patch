@@ -10,3 +10,30 @@ index 47658ba8f..af3d7e5b7 100644
        "xray:PutTelemetryRecords",
        "xray:PutTraceSegments",
      ]
+diff --git a/build_defs/aws/kmstool/kmstool.patch b/build_defs/aws/kmstool/kmstool.patch
+index c607d9d97..edc6e242e 100644
+--- a/build_defs/aws/kmstool/kmstool.patch
++++ b/build_defs/aws/kmstool/kmstool.patch
+@@ -22,10 +22,10 @@ index f810459..272b39e 100644
+      /* Sets the AWS credentials and creates a KMS client with them. */
+      struct aws_credentials *new_credentials = aws_credentials_new(
+ diff --git a/containers/Dockerfile.al2 b/containers/Dockerfile.al2
+-index e166022..ed9ea21 100644
++index e166022..bde217f 100644
+ --- a/containers/Dockerfile.al2
+ +++ b/containers/Dockerfile.al2
+-@@ -1,15 +1,15 @@
++@@ -1,20 +1,20 @@
+  # Copyright 2020-2022 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  # SPDX-License-Identifier: Apache-2.0
+  
+@@ -44,3 +44,9 @@ index e166022..ed9ea21 100644
+  	go \
+  	ninja-build \
+  	doxygen
++ 
++-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.60
+++RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --profile minimal --default-toolchain 1.63
++ 
++ # We keep the build artifacts in the -build directory
++ WORKDIR /tmp/crt-builder
