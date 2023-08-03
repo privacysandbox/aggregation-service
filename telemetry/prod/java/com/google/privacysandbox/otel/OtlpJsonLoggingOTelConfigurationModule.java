@@ -57,7 +57,7 @@ public final class OtlpJsonLoggingOTelConfigurationModule extends OTelConfigurat
         OpenTelemetrySdk.builder()
             .setMeterProvider(sdkMeterProvider)
             .setTracerProvider(sdkTracerProvider)
-            .buildAndRegisterGlobal();
+            .build();
     return new OTelConfigurationImpl(oTel);
   }
 }

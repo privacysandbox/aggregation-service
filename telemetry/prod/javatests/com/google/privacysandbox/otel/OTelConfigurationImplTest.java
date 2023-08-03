@@ -79,7 +79,7 @@ public final class OTelConfigurationImplTest {
         OpenTelemetrySdk.builder()
             .setTracerProvider(sdkTracerProvider)
             .setMeterProvider(sdkMeterProvider)
-            .buildAndRegisterGlobal();
+            .build();
 
     oTelConfigurationImpl = new OTelConfigurationImpl(openTelemetry);
   }

@@ -19,7 +19,8 @@ exclude: (?x)^(
              .bazel_output/.*|
              builders/.*|
              javatests/testData/.*|
-             version.txt
+             version.txt|
+             .*\.patch
          )$
 
 fail_fast: true

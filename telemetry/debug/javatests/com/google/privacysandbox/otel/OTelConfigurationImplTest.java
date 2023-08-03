@@ -53,8 +53,6 @@ public final class OTelConfigurationImplTest {
 
   @Before
   public void setUp() {
-    // Reset the OpenTelemetry object for tests
-    OTelConfiguration.resetForTest();
 
     // Setup trace provider
     spanExporter = InMemorySpanExporter.create();
@@ -79,7 +77,7 @@ public final class OTelConfigurationImplTest {
         OpenTelemetrySdk.builder()
             .setTracerProvider(sdkTracerProvider)
             .setMeterProvider(sdkMeterProvider)
-            .buildAndRegisterGlobal();
+            .build();
 
     oTelConfigurationImpl = new OTelConfigurationImpl(openTelemetry);
   }
