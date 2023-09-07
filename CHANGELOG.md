@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.3](https://github.com/privacysandbox/aggregation-service/compare/v1.0.2...v1.0.3) (2023-09-05)
+
+### Changes
+
+-   Updated build container dependencies.
+-   Updated documentation for PRIVACY_BUDGET_EXHAUSTED error code.
+-   Updated aws-aggregation-service.md with a note about multiple NUMA nodes instances.
+-   Added sizing-guidance.md for sizing guidance.
+-   Corrected api.md url in error message referencing api.md file.
+
 ## [1.0.2](https://github.com/privacysandbox/aggregation-service/compare/v1.0.1...v1.0.2) (2023-08-03)
 
 ### Changes

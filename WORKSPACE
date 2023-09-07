@@ -315,7 +315,7 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 # Distroless image for running Java.
 container_pull(
     name = "java_base",
-    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-08-03.
+    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-09-05.
     digest = "sha256:052076466984fd56979c15a9c3b7433262b0ad9aae55bc0c53d1da8ffdd829c3",
     registry = "gcr.io",
     repository = "distroless/java17-debian11",
@@ -344,11 +344,11 @@ container_pull(
 # Pulls AWS Otel Collector
 container_pull(
     name = "aws_otel_collector",
-    # latest as of 2023-08-03.
-    digest = "sha256:4703de9f02fdb23602b2e9961aeb151e476775ce2ac38a401b4864c3f979644d",
+    # latest as of 2023-09-05.
+    digest = "sha256:2a6183f63e637b940584e8ebf5335bd9a2581ca16ee400e2e74b7b488825adb4",
     registry = "public.ecr.aws",
     repository = "aws-observability/aws-otel-collector",
-    tag = "v0.31.0",
+    tag = "v0.32.0",
 )
 
 #############
@@ -479,11 +479,11 @@ http_archive(
 # Needed for reproducibly building AL2 binaries (e.g. //cc/aws/proxy)
 container_pull(
     name = "amazonlinux_2",
-    # Latest as of 2023-08-03.
-    digest = "sha256:8493322bcbf25417bb2acf5de53302811c30558965fb9c91bd8dfe3a9db7a06e",
+    # Latest as of 2023-09-05.
+    digest = "sha256:993d82940dba5370065dd5afb99fab56cdaf9f7b88800e88ddbd622678a6d3ea",
     registry = "index.docker.io",
     repository = "amazonlinux",
-    tag = "2.0.20230719.0",
+    tag = "2.0.20230822.0",
 )
 
 ################################################################################

@@ -106,7 +106,7 @@ public abstract class OutputDomainProcessor {
                     String.format(
                         "No output domain provided in the location. : %s. Please refer to the API"
                             + " documentation for output domain parameters at"
-                            + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/API.md",
+                            + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/api.md",
                         outputDomainLocation)));
           }
           return domain;
