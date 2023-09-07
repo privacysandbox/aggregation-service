@@ -61,7 +61,7 @@ public final class JobValidator {
             "Job parameters for the job '%s' does not have output domain location specified in"
                 + " 'output_domain_bucket_name' and 'output_domain_blob_prefix' fields. Please"
                 + " refer to the API documentation for output domain parameters at"
-                + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/API.md",
+                + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/api.md",
             jobKey));
     String reportErrorThreshold =
         jobParams.getOrDefault(JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE, null);

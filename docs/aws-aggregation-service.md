@@ -143,6 +143,13 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
     -   alarm_notification_email: Email to receive alarm notifications. Requires confirmation
         subscription through sign up email sent to this address.
 
+    Note: If you want to use an instance type other than the default one specified in the
+    configuration, we recommend using an instance type with single NUMA node. Memory and CPUs for
+    the enclave must be from the [same NUMA node](https://docs.kernel.org/virt/ne_overview.html);
+    however, a single NUMA node on AWS EC2 has a maximum of 48 cores. Please refer to
+    [sizing guidance](/docs/sizing-guidance.md) for instance type recommendations. For AWS instance
+    specific questions, please contact AWS support.
+
 1.  **Skip this step if you use our prebuilt AMI and Lambda jars**
 
     If you [self-build your AMI and jars](/build-scripts/aws/README.md), you need to copy the

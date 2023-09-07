@@ -109,7 +109,7 @@ public class JobValidatorTest {
             "Job parameters for the job '' does not have output domain location specified in"
                 + " 'output_domain_bucket_name' and 'output_domain_blob_prefix' fields. Please"
                 + " refer to the API documentation for output domain parameters at"
-                + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/API.md");
+                + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/api.md");
   }
 
   @Test
