@@ -16,41 +16,66 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
+import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.JobProcessor;
+import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 /** Work processor that does nothing except capture the last job provided to it */
 public final class NoopJobProcessor implements JobProcessor {
 
+  public enum ExceptionToThrow {
+    AggregationJobProcess,
+    IllegalState,
+    Interrupted,
+    None
+  }
+
   private Optional<Job> lastProcessed = Optional.empty();
   private JobResult jobResultToReturn;
-  private boolean shouldThrowException;
+  private ExceptionToThrow toThrow;
 
   NoopJobProcessor() {
     jobResultToReturn = null;
-    shouldThrowException = false;
+    toThrow = ExceptionToThrow.None;
   }
 
   @Override
-  public JobResult process(Job Job) throws IllegalStateException {
-    if (shouldThrowException) {
-      throw new IllegalStateException("Was set to throw");
+  public JobResult process(Job Job)
+      throws ExecutionException,
+          InterruptedException,
+          AggregationJobProcessException,
+          IllegalStateException {
+    switch (toThrow) {
+      case AggregationJobProcess:
+        throw new AggregationJobProcessException(
+            AggregationWorkerReturnCode.INVALID_JOB, "Was set to throw");
+      case Interrupted:
+        throw new InterruptedException("Was set to throw");
+      case IllegalState:
+        throw new IllegalStateException("Was set to throw");
+      case None:
+        // Job processing will continue as normal
     }
     lastProcessed = Optional.of(Job);
     return jobResultToReturn;
   }
 
+  /** Gets the previous Job that was passed into process where an exception was not thrown */
   public Optional<Job> getLastProcessed() {
     return lastProcessed;
   }
 
+  /** Sets the JobResult to be returned by process() if an exception is not thrown */
   public void setJobResultToReturn(JobResult jobResultToReturn) {
     this.jobResultToReturn = jobResultToReturn;
   }
 
-  public void setShouldThrowException(boolean shouldThrowException) {
-    this.shouldThrowException = shouldThrowException;
+  /** Sets to throw an exception whose type is based on the parameter */
+  public void setShouldThrowException(ExceptionToThrow toThrow) {
+    this.toThrow = toThrow;
   }
 }

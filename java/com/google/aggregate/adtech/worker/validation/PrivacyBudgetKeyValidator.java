@@ -14,13 +14,19 @@
  * limitations under the License.
  */
 
-package com.google.aggregate.adtech.worker.exceptions;
+package com.google.aggregate.adtech.worker.validation;
 
-/** Exception caused when Domain processing fails. */
-public class DomainProcessException extends RuntimeException {
+import com.google.aggregate.adtech.worker.model.ErrorMessage;
+import com.google.aggregate.adtech.worker.model.SharedInfo;
+import java.util.Optional;
 
-  /** Builds a new DomainProcessException with cause. */
-  public DomainProcessException(Throwable cause) {
-    super(cause);
-  }
+/**
+ * PrivacyBudgetKeyValidator is used to validate SharedInfo fields used for generating privacy
+ * budget key for Reports.
+ */
+public interface PrivacyBudgetKeyValidator {
+  String NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING =
+      "One or more required fields in report's SharedInfo are null or invalid.";
+
+  Optional<ErrorMessage> validatePrivacyBudgetKey(SharedInfo sharedInfo);
 }

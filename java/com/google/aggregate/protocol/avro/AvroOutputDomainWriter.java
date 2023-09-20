@@ -49,7 +49,7 @@ public final class AvroOutputDomainWriter extends AvroRecordWriter<AvroOutputDom
       AvroOutputDomainRecord avroOutputDomainRecord, Schema avroSchema) {
     GenericRecord record = new GenericData.Record(avroSchema);
     ByteBuffer bucketBytes =
-        ByteBuffer.wrap(NumericConversions.toUnSignedByteArray(avroOutputDomainRecord.bucket()));
+        ByteBuffer.wrap(NumericConversions.toUnsignedByteArray(avroOutputDomainRecord.bucket()));
     record.put("bucket", bucketBytes);
     return record;
   }

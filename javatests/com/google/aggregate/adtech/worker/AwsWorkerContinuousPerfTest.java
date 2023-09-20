@@ -38,6 +38,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
@@ -47,6 +48,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class AwsWorkerContinuousPerfTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration completionTimeout = Duration.of(60, ChronoUnit.MINUTES);
   private static final String TESTING_BUCKET = "aggregation-service-testing";
@@ -103,6 +105,7 @@ public class AwsWorkerContinuousPerfTest {
             INPUT_REPORTS_PREFIX,
             TESTING_BUCKET,
             outputDataPath,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(TESTING_BUCKET),
             /* outputDomainPrefix= */ Optional.of(OUTPUT_DOMAIN_PREFIX));
 

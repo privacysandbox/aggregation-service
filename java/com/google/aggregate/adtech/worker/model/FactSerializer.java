@@ -37,8 +37,8 @@ public final class FactSerializer extends StdSerializer<Fact> {
   public void serialize(Fact fact, JsonGenerator jsonGenerator, SerializerProvider unused)
       throws IOException {
     // Convert bucket and value to bytes
-    byte[] bucketBytes = NumericConversions.toUnSignedByteArray(fact.bucket());
-    byte[] valueBytes = NumericConversions.toUnSignedByteArray(BigInteger.valueOf(fact.value()));
+    byte[] bucketBytes = NumericConversions.toUnsignedByteArray(fact.bucket());
+    byte[] valueBytes = NumericConversions.toUnsignedByteArray(BigInteger.valueOf(fact.value()));
 
     jsonGenerator.writeStartObject();
     jsonGenerator.writeBinaryField("bucket", bucketBytes);

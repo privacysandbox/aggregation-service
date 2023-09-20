@@ -21,7 +21,7 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.common.primitives.Bytes;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -222,7 +222,7 @@ public class NumericConversionsTest {
     BigInteger value = BigInteger.valueOf(-1);
 
     assertThrows(
-        IllegalArgumentException.class, () -> NumericConversions.toUnSignedByteArray(value));
+        IllegalArgumentException.class, () -> NumericConversions.toUnsignedByteArray(value));
   }
 
   @Test
@@ -230,25 +230,25 @@ public class NumericConversionsTest {
     BigInteger value = BigInteger.valueOf(1).shiftLeft(128); // 2^128
 
     assertThrows(
-        IllegalArgumentException.class, () -> NumericConversions.toUnSignedByteArray(value));
+        IllegalArgumentException.class, () -> NumericConversions.toUnsignedByteArray(value));
   }
 
   @Test
   public void testCreateBucketFromInt() {
     int a = 61;
     BigInteger bigInteger = NumericConversions.createBucketFromInt(a);
-    byte[] bytesInAvro = NumericConversions.toUnSignedByteArray(bigInteger);
-    String inTextFile = new String(bytesInAvro, StandardCharsets.US_ASCII);
+    byte[] bytesInAvro = NumericConversions.toUnsignedByteArray(bigInteger);
+    String inTextFile = NumericConversions.createStringFromByteArray(bytesInAvro);
 
-    assertThat("61").isEqualTo(inTextFile);
+    assertThat(String.valueOf(a)).isEqualTo(inTextFile);
   }
 
   @Test
   public void testCreateBucketFromString() {
     String a = "61"; // in  ascii it represents 1
     BigInteger bigInteger = NumericConversions.createBucketFromString(a);
-    byte[] bytesInAvro = NumericConversions.toUnSignedByteArray(bigInteger);
-    String inTextFile = new String(bytesInAvro, StandardCharsets.US_ASCII);
+    byte[] bytesInAvro = NumericConversions.toUnsignedByteArray(bigInteger);
+    String inTextFile = NumericConversions.createStringFromByteArray(bytesInAvro);
 
     assertThat("61").isEqualTo(inTextFile);
   }
@@ -303,6 +303,17 @@ public class NumericConversionsTest {
     assertThat(exception2).hasMessageThat().containsMatch("Invalid value for percentage: .*");
   }
 
+  @Test
+  public void convertBigInteger_noDataLoss() {
+    BigInteger bigInteger = new BigInteger("10000000");
+
+    byte[] bytes = NumericConversions.toUnsignedByteArray(bigInteger);
+    String str = NumericConversions.createStringFromByteArray(bytes);
+    BigInteger convertedBigInteger = NumericConversions.createBucketFromString(str);
+
+    assertThat(convertedBigInteger).isEqualTo(bigInteger);
+  }
+
   private void convertUInt32FromBytesAndAssert(byte[] bytes, long expected) {
     Long value = NumericConversions.uInt32FromBytes(bytes);
 
@@ -316,7 +327,7 @@ public class NumericConversionsTest {
   }
 
   private void convertToByteArrayAndAssert(BigInteger value, byte[] expected) {
-    byte[] bytes = NumericConversions.toUnSignedByteArray(value);
+    byte[] bytes = NumericConversions.toUnsignedByteArray(value);
 
     assertThat(Bytes.asList(bytes)).containsExactlyElementsIn(Bytes.asList(expected));
   }

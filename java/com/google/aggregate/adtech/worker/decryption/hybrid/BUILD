@@ -26,6 +26,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/decryption",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/selector",
         "//java/com/google/aggregate/adtech/worker/validation",

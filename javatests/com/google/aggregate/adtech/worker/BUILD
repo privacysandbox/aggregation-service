@@ -435,3 +435,27 @@ java_test(
         "//telemetry/common/java/com/google/privacysandbox/otel:otel_common",
     ],
 )
+
+java_test(
+    name = "WorkerPullWorkServiceTest",
+    srcs = ["WorkerPullWorkServiceTest.java"],
+    runtime_deps = [
+        "//telemetry/debug/java/com/google/privacysandbox/otel:otel_debug",
+    ],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/selector",
+        "//java/com/google/aggregate/adtech/worker/testing:fake_job_result_generator",
+        "//java/com/google/aggregate/adtech/worker/testing:noop_job_processor",
+        "//java/com/google/aggregate/perf",
+        "//java/com/google/aggregate/perf/export:no_op_exporter",
+        "//java/external:acai",
+        "//java/external:clients_jobclient_aws",
+        "//java/external:clients_jobclient_model",
+        "//java/external:google_truth",
+        "//java/external:guice",
+        "//java/external:mockito",
+        "//java/external:operator_protos",
+        "//telemetry/common/java/com/google/privacysandbox/otel:otel_common",
+    ],
+)

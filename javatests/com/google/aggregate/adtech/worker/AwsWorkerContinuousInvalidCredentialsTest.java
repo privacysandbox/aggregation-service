@@ -36,6 +36,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
@@ -45,6 +46,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class AwsWorkerContinuousInvalidCredentialsTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration completionTimeout = Duration.of(10, ChronoUnit.MINUTES);
   private static final String TESTING_BUCKET = "aggregation-service-testing";
@@ -85,6 +87,7 @@ public class AwsWorkerContinuousInvalidCredentialsTest {
             INPUT_DATA_PATH,
             TESTING_BUCKET,
             outputDataPath,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             Optional.of(TESTING_BUCKET),
             Optional.of(INPUT_DOMAIN_PATH));
     JsonNode result =

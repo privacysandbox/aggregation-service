@@ -16,7 +16,7 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
-import static com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionCipher.ASSOCIATED_DATA_PREFIX_WITH_NULL_TERMINATOR;
+import static com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionCipher.ASSOCIATED_DATA_PREFIX;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.io.ByteSource;
@@ -40,12 +40,13 @@ import java.util.Map;
 public class FakeDecryptionKeyService implements DecryptionKeyService {
 
   private boolean shouldThrow;
-  private boolean shouldThrowPermissionException;
+  private ErrorReason errorReason;
   private String lastKeyIdUsed;
   private Map<String, KeysetHandle> keyMap = new HashMap<String, KeysetHandle>();
 
   public FakeDecryptionKeyService() {
     this.shouldThrow = false;
+    this.errorReason = ErrorReason.UNKNOWN_ERROR;
   }
 
   /** Generates a new hybrid decryption key. */
@@ -61,14 +62,9 @@ public class FakeDecryptionKeyService implements DecryptionKeyService {
 
   @Override
   public HybridDecrypt getDecrypter(String keyId) throws KeyFetchException {
-    if (shouldThrowPermissionException) {
-      throw new KeyFetchException(
-          new RuntimeException("Permission Denied"), ErrorReason.PERMISSION_DENIED);
-    }
     if (shouldThrow) {
       throw new KeyFetchException(
-          new IllegalStateException("FakeDecryptionKeyService was set to throw"),
-          ErrorReason.UNKNOWN_ERROR);
+          new IllegalStateException("FakeDecryptionKeyService was set to throw"), errorReason);
     }
 
     lastKeyIdUsed = keyId;
@@ -82,10 +78,12 @@ public class FakeDecryptionKeyService implements DecryptionKeyService {
 
   public void setShouldThrow(boolean shouldThrow) {
     this.shouldThrow = shouldThrow;
+    this.errorReason = ErrorReason.UNKNOWN_ERROR;
   }
 
-  public void setShouldThrowPermissionException(boolean shouldThrowPermissionException) {
-    this.shouldThrowPermissionException = shouldThrowPermissionException;
+  public void setShouldThrow(boolean shouldThrow, ErrorReason errorReason) {
+    this.shouldThrow = shouldThrow;
+    this.errorReason = errorReason;
   }
 
   public String getLastKeyIdUsed() {
@@ -101,13 +99,8 @@ public class FakeDecryptionKeyService implements DecryptionKeyService {
   public ByteSource generateCiphertext(String keyId, ByteSource plaintext, String sharedInfo)
       throws KeyFetchException, GeneralSecurityException, IOException {
     var keysetHandle = getKeysetHandle(keyId).getPublicKeysetHandle();
-
     var hybridEncrypt = keysetHandle.getPrimitive(HybridEncrypt.class);
-    /**
-     * TODO(b/238842472) More info at-
-     * java/com/google/aggregate/simulation/encryption/RecordEncrypter.java
-     */
-    byte[] contextInfo = (ASSOCIATED_DATA_PREFIX_WITH_NULL_TERMINATOR + sharedInfo).getBytes(UTF_8);
+    byte[] contextInfo = (ASSOCIATED_DATA_PREFIX + sharedInfo).getBytes(UTF_8);
     return ByteSource.wrap(hybridEncrypt.encrypt(plaintext.read(), contextInfo));
   }
 }

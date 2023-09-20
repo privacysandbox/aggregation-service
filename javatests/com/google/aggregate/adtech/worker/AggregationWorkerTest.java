@@ -34,8 +34,7 @@ import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.Nois
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingL1Sensitivity;
 import com.google.aggregate.adtech.worker.testing.FakeJobResultGenerator;
 import com.google.aggregate.adtech.worker.testing.NoopJobProcessor;
-import com.google.privacysandbox.otel.OTelConfiguration;
-import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
+import com.google.aggregate.adtech.worker.testing.NoopJobProcessor.ExceptionToThrow;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
@@ -44,6 +43,8 @@ import com.google.common.util.concurrent.ServiceManager;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import com.google.privacysandbox.otel.OTelConfiguration;
+import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
 import com.google.scp.operator.cpio.jobclient.JobClient;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
@@ -157,7 +158,7 @@ public class AggregationWorkerTest {
   public void processorThrowing() {
     Job item = FakeJobGenerator.generate("foo");
     jobClient.setReturnConstant(item);
-    processor.setShouldThrowException(true);
+    processor.setShouldThrowException(ExceptionToThrow.IllegalState);
 
     runWorker();
 

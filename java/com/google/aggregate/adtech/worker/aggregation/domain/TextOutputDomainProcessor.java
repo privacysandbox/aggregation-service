@@ -17,7 +17,6 @@
 package com.google.aggregate.adtech.worker.aggregation.domain;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
@@ -26,7 +25,6 @@ import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
@@ -66,15 +64,15 @@ public final class TextOutputDomainProcessor extends OutputDomainProcessor {
     stopwatch.start();
     try (InputStream domainStream = blobStorageClient.getBlob(outputDomainLocation)) {
       byte[] bytes = ByteStreams.toByteArray(domainStream);
-      try (Stream<String> fileLines = ByteSource.wrap(bytes).asCharSource(US_ASCII).lines()) {
+      try (Stream<String> fileLines = NumericConversions.createStringFromByteArray(bytes).lines()) {
         ImmutableList<BigInteger> shard =
             fileLines.map(NumericConversions::createBucketFromString).collect(toImmutableList());
-        stopwatch.stop();
         return shard;
       }
-    } catch (IOException | BlobStorageClientException e) {
-      stopwatch.stop();
+    } catch (IOException | BlobStorageClientException | IllegalArgumentException e) {
       throw new DomainReadException(e);
+    } finally {
+      stopwatch.stop();
     }
   }
 }

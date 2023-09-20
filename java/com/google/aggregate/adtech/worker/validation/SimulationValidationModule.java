@@ -30,7 +30,9 @@ public final class SimulationValidationModule extends AbstractModule {
   protected void configure() {
     Multibinder<ReportValidator> validatorBinder =
         Multibinder.newSetBinder(binder(), ReportValidator.class);
-    // Add ReportForDebugValidator to enable debug mode filter in simulation to enable testing.
     validatorBinder.addBinding().to(ReportForDebugValidator.class);
+    validatorBinder.addBinding().to(SharedInfoReportIdValidator.class);
+    validatorBinder.addBinding().to(SupportedReportApiTypeValidator.class);
+    validatorBinder.addBinding().to(ReportPrivacyBudgetKeyValidator.class);
   }
 }

@@ -16,6 +16,7 @@
 
 package com.google.aggregate.adtech.worker;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
@@ -46,7 +47,7 @@ public class ErrorSummaryAggregatorTest {
 
   private static final DecryptionValidationResult NO_ERROR_RESULTS =
       DecryptionValidationResult.builder()
-          .setReport(FakeReportGenerator.generateWithParam(0, /* reportVersion */ ""))
+          .setReport(FakeReportGenerator.generateWithParam(0, /* reportVersion */ LATEST_VERSION))
           .build();
 
   private static final ImmutableList<DecryptionValidationResult> DECRYPTION_VALIDATION_RESULTS =

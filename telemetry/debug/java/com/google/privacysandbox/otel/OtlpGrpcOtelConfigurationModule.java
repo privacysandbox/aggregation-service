@@ -32,7 +32,9 @@ import io.opentelemetry.sdk.resources.Resource;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.export.BatchSpanProcessor;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
+import io.opentelemetry.sdk.trace.samplers.Sampler;
 import java.time.Duration;
+import java.util.Random;
 
 /** GRPC configuration module which would send metric to the Otel collector endpoint. */
 public final class OtlpGrpcOtelConfigurationModule extends OTelConfigurationModule {
@@ -44,6 +46,7 @@ public final class OtlpGrpcOtelConfigurationModule extends OTelConfigurationModu
       Duration duration,
       Resource resource,
       Clock clock) {
+    Sampler traceSampler = TraceSampler.create(/* sampleRatio= */ 0.001, new Random());
     SpanExporter spanExporter =
         OtlpGrpcSpanExporter.builder().setEndpoint(collectorEndpoint).build();
     MetricReader metricReader =
@@ -54,6 +57,7 @@ public final class OtlpGrpcOtelConfigurationModule extends OTelConfigurationModu
     SdkTracerProvider sdkTracerProvider =
         SdkTracerProvider.builder()
             .addSpanProcessor(BatchSpanProcessor.builder(spanExporter).build())
+            .setSampler(traceSampler)
             .setResource(resource)
             .setClock(clock)
             .setIdGenerator(AwsXrayIdGenerator.getInstance())

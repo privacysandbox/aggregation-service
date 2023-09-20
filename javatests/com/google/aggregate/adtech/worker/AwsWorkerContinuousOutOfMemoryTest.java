@@ -42,6 +42,7 @@ import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
@@ -56,6 +57,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class AwsWorkerContinuousOutOfMemoryTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
   private static final String DEFAULT_TEST_DATA_BUCKET = "aggregation-service-testing";
 
@@ -98,6 +100,7 @@ public class AwsWorkerContinuousOutOfMemoryTest {
             getTestDataBucket(),
             outputKey,
             /* debugRun= */ true,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName() + "_request_1",
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest1, COMPLETION_TIMEOUT);
@@ -121,6 +124,7 @@ public class AwsWorkerContinuousOutOfMemoryTest {
             getTestDataBucket(),
             outputKey,
             /* debugRun= */ true,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName() + "_request_2",
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     result = submitJobAndWaitForResult(createJobRequest2, COMPLETION_TIMEOUT);
@@ -132,7 +136,10 @@ public class AwsWorkerContinuousOutOfMemoryTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     assertThat(aggregatedFacts.size()).isGreaterThan(10);
   }

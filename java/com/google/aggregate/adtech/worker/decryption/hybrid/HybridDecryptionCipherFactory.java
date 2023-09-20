@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker.decryption.hybrid;
 
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipher;
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory;
+import com.google.aggregate.adtech.worker.exceptions.InternalServerException;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.cryptoclient.DecryptionKeyService;
@@ -53,6 +54,8 @@ public final class HybridDecryptionCipherFactory implements DecryptionCipherFact
       switch (e.getReason()) {
         case PERMISSION_DENIED:
           throw new AccessControlException("Permission denied in fetching decryption keys.");
+        case KEY_SERVICE_UNAVAILABLE:
+          throw new InternalServerException(e);
         default:
           throw new CipherCreationException(e, e.getReason());
       }

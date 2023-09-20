@@ -95,8 +95,19 @@ public final class AggregationEngine implements Consumer<Report> {
           PrivacyBudgetUnit.create(
               privacyBudgetKey.get(), report.sharedInfo().scheduledReportTime().truncatedTo(HOURS));
       privacyBudgetUnits.add(budgetUnitId);
-      report.payload().data().forEach(this::upsertAggregationForFact);
+      report.payload().data().stream()
+          .filter(fact -> !isNullFact(fact))
+          .forEach(this::upsertAggregationForFact);
     }
+  }
+
+  /**
+   * Returns true if the fact is a null fact. Null facts have both keys and values to 0.
+   *
+   * @param fact
+   */
+  private static boolean isNullFact(Fact fact) {
+    return fact.value() == 0 && fact.bucket().equals(BigInteger.ZERO);
   }
 
   // TODO: b/261728313 remove Optional from return type.

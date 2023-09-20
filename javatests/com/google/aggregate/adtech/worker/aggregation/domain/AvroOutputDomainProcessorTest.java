@@ -19,6 +19,9 @@ package com.google.aggregate.adtech.worker.aggregation.domain;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.WRITE;
 import static org.junit.Assert.assertThrows;
 
 import com.google.acai.Acai;
@@ -127,6 +130,15 @@ public class AvroOutputDomainProcessorTest {
         .containsMatch("No output domain provided in the location.*");
   }
 
+  @Test
+  public void readOutputDomain_notReadableOutputDomain_throwsException() throws Exception {
+    writeOutputDomainTextFile(outputDomainDirectory.resolve("domain_1.avro"), "bad domain");
+
+    ExecutionException error = assertThrows(ExecutionException.class, this::readOutputDomain);
+
+    assertThat(error).hasCauseThat().isInstanceOf(DomainReadException.class);
+  }
+
   private ImmutableSet<BigInteger> readOutputDomain()
       throws ExecutionException, InterruptedException {
     return outputDomainProcessor.readAndDedupDomain(outputDomainLocation).get();
@@ -140,6 +152,10 @@ public class AvroOutputDomainProcessorTest {
             .map(AvroOutputDomainRecord::create)
             .collect(toImmutableList());
     writer.writeRecords(ImmutableList.of(), records);
+  }
+
+  private void writeOutputDomainTextFile(Path outputDomainPath, String... keys) throws IOException {
+    Files.write(outputDomainPath, ImmutableList.copyOf(keys), US_ASCII, WRITE, CREATE);
   }
 
   private static final class TestEnv extends AbstractModule {

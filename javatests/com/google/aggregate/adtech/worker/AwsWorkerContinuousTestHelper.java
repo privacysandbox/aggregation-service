@@ -47,7 +47,6 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -167,22 +166,8 @@ public class AwsWorkerContinuousTestHelper {
             outputDataBlobBucket,
             outputDataBlobPrefix,
             jobId)
-        .putAllJobParameters(getJobParams(debugRun, outputDomainBucketName, outputDomainPrefix, 100))
-        .build();
-  }
-
-  public static CreateJobRequest createJobRequest(
-      String inputDataBlobBucket,
-      String inputDataBlobPrefix,
-      String outputDataBlobBucket,
-      String outputDataBlobPrefix,
-      Optional<String> outputDomainBucketName,
-      Optional<String> outputDomainPrefix) {
-    return createDefaultJobRequestBuilder(
-            inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
         .putAllJobParameters(
-            getJobParams(
-                false, outputDomainBucketName, outputDomainPrefix, /* reportErrorThreshold= */ 100))
+            getJobParams(debugRun, outputDomainBucketName, outputDomainPrefix, 100))
         .build();
   }
 
@@ -192,30 +177,16 @@ public class AwsWorkerContinuousTestHelper {
       String outputDataBlobBucket,
       String outputDataBlobPrefix,
       Boolean debugRun,
-      Optional<String> outputDomainBucketName,
-      Optional<String> outputDomainPrefix) {
-    return createDefaultJobRequestBuilder(
-            inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
-        .putAllJobParameters(
-            getJobParams(
-                debugRun,
-                outputDomainBucketName,
-                outputDomainPrefix,
-                /* reportErrorThreshold= */ 100))
-        .build();
-  }
-
-  public static CreateJobRequest createJobRequest(
-      String inputDataBlobBucket,
-      String inputDataBlobPrefix,
-      String outputDataBlobBucket,
-      String outputDataBlobPrefix,
-      Boolean debugRun,
+      String jobId,
       Optional<String> outputDomainBucketName,
       Optional<String> outputDomainPrefix,
       int reportErrorThresholdPercentage) {
     return createDefaultJobRequestBuilder(
-            inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
+            inputDataBlobBucket,
+            inputDataBlobPrefix,
+            outputDataBlobBucket,
+            outputDataBlobPrefix,
+            jobId)
         .putAllJobParameters(
             getJobParams(
                 debugRun,
@@ -223,19 +194,6 @@ public class AwsWorkerContinuousTestHelper {
                 outputDomainPrefix,
                 reportErrorThresholdPercentage))
         .build();
-  }
-
-  private static CreateJobRequest.Builder createDefaultJobRequestBuilder(
-      String inputDataBlobBucket,
-      String inputDataBlobPrefix,
-      String outputDataBlobBucket,
-      String outputDataBlobPrefix) {
-    return createDefaultJobRequestBuilder(
-        inputDataBlobBucket,
-        inputDataBlobPrefix,
-        outputDataBlobBucket,
-        outputDataBlobPrefix,
-        UUID.randomUUID().toString());
   }
 
   private static CreateJobRequest.Builder createDefaultJobRequestBuilder(

@@ -134,6 +134,17 @@ public class CborPayloadSerdesTest {
         Path.of(System.getenv("CBOR_REPORT_6_LOCATION")), expectedPayload);
   }
 
+  @Test
+  public void deserializeFromCborBytes_nullReport() throws Exception {
+    Payload expectedPayload =
+        Payload.builder()
+            .addFact(Fact.builder().setBucket(new BigInteger("0")).setValue(0).build())
+            .build();
+
+    readCborBytesFromFileAndAssert(
+        Path.of(System.getenv("CBOR_NULL_REPORT_LOCATION")), expectedPayload);
+  }
+
   private void readCborBytesFromFileAndAssert(Path path, Payload expectedPayload)
       throws IOException {
     ByteSource cborBytes = ByteSource.wrap(Files.readAllBytes(path));

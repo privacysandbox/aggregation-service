@@ -16,9 +16,6 @@
 
 package com.google.aggregate.privacy.budgeting;
 
-import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
-
 import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.common.hash.Hashing;
 import java.nio.charset.StandardCharsets;
@@ -30,13 +27,7 @@ public class AttributionReportingPrivacyBudgetKeyGenerator implements PrivacyBud
 
   @Override
   public Optional<String> generatePrivacyBudgetKey(SharedInfo sharedInfo) {
-    Optional<String> privacyBudgetKey = Optional.empty();
-    if (sharedInfo.version().equals(DEFAULT_VERSION)) {
-      privacyBudgetKey = sharedInfo.privacyBudgetKey();
-    } else if (sharedInfo.version().equals(VERSION_0_1)) {
-      privacyBudgetKey = Optional.of(createPrivacyBudgetKey(sharedInfo));
-    }
-    return privacyBudgetKey;
+    return Optional.of(createPrivacyBudgetKey(sharedInfo));
   }
 
   /**

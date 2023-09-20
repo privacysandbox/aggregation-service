@@ -16,7 +16,8 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
-import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.time.temporal.ChronoUnit.SECONDS;
@@ -26,6 +27,7 @@ import com.google.aggregate.adtech.worker.model.Payload;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.common.collect.ImmutableList;
+import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,17 +46,12 @@ public class FakeReportGenerator {
   /**
    * Generates a Fake Report of the following format:
    *
-   * <p>Payload: facts (Default Version) SharedInfo: reportingOrigin: "dummy", reportId: random
-   * UUID, privacyBudgetKey: "dummy", destination: "dummy", scheduledReportTime: 1 sec past epoch,
-   * sourceRegistrationTime: 1 sec past epoch
-   *
    * <p>(Latest Version) SharedInfo: reportId: auto-generated from the following values, version:
    * "0.1", api: "attribution-reporting", destination: "dummy", scheduledReportTime: 1 sec past
    * epoch, sourceRegistrationTime: 1 sec past epoch
    *
    * @param facts Facts to populate the Report's Payload with
-   * @param reportVersion Version of the report to generate. Empty String for default version,
-   *     anything else for latest.
+   * @param reportVersion Version of the report to generate.
    * @return Fake Report
    */
   public static Report generateWithFactList(ImmutableList<Fact> facts, String reportVersion) {
@@ -69,9 +66,6 @@ public class FakeReportGenerator {
    * Generates a Fake Report of the following format:
    *
    * <p>Payload: dummyValue number of Facts, each with bucket: dummyValue, value: dummyValue
-   * (Default Version) SharedInfo: reportingOrigin: dummyValue, reportId: random UUID,
-   * privacyBudgetKey: dummyValue, destination: dummyValue, scheduledReportTime: dummyValue sec past
-   * epoch, sourceRegistrationTime: dummyValue sec past epoch
    *
    * <p>(Latest Version) SharedInfo: reportId: auto-generated from the following values, version:
    * "0.1", api: "attribution-reporting", destination: dummyValue, scheduledReportTime: dummyValue
@@ -79,8 +73,7 @@ public class FakeReportGenerator {
    *
    * @param dummyValue a dummy integer value that is set as various applicable values in the
    *     returned Report. See above for where it is specifically used.
-   * @param reportVersion Version of the report to generate. Empty String for default version,
-   *     anything else for latest.
+   * @param reportVersion Version of the report to generate.
    * @return
    */
   public static Report generateWithParam(int dummyValue, String reportVersion) {
@@ -95,9 +88,6 @@ public class FakeReportGenerator {
    * Generates a Fake Report of the following format:
    *
    * <p>Payload: dummyValue number of Facts, each with bucket: dummyValue, value: dummyValue
-   * (Default Version) SharedInfo: reportingOrigin: dummyValue, reportId: reportVersion,
-   * privacyBudgetKey: dummyValue, destination: dummyValue, scheduledReportTime: dummyValue sec past
-   * epoch, sourceRegistrationTime: dummyValue sec past epoch
    *
    * <p>(Latest Version) SharedInfo: reportId: auto-generated from the following values, version:
    * "0.1", api: "attribution-reporting", destination: dummyValue, scheduledReportTime: dummyValue
@@ -106,8 +96,7 @@ public class FakeReportGenerator {
    * @param dummyValue a dummy integer value that is set as various applicable values in the
    *     returned Report. See above for where it is specifically used.
    * @param reportId Value to set the report's ID to.
-   * @param reportVersion Version of the report to generate. Empty String for default version,
-   *     anything else for latest.
+   * @param reportVersion Version of the report to generate.
    * @return
    */
   public static Report generateWithFixedReportId(
@@ -125,9 +114,12 @@ public class FakeReportGenerator {
    * @return A fake null report having key and value set to 0.
    */
   public static Report generateNullReport() {
-    Fact nullFact = FakeFactGenerator.generate(0, 0);
+    Fact nullFact = Fact.builder().setBucket(BigInteger.ZERO).setValue(0).build();
     return generate(
-        Optional.of(ImmutableList.of(nullFact)), Optional.empty(), Optional.empty(), "");
+        Optional.of(ImmutableList.of(nullFact)),
+        Optional.empty(),
+        Optional.empty(),
+        LATEST_VERSION);
   }
 
   /**
@@ -141,9 +133,7 @@ public class FakeReportGenerator {
    *     variables and the number of facts to generate for the payload if `facts` is not set.
    * @param reportId The reportId of the generated Fake Report. If not specified, the Fake Report's
    *     id will be set to a random UUID.
-   * @param reportVersion Version of the Fake Report to generate. If set to the default version (aka
-   *     an empty String), the privacyBudgetKey will be set to the String equivalent of dummyValue.
-   *     Otherwise, it will be auto-generated from other SharedInfo variables.
+   * @param reportVersion Version of the Fake Report to generate.
    * @return A Fake Report generated from the parameter data.
    */
   private static Report generate(
@@ -178,22 +168,18 @@ public class FakeReportGenerator {
                                 .collect(toImmutableList())))
                     .build());
 
-    SharedInfo.Builder sharedInfoBuilder =
+    SharedInfo sharedInfo =
         SharedInfo.builder()
             .setDestination(dummyStringActual)
             .setScheduledReportTime(dummyTime)
             .setSourceRegistrationTime(dummyTime)
             .setReportingOrigin(dummyStringActual)
-            .setReportId(reportId.orElse(String.valueOf(UUID.randomUUID())));
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setReportId(reportId.orElse(String.valueOf(UUID.randomUUID())))
+            .setVersion(reportVersion)
+            .build();
 
-    if (reportVersion.equals(DEFAULT_VERSION)) {
-      sharedInfoBuilder.setPrivacyBudgetKey(dummyStringActual);
-    } else {
-      /** SharedInfo in latest format */
-      sharedInfoBuilder.setVersion("0.1").setApi("attribution-reporting");
-    }
-
-    reportBuilder.setSharedInfo(sharedInfoBuilder.build());
+    reportBuilder.setSharedInfo(sharedInfo);
     return reportBuilder.build();
   }
 

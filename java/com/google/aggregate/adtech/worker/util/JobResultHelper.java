@@ -20,6 +20,7 @@ import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
+import com.google.common.base.Throwables;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
@@ -161,9 +162,26 @@ public final class JobResultHelper {
 
   /**
    * Returns a string containing the throwable.toString() value followed by stacktrace of throwable.
-   * If returnStackTraceInResponse is not enabled, it returns the throwable.toString() value.
+   * If returnStackTraceInResponse is not enabled, it returns the throwable.toString() value alone.
+   * If there is a root cause for this exception, then the stacktrace of the rootcause is also
+   * appended to this.
    */
   public String getDetailedExceptionMessage(Throwable throwable) {
+    StringBuilder builder = new StringBuilder();
+    builder.append(getExceptionStackTrace(throwable));
+
+    Throwable rootCause = Throwables.getRootCause(throwable);
+    if (rootCause != null && rootCause != throwable) {
+      builder.append("\nThe root cause is: ").append(getExceptionStackTrace(rootCause));
+    }
+    return builder.toString();
+  }
+
+  /**
+   * Returns a string containing the throwable.toString() value followed by stacktrace of throwable.
+   * If returnStackTraceInResponse is not enabled, it returns the throwable.toString() value.
+   */
+  private String getExceptionStackTrace(Throwable throwable) {
     StringBuilder builder = new StringBuilder();
     builder.append(throwable);
     if (returnStackTraceInResponse) {

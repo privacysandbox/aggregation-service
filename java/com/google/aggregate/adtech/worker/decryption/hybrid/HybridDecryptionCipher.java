@@ -16,8 +16,6 @@
 
 package com.google.aggregate.adtech.worker.decryption.hybrid;
 
-import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipher;
@@ -35,7 +33,6 @@ import java.security.GeneralSecurityException;
 public final class HybridDecryptionCipher implements DecryptionCipher {
 
   // Prefix for payloads intended for aggregate service
-  public static final String ASSOCIATED_DATA_PREFIX_WITH_NULL_TERMINATOR = "aggregation_service\0";
   public static final String ASSOCIATED_DATA_PREFIX = "aggregation_service";
 
   private final HybridDecrypt hybridDecrypt;
@@ -53,17 +50,7 @@ public final class HybridDecryptionCipher implements DecryptionCipher {
       ByteSource encryptedPayload, String sharedInfo, String sharedInfoVersion)
       throws PayloadDecryptionException {
     try {
-      String associatedDataString = "";
-
-      /*
-       * Only reports with empty version need NULL terminator in associatedDataString while decryption
-       */
-      if (sharedInfoVersion.isEmpty() || sharedInfoVersion.equals(DEFAULT_VERSION)) {
-        associatedDataString = ASSOCIATED_DATA_PREFIX_WITH_NULL_TERMINATOR + sharedInfo;
-      } else if (sharedInfoVersion.equals(VERSION_0_1)) {
-        associatedDataString = ASSOCIATED_DATA_PREFIX + sharedInfo;
-      }
-
+      String associatedDataString = ASSOCIATED_DATA_PREFIX + sharedInfo;
       byte[] associatedData = associatedDataString.getBytes(UTF_8);
       return ByteSource.wrap(hybridDecrypt.decrypt(encryptedPayload.read(), associatedData));
     } catch (GeneralSecurityException | IOException e) {

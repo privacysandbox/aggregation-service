@@ -16,7 +16,7 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
-import static com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionCipher.ASSOCIATED_DATA_PREFIX_WITH_NULL_TERMINATOR;
+import static com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionCipher.ASSOCIATED_DATA_PREFIX;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
@@ -83,8 +83,7 @@ public class FakeDecryptionKeyServiceTest {
 
     var decryptedText =
         hybridDecrypt.decrypt(
-            cipherText.read(),
-            (ASSOCIATED_DATA_PREFIX_WITH_NULL_TERMINATOR + contextInfo).getBytes(UTF_8));
+            cipherText.read(), (ASSOCIATED_DATA_PREFIX + contextInfo).getBytes(UTF_8));
     assertThat(decryptedText).isEqualTo(plaintext);
   }
 }

@@ -45,6 +45,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
@@ -61,6 +62,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class AwsWorkerContinuousSmokeTestChromeReports {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
@@ -102,6 +104,7 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
             inputKey,
             outputBucket,
             outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             Optional.of(outputDomainBucket),
             Optional.of(outputDomainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -150,6 +153,7 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
             outputBucket,
             outputKey,
             /* debugRun= */ true,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             Optional.of(outputDomainBucket),
             Optional.of(outputDomainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -157,8 +161,9 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
 
     // Read output avro from s3.
-    ImmutableList<AggregatedFact> aggregatedFacts = readResultsFromS3(
-        s3BlobStorageClient, avroResultsFileReader, outputBucket, getOutputFileName(outputKey));
+    ImmutableList<AggregatedFact> aggregatedFacts =
+        readResultsFromS3(
+            s3BlobStorageClient, avroResultsFileReader, outputBucket, getOutputFileName(outputKey));
 
     // NOTE: this result assertion assumes constant noising, if run with a worker using other
     // noising then this will fail.

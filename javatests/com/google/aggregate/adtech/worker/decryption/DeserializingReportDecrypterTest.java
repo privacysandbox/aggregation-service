@@ -16,6 +16,7 @@
 
 package com.google.aggregate.adtech.worker.decryption;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -77,7 +78,7 @@ public class DeserializingReportDecrypterTest {
 
   @Before
   public void setUp() throws Exception {
-    report = FakeReportGenerator.generateWithParam(1, /* reportVersion */ "");
+    report = FakeReportGenerator.generateWithParam(1, /* reportVersion */ LATEST_VERSION);
     sharedInfo = sharedInfoSerdes.reverse().convert(Optional.of(report.sharedInfo()));
     encryptReport();
   }
@@ -129,14 +130,17 @@ public class DeserializingReportDecrypterTest {
   public void decryptSingleReport_withSourceRegistrationTimeZero() throws Exception {
     Report report =
         FakeReportGenerator.generateWithFixedReportId(
-            /* dummyValue= */ 1, /* reportId= */ "report_id", /* reportVersion */ "");
+            /* dummyValue= */ 1, /* reportId= */ "report_id", /* reportVersion */ LATEST_VERSION);
     String sharedInfo =
-        "{\"source_registration_time\":0,\"version\":\"\",\"privacy_budget_key\":\"1\",\"reporting_origin\":\"1\",\"attribution_destination\":\"1\",\"report_id\":\"report_id\",\"scheduled_report_time\":1.000000000}";
+        "{\"source_registration_time\":0,\"version\":\"0.1\",\"reporting_origin\":\"1\",\"attribution_destination\":\"1\",\"report_id\":\"report_id\",\"scheduled_report_time\":1.000000000,"
+            + " \"api\":\"attribution-reporting\"}";
     EncryptedReport encryptedReport =
         EncryptedReport.builder()
             .setPayload(
                 encryptionCipher.encryptReport(
-                    payloadSerdes.reverse().convert(Optional.of(report.payload())), sharedInfo))
+                    payloadSerdes.reverse().convert(Optional.of(report.payload())),
+                    sharedInfo,
+                    LATEST_VERSION))
             .setKeyId(DECRYPTION_KEY_ID)
             .setSharedInfo(sharedInfo)
             .build();
@@ -151,14 +155,17 @@ public class DeserializingReportDecrypterTest {
   public void decryptSingleReport_withSourceRegistrationTimeNegative() throws Exception {
     Report report =
         FakeReportGenerator.generateWithFixedReportId(
-            /* dummyValue= */ 1, /* reportId= */ "report_id", /* reportVersion */ "");
+            /* dummyValue= */ 1, /* reportId= */ "report_id", /* reportVersion */ LATEST_VERSION);
     String sharedInfo =
-        "{\"source_registration_time\":-1,\"version\":\"\",\"privacy_budget_key\":\"1\",\"reporting_origin\":\"1\",\"attribution_destination\":\"1\",\"report_id\":\"report_id\",\"scheduled_report_time\":1.000000000}";
+        "{\"source_registration_time\":0,\"version\":\"0.1\",\"reporting_origin\":\"1\",\"attribution_destination\":\"1\",\"report_id\":\"report_id\",\"scheduled_report_time\":1.000000000,"
+            + " \"api\":\"attribution-reporting\"}";
     EncryptedReport encryptedReport =
         EncryptedReport.builder()
             .setPayload(
                 encryptionCipher.encryptReport(
-                    payloadSerdes.reverse().convert(Optional.of(report.payload())), sharedInfo))
+                    payloadSerdes.reverse().convert(Optional.of(report.payload())),
+                    sharedInfo,
+                    LATEST_VERSION))
             .setKeyId(DECRYPTION_KEY_ID)
             .setSharedInfo(sharedInfo)
             .build();
@@ -173,14 +180,17 @@ public class DeserializingReportDecrypterTest {
   public void decryptSingleReport_withNoSourceRegistrationTime() throws Exception {
     Report report =
         FakeReportGenerator.generateWithFixedReportId(
-            /* dummyValue= */ 1, /* reportId= */ "report_id", /* reportVersion */ "");
+            /* dummyValue= */ 1, /* reportId= */ "report_id", /* reportVersion */ LATEST_VERSION);
     String sharedInfo =
-        "{\"version\":\"\",\"privacy_budget_key\":\"1\",\"reporting_origin\":\"1\",\"attribution_destination\":\"1\",\"report_id\":\"report_id\",\"scheduled_report_time\":1.000000000}";
+        "{\"version\":\"0.1\",\"reporting_origin\":\"1\",\"attribution_destination\":\"1\",\"report_id\":\"report_id\",\"scheduled_report_time\":1.000000000,"
+            + " \"api\":\"attribution-reporting\"}";
     EncryptedReport encryptedReport =
         EncryptedReport.builder()
             .setPayload(
                 encryptionCipher.encryptReport(
-                    payloadSerdes.reverse().convert(Optional.of(report.payload())), sharedInfo))
+                    payloadSerdes.reverse().convert(Optional.of(report.payload())),
+                    sharedInfo,
+                    LATEST_VERSION))
             .setKeyId(DECRYPTION_KEY_ID)
             .setSharedInfo(sharedInfo)
             .build();
@@ -194,12 +204,14 @@ public class DeserializingReportDecrypterTest {
     ByteSource serializedPayload = payloadSerdes.reverse().convert(Optional.of(report.payload()));
     encryptedReport =
         EncryptedReport.builder()
-            .setPayload(encryptionCipher.encryptReport(serializedPayload, sharedInfo))
+            .setPayload(
+                encryptionCipher.encryptReport(serializedPayload, sharedInfo, LATEST_VERSION))
             .setKeyId(DECRYPTION_KEY_ID)
             .setSharedInfo(sharedInfo)
             .build();
     ByteSource garbageBytesEncryptedWithCorrectKey =
-        encryptionCipher.encryptReport(ByteSource.wrap(new byte[] {0x00, 0x01}), sharedInfo);
+        encryptionCipher.encryptReport(
+            ByteSource.wrap(new byte[] {0x00, 0x01}), sharedInfo, LATEST_VERSION);
     garbageReportEncryptedWithCorrectKey =
         EncryptedReport.builder()
             .setPayload(garbageBytesEncryptedWithCorrectKey)

@@ -16,6 +16,7 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.aggregate.adtech.worker.testing.FakeReportGenerator.generateWithFixedReportId;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
@@ -79,6 +80,6 @@ public class FakeRecordDecrypterTest {
     assertThat(report)
         .isEqualTo(
             generateWithFixedReportId(
-                2, report.sharedInfo().reportId().get(), /* reportVersion */ ""));
+                2, report.sharedInfo().reportId().get(), /* reportVersion */ LATEST_VERSION));
   }
 }

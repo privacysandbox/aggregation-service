@@ -43,10 +43,10 @@ import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.Crea
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
-import java.util.UUID;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.slf4j.Logger;
@@ -70,9 +70,6 @@ import software.amazon.awssdk.services.s3.S3Client;
  *   <li>Multiple report input files with version 0.1 of reports. Each file follows the naming
  *       format 10k_test_input_${number}.avro. Each test below that relies on version 0.1 reports is
  *       supposed to use one of the above input files each
- *   <li>One report input file with report version 0.0 which is the report version before 0.1 and
- *       can be generated with --generated_report_version ""` in SimulationRunner. The file follows
- *       the naming format 10k_test_input_v0_0.avro
  *   <li>One report input file with version 0.1 of reports and debug mode enabled on generated
  *       reports. The file follows the naming format 10k_attribution_report_test_input_debug.avro
  * </ul>
@@ -84,8 +81,6 @@ import software.amazon.awssdk.services.s3.S3Client;
  *   <li>Multiple domain files for version 0.1 of reports. Each file follows the naming format
  *       10k_test_domain_${number}.avro. Each test below that relies on version 0.1 reports is
  *       supposed to use one of the above domain files each that matches the report input.
- *   <li>One domain file for reports with version 0.0 which is the report version before 0.1. The
- *       file follows the naming format 10k_test_domain_v0_0.avro
  *   <li>One domain file for reports in version 0.1 with debug mode enabled on the reports. The file
  *       follows the naming format 10k_test_domain_debug.avro
  * </ul>
@@ -97,7 +92,6 @@ import software.amazon.awssdk.services.s3.S3Client;
  *
  * <ul>
  *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_${number}.avro"
- *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_v0_0.avro"
  *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_debug_nodebug.avro"
  *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_nodebug_nodebug.avro"
  *   <li>"s3://aggregation-service-testing/$KOKORO_BUILD_ID/test-outputs/10k_test_output_debug_debug.avro"
@@ -110,6 +104,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class AwsWorkerContinuousSmokeTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
@@ -174,6 +169,7 @@ public class AwsWorkerContinuousSmokeTest {
             inputKey,
             getTestDataBucket(),
             outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -186,50 +182,10 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
-
-    // TODO(b/228874552) assert that the output contains more values than just the output domain
-    // values
-    assertThat(aggregatedFacts.size()).isGreaterThan(10);
-  }
-
-  @Test
-  public void createJobE2EVersionZeroDotZeroTest() throws Exception {
-    // End to end testing:
-    // Follows same idea as createJobE2ETest but uses report with version 0.0 (the report version
-    // before v0.1) and old format shared info.
-
-    var inputKey =
-        String.format(
-            "%s/%s/test-inputs/10k_test_input_v0_0.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var domainKey =
-        String.format(
-            "%s/%s/test-inputs/10k_test_domain_v0_0.avro",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var outputKey =
-        String.format(
-            "%s/%s/test-outputs/10k_test_output_v0_0.avro",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-
-    CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+            s3BlobStorageClient,
+            avroResultsFileReader,
             getTestDataBucket(),
-            inputKey,
-            getTestDataBucket(),
-            outputKey,
-            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey));
-    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
-
-    assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
-    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
-        .isTrue();
-
-    // Read output avro from s3.
-    ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            getOutputFileName(outputKey));
 
     // TODO(b/228874552) assert that the output contains more values than just the output domain
     // values
@@ -261,6 +217,7 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             outputKey,
             /* debugRun= */ false,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -273,7 +230,10 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     // If the domainOptional is true, the aggregatedFact keys would be more than domain keys
     // Otherwise, aggregatedFact keys would be equal to domain keys
@@ -309,6 +269,7 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             outputKey,
             /* debugRun= */ true,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -321,7 +282,10 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     // The "isAtLeast" assert is set here to accommodate domainOptional(True/False) conditions.
     assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
@@ -329,7 +293,9 @@ public class AwsWorkerContinuousSmokeTest {
     // Read debug results avro from s3.
     ImmutableList<AggregatedFact> aggregatedDebugFacts =
         readDebugResultsFromS3(
-            s3BlobStorageClient, readerFactory, getTestDataBucket(),
+            s3BlobStorageClient,
+            readerFactory,
+            getTestDataBucket(),
             getOutputFileName(getDebugFilePrefix(outputKey)));
 
     // Debug facts count should be greater than or equal to the summary facts count because some
@@ -361,6 +327,7 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             outputKey,
             /* debugRun= */ true,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -398,14 +365,19 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     assertThat(aggregatedFacts.size()).isEqualTo(DEBUG_DOMAIN_KEY_SIZE);
 
     // Read debug result from s3.
     ImmutableList<AggregatedFact> aggregatedDebugFacts =
         readDebugResultsFromS3(
-            s3BlobStorageClient, readerFactory, getTestDataBucket(),
+            s3BlobStorageClient,
+            readerFactory,
+            getTestDataBucket(),
             getOutputFileName(getDebugFilePrefix(outputKey)));
 
     // Only contains keys in domain because all reports are filtered out.
@@ -437,6 +409,7 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             outputKey,
             /* debugRun= */ true,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey),
             /* reportErrorThresholdPercentage= */ 10);
@@ -502,6 +475,7 @@ public class AwsWorkerContinuousSmokeTest {
             inputKey,
             getTestDataBucket(),
             outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName() + "_request_1",
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest1, COMPLETION_TIMEOUT);
@@ -512,7 +486,10 @@ public class AwsWorkerContinuousSmokeTest {
         .isTrue();
 
     CreateJobRequest createJobRequest2 =
-        createJobRequest1.toBuilder().setJobRequestId(UUID.randomUUID().toString()).build();
+        createJobRequest1.toBuilder()
+            .setJobRequestId(
+                getClass().getSimpleName() + "::" + name.getMethodName() + "_request_2")
+            .build();
 
     result = submitJobAndWaitForResult(createJobRequest2, COMPLETION_TIMEOUT);
 
@@ -555,6 +532,7 @@ public class AwsWorkerContinuousSmokeTest {
             inputKey,
             getTestDataBucket(),
             outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -567,7 +545,10 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -606,6 +587,7 @@ public class AwsWorkerContinuousSmokeTest {
             inputKey,
             getTestDataBucket(),
             outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -618,7 +600,10 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -638,6 +623,7 @@ public class AwsWorkerContinuousSmokeTest {
         String.format(
             "%s/%s/test-outputs/10k_attribution_report_test_output_DebugJob_debugEnabled_PBSExhausted.avro",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+
     CreateJobRequest createJobRequest1 =
         AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
@@ -645,6 +631,7 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             outputKey,
             /* debugRun= */ true,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName() + "_request_1",
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest1, COMPLETION_TIMEOUT);
@@ -654,7 +641,10 @@ public class AwsWorkerContinuousSmokeTest {
     assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
         .isTrue();
     CreateJobRequest createJobRequest2 =
-        createJobRequest1.toBuilder().setJobRequestId(UUID.randomUUID().toString()).build();
+        createJobRequest1.toBuilder()
+            .setJobRequestId(
+                getClass().getSimpleName() + "::" + name.getMethodName() + "_request_2")
+            .build();
 
     result = submitJobAndWaitForResult(createJobRequest2, COMPLETION_TIMEOUT);
 
@@ -695,6 +685,7 @@ public class AwsWorkerContinuousSmokeTest {
             inputKey,
             getTestDataBucket(),
             outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -707,17 +698,20 @@ public class AwsWorkerContinuousSmokeTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFactsInShard1 =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(),
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
             getOutputFileName(outputKey, 1, 2));
     ImmutableList<AggregatedFact> aggregatedFactsInShard2 =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(),
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
             getOutputFileName(outputKey, 2, 2));
 
     assertThat(aggregatedFactsInShard1.size()).isGreaterThan(14000);
     assertThat(aggregatedFactsInShard2.size()).isGreaterThan(14000);
   }
-
 
   private static class TestEnv extends AbstractModule {
 

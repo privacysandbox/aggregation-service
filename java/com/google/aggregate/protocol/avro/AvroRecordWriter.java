@@ -21,18 +21,22 @@ import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Spliterator;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericRecord;
 
 /**
- * Reader that writes reports to an Avro file following the defined schema.
+ * Writer that writes reports to an Avro file following the defined schema.
  *
  * <p>The schema is provided by the schema supplier. For convenience, the writer object can be
  * created through the factory, which allows the supplier to be bound with dependency injection,
  * thus requiring only the input stream to be passed.
  */
 public abstract class AvroRecordWriter<Record> implements AutoCloseable {
+
+  private static final int RECORDS_PER_FLUSH = 10000;
 
   private final DataFileWriter<GenericRecord> avroWriter;
   private final OutputStream outStream;
@@ -70,6 +74,32 @@ public abstract class AvroRecordWriter<Record> implements AutoCloseable {
 
       streamWriter.flush();
       outStream.flush();
+    }
+  }
+
+  /** Writes out records with the given {@link AvroReportRecord} */
+  public void writeRecordsFromStream(
+      ImmutableList<MetadataElement> metadata, Stream<Record> records) throws IOException {
+    Schema schema = schemaSupplier.get();
+
+    metadata.forEach(meta -> avroWriter.setMeta(meta.key(), meta.value()));
+
+    try (DataFileWriter<GenericRecord> streamWriter = avroWriter.create(schema, outStream)) {
+      AtomicInteger flushCounter = new AtomicInteger(0);
+      records.forEach(
+          record -> {
+            try {
+              GenericRecord genericAvroRecord = serializeRecordToGeneric(record, schema);
+              streamWriter.append(genericAvroRecord);
+              if (flushCounter.incrementAndGet() >= RECORDS_PER_FLUSH) {
+                flushCounter.set(0);
+                streamWriter.flush();
+                outStream.flush();
+              }
+            } catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+          });
     }
   }
 

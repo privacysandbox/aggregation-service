@@ -19,6 +19,7 @@ package com.google.privacysandbox.otel;
 import com.google.errorprone.annotations.MustBeClosed;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.metrics.LongCounter;
+import java.util.Map;
 
 /**
  * Implements {@link OTelConfiguration} for production use. Provides concrete implementations for
@@ -46,6 +47,11 @@ public final class OTelConfigurationImpl implements OTelConfiguration {
   @Override
   public void createProdMemoryUtilizationGauge() {
     oTelConfigurationImplHelper.createMemoryUtilizationGauge();
+  }
+
+  @Override
+  public void createProdCPUUtilizationGauge() {
+    oTelConfigurationImplHelper.createCPUUtilizationGauge();
   }
 
   @Override
@@ -78,7 +84,19 @@ public final class OTelConfigurationImpl implements OTelConfiguration {
 
   @Override
   @MustBeClosed
+  public Timer createDebugTimerStarted(String name, Map attributeMap) {
+    return NOOP_TIMER;
+  }
+
+  @Override
+  @MustBeClosed
   public Timer createProdTimerStarted(String name, String jobID) {
     return oTelConfigurationImplHelper.createTimerStarted(name, jobID);
+  }
+
+  @Override
+  @MustBeClosed
+  public Timer createProdTimerStarted(String name, Map attributeMap) {
+    return oTelConfigurationImplHelper.createTimerStarted(name, attributeMap);
   }
 }

@@ -100,8 +100,52 @@ public class AvroDebugResultsWriterTest {
   }
 
   @Test
-  public void genericWriteTwoRecords() throws Exception {
+  public void genericWriteAsList() throws Exception {
     writeRecords(results);
+
+    ImmutableList<AvroDebugResultsRecord> records;
+    Optional<String> metaFoo;
+    Optional<String> metaAbc;
+    Optional<String> metaNonExistent;
+    try (AvroDebugResultsReader reader = getReader()) {
+      metaFoo = reader.getMeta("foo");
+      metaAbc = reader.getMeta("abc");
+      metaNonExistent = reader.getMeta("random");
+      records = reader.streamRecords().collect(toImmutableList());
+    }
+
+    assertThat(metaFoo).hasValue("bar");
+    assertThat(metaAbc).hasValue("xyz");
+    assertThat(metaNonExistent).isEmpty();
+    assertThat(records).hasSize(2);
+    assertThat(records).containsExactly(results.toArray());
+  }
+
+  @Test
+  public void genericWriteAsStream() throws Exception {
+    writeRecordsAsStream(results);
+
+    ImmutableList<AvroDebugResultsRecord> records;
+    Optional<String> metaFoo;
+    Optional<String> metaAbc;
+    Optional<String> metaNonExistent;
+    try (AvroDebugResultsReader reader = getReader()) {
+      metaFoo = reader.getMeta("foo");
+      metaAbc = reader.getMeta("abc");
+      metaNonExistent = reader.getMeta("random");
+      records = reader.streamRecords().collect(toImmutableList());
+    }
+
+    assertThat(metaFoo).hasValue("bar");
+    assertThat(metaAbc).hasValue("xyz");
+    assertThat(metaNonExistent).isEmpty();
+    assertThat(records).hasSize(2);
+    assertThat(records).containsExactly(results.toArray());
+  }
+
+  @Test
+  public void genericWriteAsSpliterator() throws Exception {
+    writeRecordsAsSpliterator(results);
 
     ImmutableList<AvroDebugResultsRecord> records;
     Optional<String> metaFoo;
@@ -130,6 +174,23 @@ public class AvroDebugResultsWriterTest {
     try (OutputStream outputAvroStream = Files.newOutputStream(avroFile, CREATE);
         AvroDebugResultsWriter reportWriter = writerFactory.create(outputAvroStream)) {
       reportWriter.writeRecords(metadata, avroDebugResultsRecord);
+    }
+  }
+
+  private void writeRecordsAsStream(ImmutableList<AvroDebugResultsRecord> avroDebugResultsRecord)
+      throws IOException {
+    try (OutputStream outputAvroStream = Files.newOutputStream(avroFile, CREATE);
+        AvroDebugResultsWriter reportWriter = writerFactory.create(outputAvroStream)) {
+      reportWriter.writeRecordsFromStream(metadata, avroDebugResultsRecord.stream());
+    }
+  }
+
+  private void writeRecordsAsSpliterator(
+      ImmutableList<AvroDebugResultsRecord> avroDebugResultsRecord) throws IOException {
+    try (OutputStream outputAvroStream = Files.newOutputStream(avroFile, CREATE);
+        AvroDebugResultsWriter reportWriter = writerFactory.create(outputAvroStream)) {
+      reportWriter.writeRecordsFromSpliterator(
+          metadata, avroDebugResultsRecord.spliterator(), avroDebugResultsRecord.size());
     }
   }
 

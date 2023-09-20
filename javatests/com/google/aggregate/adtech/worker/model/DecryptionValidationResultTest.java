@@ -16,6 +16,7 @@
 
 package com.google.aggregate.adtech.worker.model;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static org.junit.Assert.assertThrows;
 
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator;
@@ -31,7 +32,8 @@ public class DecryptionValidationResultTest {
   public void testValidationCanSetReport() {
     DecryptionValidationResult.Builder resultBuilder =
         DecryptionValidationResult.builder()
-            .setReport(FakeReportGenerator.generateWithParam(1, /* reportVersion */ ""));
+            .setReport(
+                FakeReportGenerator.generateWithParam(1, /* reportVersion */ LATEST_VERSION));
 
     resultBuilder.build();
 
@@ -61,7 +63,7 @@ public class DecryptionValidationResultTest {
   public void testValidationErrorThrownIfBothSet() {
     DecryptionValidationResult.Builder resultBuilder =
         DecryptionValidationResult.builder()
-            .setReport(FakeReportGenerator.generateWithParam(1, /* reportVersion */ ""))
+            .setReport(FakeReportGenerator.generateWithParam(1, /* reportVersion */ LATEST_VERSION))
             .addErrorMessage(
                 ErrorMessage.builder()
                     .setCategory(ErrorCounter.DECRYPTION_ERROR)

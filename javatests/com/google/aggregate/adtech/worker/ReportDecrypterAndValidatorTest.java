@@ -16,6 +16,7 @@
 
 package com.google.aggregate.adtech.worker;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.acai.Acai;
@@ -87,7 +88,7 @@ public class ReportDecrypterAndValidatorTest {
                     .sharedInfo()
                     .reportId()
                     .get(), /* reportVersion */
-                ""));
+                LATEST_VERSION));
   }
 
   @Test

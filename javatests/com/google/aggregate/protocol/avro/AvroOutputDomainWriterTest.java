@@ -87,8 +87,56 @@ public class AvroOutputDomainWriterTest {
   }
 
   @Test
-  public void genericWriteTwoRecords() throws Exception {
+  public void genericWriteAsList() throws Exception {
     writeRecords(
+        ImmutableList.of(
+            createAvroOutputDomainRecord(BigInteger.ONE),
+            createAvroOutputDomainRecord(BigInteger.TWO)));
+
+    ImmutableList<AvroOutputDomainRecord> records;
+    Optional<String> metaFoo;
+    Optional<String> metaAbc;
+    Optional<String> metaNonExistent;
+    try (AvroOutputDomainReader reader = getReader()) {
+      metaFoo = reader.getMeta("foo");
+      metaAbc = reader.getMeta("abc");
+      metaNonExistent = reader.getMeta("random");
+      records = reader.streamRecords().collect(toImmutableList());
+    }
+
+    assertThat(metaFoo).hasValue("bar");
+    assertThat(metaAbc).hasValue("xyz");
+    assertThat(metaNonExistent).isEmpty();
+    assertThat(records).hasSize(2);
+  }
+
+  @Test
+  public void genericWriteAsStream() throws Exception {
+    writeRecordsAsStream(
+        ImmutableList.of(
+            createAvroOutputDomainRecord(BigInteger.ONE),
+            createAvroOutputDomainRecord(BigInteger.TWO)));
+
+    ImmutableList<AvroOutputDomainRecord> records;
+    Optional<String> metaFoo;
+    Optional<String> metaAbc;
+    Optional<String> metaNonExistent;
+    try (AvroOutputDomainReader reader = getReader()) {
+      metaFoo = reader.getMeta("foo");
+      metaAbc = reader.getMeta("abc");
+      metaNonExistent = reader.getMeta("random");
+      records = reader.streamRecords().collect(toImmutableList());
+    }
+
+    assertThat(metaFoo).hasValue("bar");
+    assertThat(metaAbc).hasValue("xyz");
+    assertThat(metaNonExistent).isEmpty();
+    assertThat(records).hasSize(2);
+  }
+
+  @Test
+  public void genericWriteAsSpliterator() throws Exception {
+    writeRecordsAsSpliterator(
         ImmutableList.of(
             createAvroOutputDomainRecord(BigInteger.ONE),
             createAvroOutputDomainRecord(BigInteger.TWO)));
@@ -119,6 +167,23 @@ public class AvroOutputDomainWriterTest {
     try (OutputStream outputAvroStream = Files.newOutputStream(avroFile, CREATE);
         AvroOutputDomainWriter reportWriter = writerFactory.create(outputAvroStream)) {
       reportWriter.writeRecords(metadata, avroOutputDomainRecord);
+    }
+  }
+
+  private void writeRecordsAsStream(ImmutableList<AvroOutputDomainRecord> avroOutputDomainRecord)
+      throws IOException {
+    try (OutputStream outputAvroStream = Files.newOutputStream(avroFile, CREATE);
+        AvroOutputDomainWriter reportWriter = writerFactory.create(outputAvroStream)) {
+      reportWriter.writeRecordsFromStream(metadata, avroOutputDomainRecord.stream());
+    }
+  }
+
+  private void writeRecordsAsSpliterator(
+      ImmutableList<AvroOutputDomainRecord> avroOutputDomainRecord) throws IOException {
+    try (OutputStream outputAvroStream = Files.newOutputStream(avroFile, CREATE);
+        AvroOutputDomainWriter reportWriter = writerFactory.create(outputAvroStream)) {
+      reportWriter.writeRecordsFromSpliterator(
+          metadata, avroOutputDomainRecord.spliterator(), avroOutputDomainRecord.size());
     }
   }
 

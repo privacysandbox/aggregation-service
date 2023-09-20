@@ -62,6 +62,7 @@ POST
     "output_domain_bucket_name": <string>,
 
     // Reporting URL.
+    // This should be same as the reporting_origin present in the reports' shared_info.
     "attribution_report_to": <string>,
 
     // [Optional] differential privacy epsilon value to be used
@@ -118,6 +119,21 @@ These match the [Google Cloud Error Model](https://cloud.google.com/apis/design/
     }
 }
 ```
+
+# Job Request Validations
+
+These are the validations that are done before the aggregation begins.
+
+1. **Job request is valid**\
+   i. Job request is not empty.\
+   ii. Job should have a job_request_id.
+
+2. **Job parameters are valid**\
+   All required `request_info.job_parameters` map entries must be set with valid values. \
+   Please see the createJob request parameter documentation above for more details.
+
+Return code:
+[INVALID_JOB](java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L38)
 
 ### getJob Endpoint
 

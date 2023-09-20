@@ -46,6 +46,7 @@ import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
@@ -55,6 +56,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class AwsWorkerContinuousDiffTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration completionTimeout = Duration.of(60, ChronoUnit.MINUTES);
 
@@ -113,6 +115,7 @@ public class AwsWorkerContinuousDiffTest {
             inputKey,
             getTestDataBucket(),
             outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             Optional.of(getTestDataBucket()),
             Optional.of(domainKey));
 
@@ -125,7 +128,10 @@ public class AwsWorkerContinuousDiffTest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
     ImmutableList<AggregatedFact> goldenAggregatedFacts =
         readResultsFromS3(
             s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), goldenLocation);

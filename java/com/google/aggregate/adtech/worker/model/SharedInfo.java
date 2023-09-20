@@ -44,7 +44,6 @@ import java.util.Optional;
 @JsonSerialize(as = SharedInfo.class)
 public abstract class SharedInfo {
 
-  public static final String DEFAULT_VERSION = "";
   public static final String VERSION_0_1 = "0.1";
   public static final String LATEST_VERSION = VERSION_0_1;
   public static final boolean DEFAULT_DEBUG_MODE = false;
@@ -59,9 +58,7 @@ public abstract class SharedInfo {
       ImmutableSet.of(Payload.HISTOGRAM_OPERATION);
 
   public static Builder builder() {
-    return new AutoValue_SharedInfo.Builder()
-        .setVersion(DEFAULT_VERSION)
-        .setReportDebugMode(DEFAULT_DEBUG_MODE);
+    return new AutoValue_SharedInfo.Builder().setReportDebugMode(DEFAULT_DEBUG_MODE);
   }
 
   // TODO(b/263901045) : consider moving version to api specific code.
@@ -72,11 +69,6 @@ public abstract class SharedInfo {
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   @JsonProperty("api")
   public abstract Optional<String> api();
-
-  // Privacy Budget Key will not be passed in SharedInfo starting version 0.1
-  @JsonInclude(JsonInclude.Include.NON_EMPTY)
-  @JsonProperty("privacy_budget_key")
-  public abstract Optional<String> privacyBudgetKey();
 
   @JsonProperty("scheduled_report_time")
   public abstract Instant scheduledReportTime();
@@ -124,9 +116,6 @@ public abstract class SharedInfo {
 
     @JsonProperty("api")
     public abstract Builder setApi(String value);
-
-    @JsonProperty("privacy_budget_key")
-    public abstract Builder setPrivacyBudgetKey(String value);
 
     @JsonProperty("scheduled_report_time")
     public abstract Builder setScheduledReportTime(Instant value);

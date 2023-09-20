@@ -37,7 +37,7 @@ public final class PrivacyBudgetKeyGeneratorFactory {
   public static Optional<PrivacyBudgetKeyGenerator> getPrivacyBudgetKeyGenerator(
       Optional<String> api) {
     Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator = Optional.empty();
-    if (api.isEmpty() || (api.get().equals(ATTRIBUTION_REPORTING_API))) {
+    if (api.get().equals(ATTRIBUTION_REPORTING_API)) {
       privacyBudgetKeyGeneratorMap.putIfAbsent(
           ATTRIBUTION_REPORTING_API, new AttributionReportingPrivacyBudgetKeyGenerator());
       privacyBudgetKeyGenerator =

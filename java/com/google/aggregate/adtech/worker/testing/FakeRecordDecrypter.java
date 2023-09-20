@@ -16,7 +16,7 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
-import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory.CipherCreationException;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
@@ -56,7 +56,7 @@ public final class FakeRecordDecrypter implements RecordDecrypter {
       }
     }
 
-    return FakeReportGenerator.generateWithParam(idToGenerate, DEFAULT_VERSION);
+    return FakeReportGenerator.generateWithParam(idToGenerate, LATEST_VERSION);
   }
 
   public void setShouldThrow(boolean shouldThrow, ErrorReason reason) {

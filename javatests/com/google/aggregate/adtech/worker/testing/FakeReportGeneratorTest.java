@@ -16,6 +16,7 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.truth.Truth.assertThat;
 import static java.time.temporal.ChronoUnit.SECONDS;
@@ -26,6 +27,7 @@ import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator.FakeFactGenerator;
 import com.google.common.collect.ImmutableList;
+import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.Test;
@@ -34,8 +36,6 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class FakeReportGeneratorTest {
-
-  private static final String VERSION_0_1 = "0.1";
 
   @Test
   public void testGenerateFakeFact() {
@@ -49,76 +49,13 @@ public class FakeReportGeneratorTest {
   }
 
   @Test
-  public void testGenerate_FakeReportList_version_default() {
-    // Setup.
-    int id1 = 1;
-    int val1 = 1;
-
-    int id2 = 2;
-    int val2 = 2;
-
-    ImmutableList<Fact> factList =
-        ImmutableList.of(
-            FakeFactGenerator.generate(id1, val1), FakeFactGenerator.generate(id2, val2));
-
-    // Invocation.
-    Report generatedReport =
-        FakeReportGenerator.generateWithFactList(factList, /* reportVersion */ "");
-
-    // Assert.
-    assertThat(generatedReport)
-        .isEqualTo(
-            Report.builder()
-                .setSharedInfo(
-                    SharedInfo.builder()
-                        .setPrivacyBudgetKey(String.valueOf("dummy"))
-                        .setDestination("dummy")
-                        .setReportingOrigin("dummy")
-                        .setScheduledReportTime(Instant.EPOCH.plus(1, SECONDS))
-                        .setSourceRegistrationTime(Instant.EPOCH.plus(1, SECONDS))
-                        .setReportId(generatedReport.sharedInfo().reportId().get())
-                        .build())
-                .setPayload(
-                    Payload.builder()
-                        .addFact(FakeFactGenerator.generate(id1, val1))
-                        .addFact(FakeFactGenerator.generate(id2, val2))
-                        .build())
-                .build());
-  }
-
-  @Test
-  public void testGenerate_version_default() {
-    int id = 2;
-
-    Report generatedReport = FakeReportGenerator.generateWithParam(id, /* reportVersion */ "");
-
-    assertThat(generatedReport)
-        .isEqualTo(
-            Report.builder()
-                .setSharedInfo(
-                    SharedInfo.builder()
-                        .setPrivacyBudgetKey(String.valueOf(id))
-                        .setDestination(String.valueOf(id))
-                        .setReportingOrigin(String.valueOf(id))
-                        .setScheduledReportTime(Instant.EPOCH.plus(id, SECONDS))
-                        .setSourceRegistrationTime(Instant.EPOCH.plus(id, SECONDS))
-                        .setReportId(generatedReport.sharedInfo().reportId().get())
-                        .build())
-                .setPayload(
-                    Payload.builder()
-                        .addFact(FakeFactGenerator.generate(id, id))
-                        .addFact(FakeFactGenerator.generate(id, id))
-                        .build())
-                .build());
-  }
-
-  @Test
-  public void testGenerate_reportId_version_default() {
+  public void testGenerate_reportId_version_0_1() {
     String reportId = "My Report ID";
     int dummyValue = 2;
 
     Report generatedReport =
-        FakeReportGenerator.generateWithFixedReportId(dummyValue, reportId, /* reportVersion */ "");
+        FakeReportGenerator.generateWithFixedReportId(
+            dummyValue, reportId, /* reportVersion */ "0.1");
 
     assertThat(generatedReport.sharedInfo().reportId()).isEqualTo(Optional.of(reportId));
   }
@@ -137,7 +74,7 @@ public class FakeReportGeneratorTest {
             FakeFactGenerator.generate(id1, val1), FakeFactGenerator.generate(id2, val2));
 
     // Invocation.
-    Report generatedReport = FakeReportGenerator.generateWithFactList(factList, VERSION_0_1);
+    Report generatedReport = FakeReportGenerator.generateWithFactList(factList, LATEST_VERSION);
 
     // Assert.
     assertThat(generatedReport)
@@ -165,7 +102,7 @@ public class FakeReportGeneratorTest {
   public void testGenerate_version_0_1() {
     int id = 2;
 
-    Report generatedReport = FakeReportGenerator.generateWithParam(id, VERSION_0_1);
+    Report generatedReport = FakeReportGenerator.generateWithParam(id, LATEST_VERSION);
 
     assertThat(generatedReport)
         .isEqualTo(
@@ -198,14 +135,18 @@ public class FakeReportGeneratorTest {
             Report.builder()
                 .setSharedInfo(
                     SharedInfo.builder()
-                        .setPrivacyBudgetKey(String.valueOf("dummy"))
+                        .setVersion(LATEST_VERSION)
                         .setDestination("dummy")
                         .setReportingOrigin("dummy")
                         .setScheduledReportTime(Instant.EPOCH.plus(1, SECONDS))
                         .setSourceRegistrationTime(Instant.EPOCH.plus(1, SECONDS))
                         .setReportId(generatedReport.sharedInfo().reportId().get())
+                        .setApi(SharedInfo.ATTRIBUTION_REPORTING_API)
                         .build())
-                .setPayload(Payload.builder().addFact(FakeFactGenerator.generate(0, 0)).build())
+                .setPayload(
+                    Payload.builder()
+                        .addFact(Fact.builder().setBucket(BigInteger.ZERO).setValue(0).build())
+                        .build())
                 .build());
   }
 }

@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v1.0.0"  # version updated on 2023-07-06
+COORDINATOR_VERSION = "v1.2.0"  # version updated on 2023-08-28
 
 JACKSON_VERSION = "2.12.2"
 
@@ -67,7 +67,6 @@ git_repository(
     ],
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
-        "//build_defs/scp:v1.0.patch",
         "//build_defs/scp:coordinator.patch",
     ],
     tag = COORDINATOR_VERSION,

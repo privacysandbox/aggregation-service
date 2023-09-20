@@ -65,7 +65,7 @@ public class AvroDebugResultsReaderTest {
   private ImmutableList<MetadataElement> metadata;
 
   private static byte[] readBigInteger(BigInteger bucket) {
-    return NumericConversions.toUnSignedByteArray(bucket);
+    return NumericConversions.toUnsignedByteArray(bucket);
   }
 
   private List<DebugBucketAnnotation> debugAnnotationList1 =

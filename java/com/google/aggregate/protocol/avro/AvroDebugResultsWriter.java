@@ -44,7 +44,7 @@ public final class AvroDebugResultsWriter extends AvroRecordWriter<AvroDebugResu
       AvroDebugResultsRecord avroDebugResultRecord, Schema avroSchema) {
     GenericRecord record = new GenericData.Record(avroSchema);
     ByteBuffer bucketBytes =
-        ByteBuffer.wrap(NumericConversions.toUnSignedByteArray(avroDebugResultRecord.bucket()));
+        ByteBuffer.wrap(NumericConversions.toUnsignedByteArray(avroDebugResultRecord.bucket()));
 
     ImmutableList<EnumSymbol> enumList =
         avroDebugResultRecord.debugAnnotations().stream()

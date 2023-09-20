@@ -140,9 +140,9 @@ worker_aws_deployment(
         "--decryption_key_service",
         "AWS_ENCLAVE_CLI_MULTI_PARTY_DECRYPTION_KEY_SERVICE",
         "--coordinator_a_encryption_key_service_base_url",
-        "https://privatekeyservice-a.agg-1.aws.privacysandboxservices.com/v1alpha",
+        "https://privatekeyservice-a.msmt-1.aws.privacysandboxservices.com/v1alpha",
         "--coordinator_b_encryption_key_service_base_url",
-        "https://privatekeyservice-b.agg-2.aws.privacysandboxservices.com/v1alpha",
+        "https://privatekeyservice-b.msmt-2.aws.privacysandboxservices.com/v1alpha",
 
         # PBS related arguments
         "--privacy_budgeting",
@@ -150,15 +150,15 @@ worker_aws_deployment(
 
         # PBS endpoints
         "--coordinator_a_privacy_budgeting_endpoint",
-        "https://mp-pbs-a.agg-1.aws.privacysandboxservices.com/v1",
+        "https://mp-pbs-a.msmt-1.aws.privacysandboxservices.com/v1",
         "--coordinator_b_privacy_budgeting_endpoint",
-        "https://mp-pbs-b.agg-2.aws.privacysandboxservices.com/v1",
+        "https://mp-pbs-b.msmt-2.aws.privacysandboxservices.com/v1",
 
         # PBS auth endpoints
         "--coordinator_a_privacy_budget_service_auth_endpoint",
-        "https://auth.mp-pbs-a.agg-1.aws.privacysandboxservices.com/auth",
+        "https://auth.mp-pbs-a.msmt-1.aws.privacysandboxservices.com/auth",
         "--coordinator_b_privacy_budget_service_auth_endpoint",
-        "https://auth.mp-pbs-b.agg-2.aws.privacysandboxservices.com/auth",
+        "https://auth.mp-pbs-b.msmt-2.aws.privacysandboxservices.com/auth",
     ],
     jar_file = "/WorkerRunner_prod_deploy.jar",
     jvm_options = DEFAULT_JVM_OPTIONS,

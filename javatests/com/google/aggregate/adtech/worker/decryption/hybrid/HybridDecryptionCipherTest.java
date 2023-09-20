@@ -17,8 +17,7 @@
 package com.google.aggregate.adtech.worker.decryption.hybrid;
 
 import static com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionCipher.ASSOCIATED_DATA_PREFIX;
-import static com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionCipher.ASSOCIATED_DATA_PREFIX_WITH_NULL_TERMINATOR;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -62,12 +61,11 @@ public class HybridDecryptionCipherTest {
     String sharedInfo = "Context info";
     byte[] encryptedPayload =
         hybridEncryptData(
-            message.getBytes(UTF_8),
-            (ASSOCIATED_DATA_PREFIX_WITH_NULL_TERMINATOR + sharedInfo).getBytes(UTF_8));
+            message.getBytes(UTF_8), (ASSOCIATED_DATA_PREFIX + sharedInfo).getBytes(UTF_8));
 
     ByteSource decryptedPayload =
         hybridDecryptionCipher.decrypt(
-            ByteSource.wrap(encryptedPayload), sharedInfo, DEFAULT_VERSION);
+            ByteSource.wrap(encryptedPayload), sharedInfo, LATEST_VERSION);
 
     String decryptedMessage = new String(decryptedPayload.read(), UTF_8);
     assertThat(decryptedMessage).isEqualTo(message);
@@ -91,34 +89,11 @@ public class HybridDecryptionCipherTest {
             message.getBytes(UTF_8), (ASSOCIATED_DATA_PREFIX + sharedInfo).getBytes(UTF_8));
 
     ByteSource decryptedPayload =
-        hybridDecryptionCipher.decrypt(ByteSource.wrap(encryptedPayload), sharedInfo, VERSION_0_1);
+        hybridDecryptionCipher.decrypt(
+            ByteSource.wrap(encryptedPayload), sharedInfo, LATEST_VERSION);
 
     String decryptedMessage = new String(decryptedPayload.read(), UTF_8);
     assertThat(decryptedMessage).isEqualTo(message);
-  }
-
-  @Test
-  public void decryptionTestWithSharedInfoZeroDotOneWrongDecryptionVersion() throws Exception {
-    String message = Strings.repeat("This is a secret", 10000);
-    String sharedInfo =
-        SharedInfo.Builder.builder()
-            .setDestination("conversion.test")
-            .setReportingOrigin("report.test")
-            .setScheduledReportTime(Instant.EPOCH)
-            .setSourceRegistrationTime(Instant.EPOCH)
-            .setApi("attribution-reporting")
-            .setVersion(VERSION_0_1)
-            .build()
-            .toString();
-    byte[] encryptedPayload =
-        hybridEncryptData(
-            message.getBytes(UTF_8), (ASSOCIATED_DATA_PREFIX + sharedInfo).getBytes(UTF_8));
-
-    assertThrows(
-        PayloadDecryptionException.class,
-        () ->
-            hybridDecryptionCipher.decrypt(
-                ByteSource.wrap(encryptedPayload), sharedInfo, DEFAULT_VERSION));
   }
 
   /** Test that an exception is thrown if the sharedInfo does not match */
@@ -136,7 +111,7 @@ public class HybridDecryptionCipherTest {
         PayloadDecryptionException.class,
         () ->
             hybridDecryptionCipher.decrypt(
-                ByteSource.wrap(encryptedPayload), decryptionSharedInfo, DEFAULT_VERSION));
+                ByteSource.wrap(encryptedPayload), decryptionSharedInfo, LATEST_VERSION));
   }
 
   /** Test that an exception is thrown the wrong key is used */
@@ -155,7 +130,7 @@ public class HybridDecryptionCipherTest {
         PayloadDecryptionException.class,
         () ->
             hybridDecryptionCipher.decrypt(
-                ByteSource.wrap(encryptedPayload), sharedInfo, DEFAULT_VERSION));
+                ByteSource.wrap(encryptedPayload), sharedInfo, LATEST_VERSION));
   }
 
   private byte[] hybridEncryptData(byte[] plaintextPayload, byte[] contextInfo) throws Exception {

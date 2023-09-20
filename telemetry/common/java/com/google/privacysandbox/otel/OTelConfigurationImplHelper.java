@@ -17,10 +17,15 @@
 package com.google.privacysandbox.otel;
 
 import com.google.errorprone.annotations.MustBeClosed;
+import com.sun.management.OperatingSystemMXBean;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
+import java.lang.management.ManagementFactory;
+import java.util.Map;
 
 /** Implements helper methods for {@link OTelConfiguration} implementations */
 public final class OTelConfigurationImplHelper {
@@ -61,6 +66,21 @@ public final class OTelConfigurationImplHelper {
             });
   }
 
+  /** Creates a gauge meter that periodically exports CPU utilization */
+  public void createCPUUtilizationGauge() {
+    meter
+        .gaugeBuilder("process.runtime.jvm.CPU.utilization")
+        .setDescription("CPU utilization")
+        .setUnit("percent")
+        .buildWithCallback(
+            measurement -> {
+              OperatingSystemMXBean osBean =
+                  ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
+              Double CpuUsage = osBean.getProcessCpuLoad() * 100;
+              measurement.record(CpuUsage);
+            });
+  }
+
   /**
    * Creates a {@link LongCounter} meter
    *
@@ -79,7 +99,7 @@ public final class OTelConfigurationImplHelper {
    */
   @MustBeClosed
   public Timer createTimerStarted(String name) {
-    SpanBuilder sp = tracer.spanBuilder(name);
+    SpanBuilder sp = tracer.spanBuilder(name).setNoParent();
     return new TimerImpl(sp);
   }
 
@@ -92,7 +112,22 @@ public final class OTelConfigurationImplHelper {
    */
   @MustBeClosed
   public Timer createTimerStarted(String name, String jobID) {
-    SpanBuilder sp = tracer.spanBuilder(name);
+    SpanBuilder sp = tracer.spanBuilder(name).setNoParent();
     return new TimerImpl(sp, jobID);
+  }
+
+  /**
+   * Creates a {@link Timer} and adds attributes to the span attributes
+   *
+   * @param name {@link String}
+   * @param attributesMap {@link Map}
+   * @return {@link Timer}
+   */
+  @MustBeClosed
+  public Timer createTimerStarted(String name, Map<String, String> attributesMap) {
+    AttributesBuilder attributes = Attributes.empty().toBuilder();
+    attributesMap.forEach((k, v) -> attributes.put(k, v));
+    SpanBuilder sp = tracer.spanBuilder(name).setNoParent();
+    return new TimerImpl(sp, attributes.build());
   }
 }

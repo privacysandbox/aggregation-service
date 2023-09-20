@@ -20,6 +20,8 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
+import com.google.aggregate.adtech.worker.testing.NoopJobProcessor.ExceptionToThrow;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
@@ -60,10 +62,26 @@ public class NoopJobProcessorTest {
   }
 
   @Test
-  public void throwsWhenSetTo() throws Exception {
+  public void throwsIllegalStateExceptionWhenSetTo() throws Exception {
     Job item = FakeJobGenerator.generate("foo");
-    processor.setShouldThrowException(true);
+    processor.setShouldThrowException(ExceptionToThrow.IllegalState);
 
     assertThrows(IllegalStateException.class, () -> processor.process(item));
+  }
+
+  @Test
+  public void throwsAggregationJobProcessExceptionWhenSetTo() throws Exception {
+    Job item = FakeJobGenerator.generate("foo");
+    processor.setShouldThrowException(ExceptionToThrow.AggregationJobProcess);
+
+    assertThrows(AggregationJobProcessException.class, () -> processor.process(item));
+  }
+
+  @Test
+  public void throwsInterruptedStateExceptionWhenSetTo() throws Exception {
+    Job item = FakeJobGenerator.generate("foo");
+    processor.setShouldThrowException(ExceptionToThrow.Interrupted);
+
+    assertThrows(InterruptedException.class, () -> processor.process(item));
   }
 }

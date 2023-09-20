@@ -16,6 +16,7 @@
 
 package com.google.aggregate.adtech.worker.testing;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 
@@ -49,8 +50,8 @@ public class FakeValidatorTest {
   public void setUp() {
     reportId1 = String.valueOf(UUID.randomUUID());
     reportId2 = String.valueOf(UUID.randomUUID());
-    report1 = FakeReportGenerator.generateWithFixedReportId(1, reportId1, "");
-    report2 = FakeReportGenerator.generateWithFixedReportId(1, reportId2, "");
+    report1 = FakeReportGenerator.generateWithFixedReportId(1, reportId1, LATEST_VERSION);
+    report2 = FakeReportGenerator.generateWithFixedReportId(1, reportId2, LATEST_VERSION);
     ctx = FakeJobGenerator.generate("foo");
 
     fakeValidator = new FakeValidator();

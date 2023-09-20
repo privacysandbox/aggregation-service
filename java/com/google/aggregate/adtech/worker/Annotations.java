@@ -72,11 +72,6 @@ public final class Annotations {
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface FailJobOnPbsException {}
-
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
   @interface DebugWriter {}
 
   @BindingAnnotation

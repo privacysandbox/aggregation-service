@@ -63,7 +63,7 @@ public class AvroOutputDomainReaderTest {
   private ImmutableList<MetadataElement> metadata;
 
   private static byte[] readBigInteger(BigInteger bucket) {
-    return NumericConversions.toUnSignedByteArray(bucket);
+    return NumericConversions.toUnsignedByteArray(bucket);
   }
 
   @Before

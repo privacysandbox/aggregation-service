@@ -161,16 +161,40 @@ public class JobResultHelperTest {
         jobResultHelper.createJobResultOnException(job, aggregationJobProcessException);
 
     // Assert
-    StackTraceElement[] stackTrace = aggregationJobProcessException.getStackTrace();
-    StringBuilder expectedReturnMessage =
-        new StringBuilder(aggregationJobProcessException.toString()).append(" \n ");
-    expectedReturnMessage.append(
-        String.join(
-            " \n ",
-            Arrays.stream(stackTrace)
-                .limit(NUMBER_OF_STACK_TRACE_LINES)
-                .map(element -> element.toString())
-                .collect(ImmutableList.toImmutableList())));
+    StringBuilder expectedReturnMessage = getExceptionStackTrace(aggregationJobProcessException);
+    JobResult expectedJobResult =
+        JobResult.builder()
+            .setJobKey(job.jobKey())
+            .setResultInfo(
+                ResultInfo.newBuilder()
+                    .setErrorSummary(ErrorSummary.getDefaultInstance())
+                    .setReturnCode(AggregationWorkerReturnCode.INTERNAL_ERROR.name())
+                    .setReturnMessage(expectedReturnMessage.toString())
+                    .setFinishedAt(TIMESTAMP)
+                    .build())
+            .build();
+    assertThat(actualJobResult).isEqualTo(expectedJobResult);
+  }
+
+  @Test
+  public void createErrorJobResult_returnsJobResultWithStackTraceAndRootCause() {
+    NullPointerException rootException = new NullPointerException("Null pointer.");
+    IllegalStateException tailMinus2Exception =
+        new IllegalStateException("This is an illegal state 1", rootException);
+    IllegalStateException tailMinus1Exception =
+        new IllegalStateException("This is an illegal state 2", tailMinus2Exception);
+    AggregationJobProcessException tailException =
+        new AggregationJobProcessException(
+            AggregationWorkerReturnCode.INTERNAL_ERROR,
+            "Resistance is futile!",
+            tailMinus1Exception);
+
+    JobResult actualJobResult = jobResultHelper.createJobResultOnException(job, tailException);
+
+    StringBuilder expectedReturnMessage = getExceptionStackTrace(tailException);
+    expectedReturnMessage
+        .append("\nThe root cause is: ")
+        .append(getExceptionStackTrace(rootException));
     JobResult expectedJobResult =
         JobResult.builder()
             .setJobKey(job.jobKey())
@@ -267,5 +291,18 @@ public class JobResultHelperTest {
                     .build())
             .build();
     assertThat(actualJobResult).isEqualTo(expectedJobResult);
+  }
+
+  private static StringBuilder getExceptionStackTrace(Throwable throwable) {
+    StackTraceElement[] stackTrace = throwable.getStackTrace();
+    StringBuilder expectedReturnMessage = new StringBuilder(throwable.toString()).append(" \n ");
+    expectedReturnMessage.append(
+        String.join(
+            " \n ",
+            Arrays.stream(stackTrace)
+                .limit(NUMBER_OF_STACK_TRACE_LINES)
+                .map(element -> element.toString())
+                .collect(ImmutableList.toImmutableList())));
+    return expectedReturnMessage;
   }
 }

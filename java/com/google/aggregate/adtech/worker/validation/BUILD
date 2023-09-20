@@ -23,6 +23,27 @@ java_library(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/validation/v01",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:clients_jobclient_model",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:operator_protos",
+        "//java/external:shared_model",
+    ],
+)
+
+java_library(
+    name = "privacy_budget_key_validator",
+    srcs = glob([
+        "PrivacyBudgetKeyValidator.java",
+        "ValidatorHelper.java",
+    ]),
+    javacopts = ["-Xep:Var"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/util",
         "//java/external:clients_jobclient_model",
         "//java/external:guava",
         "//java/external:guice",

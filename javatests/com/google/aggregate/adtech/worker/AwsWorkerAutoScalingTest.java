@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
@@ -46,6 +47,7 @@ import software.amazon.awssdk.services.autoscaling.model.Instance;
 @RunWith(JUnit4.class)
 public class AwsWorkerAutoScalingTest {
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration SUBMIT_JOB_TIMEOUT = Duration.of(1, ChronoUnit.SECONDS);
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
@@ -106,6 +108,7 @@ public class AwsWorkerAutoScalingTest {
             INPUT_DATA_PATH,
             DATA_BUCKET,
             outputDataPath,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName() + "_" + jobCount,
             Optional.of(DATA_BUCKET),
             Optional.of(INPUT_DOMAIN_PATH));
     submitJob(createJobRequest, SUBMIT_JOB_TIMEOUT, false);

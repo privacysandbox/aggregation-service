@@ -23,6 +23,7 @@ import com.google.acai.Acai;
 import com.google.acai.TestScoped;
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipher;
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory.CipherCreationException;
+import com.google.aggregate.adtech.worker.exceptions.InternalServerException;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.testing.FakeDecryptionKeyService;
 import com.google.common.io.ByteSource;
@@ -74,7 +75,7 @@ public class HybridDecryptionCipherFactoryTest {
             .setKeyId(UUID.randomUUID().toString())
             .setSharedInfo("")
             .build();
-    fakeDecryptionKeyService.setShouldThrowPermissionException(true);
+    fakeDecryptionKeyService.setShouldThrow(true, ErrorReason.PERMISSION_DENIED);
 
     assertThrows(
         AccessControlException.class,
@@ -97,6 +98,21 @@ public class HybridDecryptionCipherFactoryTest {
 
     assertThat(decryptionCipher).isInstanceOf(HybridDecryptionCipher.class);
     assertThat(fakeDecryptionKeyService.getLastKeyIdUsed()).isEqualTo(keyId);
+  }
+
+  @Test
+  public void decryptionCipherFor_throwsServiceUnavailable() {
+    EncryptedReport encryptedReport =
+        EncryptedReport.builder()
+            .setPayload(ByteSource.empty())
+            .setKeyId(UUID.randomUUID().toString())
+            .setSharedInfo("")
+            .build();
+    fakeDecryptionKeyService.setShouldThrow(true, ErrorReason.KEY_SERVICE_UNAVAILABLE);
+
+    assertThrows(
+        InternalServerException.class,
+        () -> hybridDecryptionCipherFactory.decryptionCipherFor(encryptedReport));
   }
 
   private static final class TestEnv extends AbstractModule {

@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.metrics.LongCounter;
@@ -46,6 +47,10 @@ public final class OTelConfigurationImplTest {
 
   private static final Clock CLOCK = Clock.getDefault();
   private static final AttributeKey<String> JOB_ID_KEY = AttributeKey.stringKey("job-id");
+  // SPAN_ATTRIBUTES map allows user to add multiple attributes such as job-id or report-id to span.
+  private static final ImmutableMap<String, String> SPAN_ATTRIBUTES =
+      ImmutableMap.of("job-id", "testJob", "report-id", "abcd");
+  private static final String ROOT_PARENT_SPAN_ID = "0000000000000000";
   private final Resource RESOURCE = Resource.getDefault();
   private InMemorySpanExporter spanExporter;
   private InMemoryMetricReader metricReader;
@@ -167,10 +172,20 @@ public final class OTelConfigurationImplTest {
     assertGaugeNonNull(gaugeName, "percent");
   }
 
+  @Test
+  public void createProdCPUUtilizationGauge_isNotNull() {
+    String gaugeName = "process.runtime.jvm.CPU.utilization";
+
+    oTelConfigurationImpl.createProdCPUUtilizationGauge();
+
+    assertGaugeNonNull(gaugeName, "percent");
+  }
+
   private void assertTimerNames(ImmutableList<String> timerNames) {
     List<SpanData> spanItems = spanExporter.getFinishedSpanItems();
     assertThat(spanItems).isNotNull();
-    ImmutableList<String> spanNames = spanItems.stream().map(SpanData::getName).collect(toImmutableList());
+    ImmutableList<String> spanNames =
+        spanItems.stream().map(SpanData::getName).collect(toImmutableList());
     assertThat(spanNames).containsExactlyElementsIn(timerNames).inOrder();
   }
 
@@ -218,6 +233,31 @@ public final class OTelConfigurationImplTest {
   }
 
   @Test
+  public void createDebugTimerStarted_setsAttributesWhenProvided() {
+    String timerName = "debugTimer";
+
+    try (Timer ignore =
+        oTelConfigurationImpl.createDebugTimerStarted(timerName, SPAN_ATTRIBUTES)) {}
+    List<SpanData> spanItems = spanExporter.getFinishedSpanItems();
+
+    assertThat(spanItems).isEmpty();
+  }
+
+  @Test
+  public void createProdTimerStarted_setsAttributesWhenProvided() {
+    String timerName = "prodTimer";
+
+    try (Timer ignore = oTelConfigurationImpl.createProdTimerStarted(timerName, SPAN_ATTRIBUTES)) {}
+    SpanData spanData = spanExporter.getFinishedSpanItems().get(0);
+
+    assertThat(spanData.getName()).isEqualTo(timerName);
+    assertThat(spanData.getAttributes().get(AttributeKey.stringKey("job-id")))
+        .isEqualTo(SPAN_ATTRIBUTES.get("job-id"));
+    assertThat(spanData.getAttributes().get(AttributeKey.stringKey("report-id")))
+        .isEqualTo(SPAN_ATTRIBUTES.get("report-id"));
+  }
+
+  @Test
   public void createDebugTimerStarted_isEmptyInNested() {
     String timerName1 = "debugTimer1";
     String timerName2 = "debugTimer2";
@@ -237,6 +277,10 @@ public final class OTelConfigurationImplTest {
     }
     try (Timer ignored = oTelConfigurationImpl.createProdTimerStarted("prodTimer3")) {}
 
+    SpanData spanData0 = spanExporter.getFinishedSpanItems().get(0);
+    SpanData spanData1 = spanExporter.getFinishedSpanItems().get(1);
+    assertThat(spanData0.getParentSpanId()).isEqualTo(ROOT_PARENT_SPAN_ID);
+    assertThat(spanData1.getParentSpanId()).isEqualTo(ROOT_PARENT_SPAN_ID);
     assertTimerNames(ImmutableList.of("prodTimer2", "prodTimer1", "prodTimer3"));
   }
 

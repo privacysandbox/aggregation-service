@@ -91,7 +91,7 @@ public final class LocalAvroResultFileWriter implements LocalResultFileWriter {
   private GenericRecord aggregatedFactToGenericRecord(AggregatedFact aggregatedFact) {
     GenericRecord genericRecord = new GenericData.Record(schemaSupplier.get());
     ByteBuffer bucketBytes =
-        ByteBuffer.wrap(NumericConversions.toUnSignedByteArray(aggregatedFact.bucket()));
+        ByteBuffer.wrap(NumericConversions.toUnsignedByteArray(aggregatedFact.bucket()));
     genericRecord.put("bucket", bucketBytes);
     genericRecord.put("metric", aggregatedFact.metric());
     return genericRecord;

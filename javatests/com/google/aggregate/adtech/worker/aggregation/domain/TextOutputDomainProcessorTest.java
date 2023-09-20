@@ -75,7 +75,7 @@ public class TextOutputDomainProcessorTest {
 
   @Test
   public void readDomain_singleFile() throws Exception {
-    Path singleFilePath = outputDomainDirectory.resolve("domain.avro");
+    Path singleFilePath = outputDomainDirectory.resolve("domain.txt");
     writeOutputDomain(singleFilePath, "11", "22", "33");
     // Set the location to be this single file, rather than its parent directory, to ensure that
     // this works when it's pointed to single files
@@ -93,8 +93,8 @@ public class TextOutputDomainProcessorTest {
 
   @Test
   public void readStringDomain() throws Exception {
-    writeOutputDomain(outputDomainDirectory.resolve("domain_1.avro"), "foo", "bar");
-    writeOutputDomain(outputDomainDirectory.resolve("domain_2.avro"), "baz");
+    writeOutputDomain(outputDomainDirectory.resolve("domain_1.txt"), "foo", "bar");
+    writeOutputDomain(outputDomainDirectory.resolve("domain_2.txt"), "baz");
 
     ImmutableSet<BigInteger> keys = readOutputDomain();
 
@@ -107,9 +107,9 @@ public class TextOutputDomainProcessorTest {
 
   @Test
   public void deduplicate() throws Exception {
-    writeOutputDomain(outputDomainDirectory.resolve("domain_1.avro"), "11", "22", "11", "11");
+    writeOutputDomain(outputDomainDirectory.resolve("domain_1.txt"), "11", "22", "11", "11");
     writeOutputDomain(
-        outputDomainDirectory.resolve("domain_2.avro"), "11", "22", "11", "11", "22", "33");
+        outputDomainDirectory.resolve("domain_2.txt"), "11", "22", "11", "11", "22", "33");
 
     ImmutableSet<BigInteger> keys = readOutputDomain();
 
@@ -124,6 +124,16 @@ public class TextOutputDomainProcessorTest {
     DomainReadException error = assertThrows(DomainReadException.class, () -> readOutputDomain());
 
     assertThat(error).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void readDomain_notReadableTextFile() throws Exception {
+    String badString = "abcdabcdabcdabcdabcdabcdabcdabcd";
+    writeOutputDomain(outputDomainDirectory.resolve("domain_1.txt"), badString);
+
+    ExecutionException error = assertThrows(ExecutionException.class, () -> readOutputDomain());
+
+    assertThat(error).hasCauseThat().isInstanceOf(DomainReadException.class);
   }
 
   private ImmutableSet<BigInteger> readOutputDomain()

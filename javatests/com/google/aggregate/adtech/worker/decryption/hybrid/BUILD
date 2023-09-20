@@ -22,6 +22,7 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/decryption",
         "//java/com/google/aggregate/adtech/worker/decryption/hybrid",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:fake_decryption_key_service",
         "//java/external:acai",

@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.ATTRIBUTION_REPORT_TO_MALFORMED;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
@@ -49,9 +50,11 @@ public class ReportingOriginIsDomainValidatorTest {
     reportBuilder = Report.builder().setPayload(Payload.builder().build());
     sharedInfoBuilder =
         SharedInfo.builder()
+            .setVersion(LATEST_VERSION)
             .setReportingOrigin("")
-            .setPrivacyBudgetKey("")
-            .setScheduledReportTime(Instant.now());
+            .setScheduledReportTime(Instant.now())
+            .setDestination("")
+            .setSourceRegistrationTime(Instant.now());
     ctx = FakeJobGenerator.generate("");
   }
 

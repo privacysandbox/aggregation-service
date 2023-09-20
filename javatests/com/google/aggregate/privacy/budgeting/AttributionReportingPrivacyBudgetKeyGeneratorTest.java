@@ -16,7 +16,6 @@
 package com.google.aggregate.privacy.budgeting;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -38,6 +37,7 @@ public class AttributionReportingPrivacyBudgetKeyGeneratorTest {
   private static final String REPORTING_ORIGIN = "https://www.origin.com";
   private static final String DESTINATION_CHROME_GOLDEN_REPORT = "https://conversion.test";
   private static final String REPORTING_ORIGIN_CHROME_GOLDEN_REPORT = "https://report.test";
+
   /**
    * String representation of sha256 digest generated using UTF-8 representation of key. Key
    * constructed from shared info fields - api + version + reporting_origin + destination +
@@ -45,6 +45,7 @@ public class AttributionReportingPrivacyBudgetKeyGeneratorTest {
    */
   private static final String PRIVACY_BUDGET_KEY_2 =
       "7b16c743c6ffe44bc559561b4f457fd3dcf91b797446ed6dc6b01d9fb32d3565";
+
   /**
    * Privacy Budget Key generated based on Chrome Golden Report -
    * https://source.chromium.org/chromium/chromium/src/+/main:content/test/data/attribution_reporting/aggregatable_report_goldens/latest/report_1.json
@@ -54,20 +55,6 @@ public class AttributionReportingPrivacyBudgetKeyGeneratorTest {
 
   AttributionReportingPrivacyBudgetKeyGenerator attributionReportingPrivacyBudgetKeyGenerator =
       new AttributionReportingPrivacyBudgetKeyGenerator();
-  /** Test to verify Privacy Budget Key is generated correctly from Shared Info for VERSION_0_0. */
-  @Test
-  public void testAttributionReportingPrivacyBudgetKeyGeneratorWithPBKInSharedInfo() {
-    SharedInfo.Builder sharedInfoBuilder =
-        SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
-            .setScheduledReportTime(FIXED_TIME)
-            .setReportingOrigin(REPORTING_ORIGIN);
-    SharedInfo si = sharedInfoBuilder.build();
-    String privacyBudgetKey =
-        attributionReportingPrivacyBudgetKeyGenerator.generatePrivacyBudgetKey(si).get();
-    assertEquals(privacyBudgetKey, PRIVACY_BUDGET_KEY_1);
-  }
 
   /** Test to verify Privacy Budget Key is generated correctly from Shared Info for VERSION_0_1. */
   @Test

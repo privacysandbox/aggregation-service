@@ -40,6 +40,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.slf4j.Logger;
@@ -55,6 +56,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 public class AwsWorkerPrivateAggregationAPITest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
@@ -115,6 +117,7 @@ public class AwsWorkerPrivateAggregationAPITest {
             inputKey,
             getTestDataBucket(),
             outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -127,6 +130,7 @@ public class AwsWorkerPrivateAggregationAPITest {
             getTestDataBucket(),
             outputKeyDebug,
             /* debugRun= */ true,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName() + "_debug",
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKeyDebug));
     JsonNode resultDebug = submitJobAndWaitForResult(createDebugJobRequest, COMPLETION_TIMEOUT);
@@ -140,7 +144,10 @@ public class AwsWorkerPrivateAggregationAPITest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -154,7 +161,10 @@ public class AwsWorkerPrivateAggregationAPITest {
     // Read debug output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFactsDebug =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     // assert that debug job aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFactsDebug.size()).isAtLeast(20000);
@@ -200,6 +210,7 @@ public class AwsWorkerPrivateAggregationAPITest {
             inputKey,
             getTestDataBucket(),
             outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -212,6 +223,7 @@ public class AwsWorkerPrivateAggregationAPITest {
             getTestDataBucket(),
             outputKeyDebug,
             /* debugRun= */ true,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName() + "_debug",
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKeyDebug));
     JsonNode resultDebug = submitJobAndWaitForResult(createDebugJobRequest, COMPLETION_TIMEOUT);
@@ -225,7 +237,10 @@ public class AwsWorkerPrivateAggregationAPITest {
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -239,7 +254,10 @@ public class AwsWorkerPrivateAggregationAPITest {
     // Read debug output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFactsDebug =
         readResultsFromS3(
-            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), getOutputFileName(outputKey));
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
 
     // assert that debug job aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFactsDebug.size()).isAtLeast(20000);

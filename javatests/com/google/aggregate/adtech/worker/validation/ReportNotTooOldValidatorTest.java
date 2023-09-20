@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.ORIGINAL_REPORT_TIME_TOO_OLD;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static java.time.temporal.ChronoUnit.DAYS;
@@ -60,8 +61,10 @@ public class ReportNotTooOldValidatorTest {
     reportBuilder = Report.builder().setPayload(Payload.builder().build());
     sharedInfoBuilder =
         SharedInfo.builder()
+            .setVersion(LATEST_VERSION)
             .setReportingOrigin("")
-            .setPrivacyBudgetKey("")
+            .setDestination("")
+            .setSourceRegistrationTime(Instant.now())
             .setScheduledReportTime(Instant.now());
     ctx = FakeJobGenerator.generate("");
   }

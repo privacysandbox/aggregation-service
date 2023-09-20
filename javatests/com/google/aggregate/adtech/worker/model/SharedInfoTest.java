@@ -17,7 +17,6 @@
 package com.google.aggregate.adtech.worker.model;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
@@ -51,10 +50,13 @@ public class SharedInfoTest {
   public void sharedInfo_withDebugModeEnabled() {
     SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_API)
             .setScheduledReportTime(FIXED_TIME)
             .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID)
             .setReportDebugMode(true);
 
     SharedInfo si = sharedInfoBuilder.build();
@@ -68,10 +70,13 @@ public class SharedInfoTest {
   public void sharedInfo_withDebugModeDisabled() {
     SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_API)
             .setScheduledReportTime(FIXED_TIME)
             .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID)
             .setReportDebugMode(false);
 
     SharedInfo si = sharedInfoBuilder.build();
@@ -85,10 +90,13 @@ public class SharedInfoTest {
   public void sharedInfo_withDebugModeDefault() {
     SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_API)
             .setScheduledReportTime(FIXED_TIME)
-            .setReportingOrigin(REPORTING_ORIGIN);
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID);
 
     SharedInfo si = sharedInfoBuilder.build();
 
@@ -104,19 +112,25 @@ public class SharedInfoTest {
   public void sharedInfo_withDebugModeEnabledInTwoWays() {
     SharedInfo.Builder sharedInfoBuilder1 =
         SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_API)
             .setScheduledReportTime(FIXED_TIME)
             .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID)
             .setReportDebugModeString("enabled");
     SharedInfo si1 = sharedInfoBuilder1.build();
 
     SharedInfo.Builder sharedInfoBuilder2 =
         SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_API)
             .setScheduledReportTime(FIXED_TIME)
             .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID)
             .setReportDebugMode(true);
     SharedInfo si2 = sharedInfoBuilder2.build();
 
@@ -125,12 +139,6 @@ public class SharedInfoTest {
 
   @Test
   public void sharedInfo_withAttributionReportingAPIType() {
-    SharedInfo.Builder sharedInfoMissingApiBuilder =
-        SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY_1)
-            .setScheduledReportTime(FIXED_TIME)
-            .setReportingOrigin(REPORTING_ORIGIN);
     SharedInfo.Builder sharedInfoAttributionReportingBuilder =
         SharedInfo.builder()
             .setVersion(VERSION_0_1)
@@ -141,10 +149,8 @@ public class SharedInfoTest {
             .setSourceRegistrationTime(FIXED_TIME)
             .setReportId(RANDOM_UUID);
 
-    SharedInfo sharedInfoMissingApi = sharedInfoMissingApiBuilder.build();
     SharedInfo sharedInfoAttributionReporting = sharedInfoAttributionReportingBuilder.build();
 
-    assertEquals(sharedInfoMissingApi.api(), Optional.empty());
     assertEquals(sharedInfoAttributionReporting.api().get(), ATTRIBUTION_REPORTING_API);
   }
 

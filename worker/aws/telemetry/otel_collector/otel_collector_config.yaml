@@ -35,6 +35,7 @@ processors:
 
 exporters:
   awsxray:
+    indexed_attributes: ["job-id"]
   awsemf:
     namespace: ${ENV_NAME}
     resource_to_telemetry_conversion:

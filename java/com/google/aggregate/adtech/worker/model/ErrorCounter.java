@@ -57,8 +57,9 @@ public enum ErrorCounter {
   UNSUPPORTED_REPORT_API_TYPE(
       String.format(
           "The report's API type is not supported for aggregation. Supported APIs are %s",
-          SharedInfo.SUPPORTED_APIS));
-
+          SharedInfo.SUPPORTED_APIS)),
+  REQUIRED_SHAREDINFO_FIELD_INVALID("One or more required SharedInfo fields are empty or invalid."),
+  INVALID_REPORT_ID("Report ID missing or invalid in SharedInfo.");
   private String description;
 
   ErrorCounter(String description) {

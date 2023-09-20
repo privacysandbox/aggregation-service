@@ -32,8 +32,6 @@ import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
-import static com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHENTICATED;
-import static com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode.PRIVACY_BUDGET_CLIENT_UNAUTHORIZED;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
@@ -50,8 +48,8 @@ import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcess
 import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.aggregate.adtech.worker.exceptions.ConcurrentShardReadException;
-import com.google.aggregate.adtech.worker.exceptions.DomainProcessException;
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
+import com.google.aggregate.adtech.worker.exceptions.InternalServerException;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.AvroRecordEncryptedReportConverter;
@@ -81,6 +79,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.privacysandbox.otel.OTelConfiguration;
+import com.google.privacysandbox.otel.Timer;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
@@ -213,6 +212,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
 
     final Boolean debugRun = DebugSupportHelper.isDebugRun(job);
     final Optional<Double> debugPrivacyEpsilon = getPrivacyEpsilonForJob(job);
+    final String jobKey = toJobKeyString(job.jobKey());
 
     if (debugPrivacyEpsilon.isPresent()) {
       Double privacyEpsilonForJob = debugPrivacyEpsilon.get();
@@ -223,7 +223,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       }
     }
 
-    ListenableFuture<ImmutableSet<BigInteger>> outputDomain;
+    ListenableFuture<ImmutableSet<BigInteger>> outputDomainFuture;
     Optional<DataLocation> outputDomainLocation = Optional.empty();
     Map<String, String> jobParams = job.requestInfo().getJobParameters();
 
@@ -252,7 +252,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
             INPUT_DATA_READ_FAILED, "No report shards found for location: " + reportsLocation);
       }
 
-      outputDomain =
+      outputDomainFuture =
           outputDomainLocation
               .map(outputDomainProcessor::readAndDedupDomain)
               .orElse(immediateFuture(ImmutableSet.of()));
@@ -274,27 +274,11 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
               Optional.empty(), reportErrorThresholdPercentage);
       AtomicLong totalReportCount = new AtomicLong(0);
 
-      Flowable.fromStream(dataShards.stream())
-          // This would open connections with data and max concurrency is NUM_READ_THREADS.
-          .flatMap(
-              dataLocation ->
-                  readData(dataLocation).subscribeOn(Schedulers.from(blockingThreadPool)),
-              false,
-              NUM_READ_THREADS,
-              MAX_REPORTS_READ_BUFFER_SIZE)
-          // Specify the number of reports are grouped into a list.
-          .buffer(MAX_REPORTS_PROCESS_BUFFER_SIZE)
-          .doOnNext(encryptedReports -> totalReportCount.addAndGet(encryptedReports.size()))
-          .flatMap(
-              encryptedReportList ->
-                  Flowable.just(encryptedReportList)
-                      .subscribeOn(Schedulers.from(nonBlockingThreadPool))
-                      .map(
-                          encryptedReports ->
-                              processData(
-                                  encryptedReports, job, aggregationEngine, errorAggregator)),
-              NUM_PROCESS_THREADS)
-          .blockingSubscribe();
+      try (Timer reportsProcessTimer =
+          oTelConfiguration.createDebugTimerStarted("reports_process_time", jobKey)) {
+        // This function would add reports to aggregationEngine or errorAggregator.
+        processReports(dataShards, totalReportCount, job, aggregationEngine, errorAggregator);
+      }
 
       ErrorSummary errorSummary = errorAggregator.createErrorSummary();
 
@@ -307,18 +291,29 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
             Optional.of(RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE));
       }
 
-      ListenableFuture aggregationFuture =
-          Futures.immediateFuture(aggregationEngine.makeAggregation());
+      ImmutableMap<BigInteger, AggregatedFact> reportsAggregatedMap =
+          aggregationEngine.makeAggregation();
 
+      NoisedAggregatedResultSet noisedResultSet;
       ListenableFuture<NoisedAggregatedResultSet> aggregationFinalFuture =
-          Futures.whenAllSucceed(outputDomain, aggregationFuture)
-              .call(
-                  () ->
-                      adjustAggregationWithDomainAndNoise(
-                          outputDomain, aggregationFuture, debugPrivacyEpsilon, debugRun),
-                  nonBlockingThreadPool);
+          Futures.transform(
+              outputDomainFuture,
+              outputDomain ->
+                  adjustAggregationWithDomainAndNoise(
+                      outputDomain, reportsAggregatedMap, debugPrivacyEpsilon, debugRun),
+              nonBlockingThreadPool);
 
-      NoisedAggregatedResultSet noisedResultSet = aggregationFinalFuture.get();
+      try {
+        noisedResultSet = aggregationFinalFuture.get();
+      } catch (ExecutionException e) {
+        if ((e.getCause() instanceof DomainReadException)) {
+          throw new AggregationJobProcessException(
+              INPUT_DATA_READ_FAILED, "Exception while reading domain input data.", e.getCause());
+        }
+        throw new AggregationJobProcessException(
+            INTERNAL_ERROR, "Exception in processing domain.", e);
+      }
+
       processingStopwatch.stop();
 
       AggregationWorkerReturnCode jobCode = SUCCESS;
@@ -337,34 +332,26 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       }
 
       // Log summary results
-      resultLogger.logResults(
-          noisedResultSet.noisedResult().noisedAggregatedFacts(), job, /* isDebugRun= */ false);
+      try (Timer t = oTelConfiguration.createDebugTimerStarted("summary_write_time", jobKey)) {
+        resultLogger.logResults(
+            noisedResultSet.noisedResult().noisedAggregatedFacts(), job, /* isDebugRun= */ false);
+      }
 
       return jobResultHelper.createJobResult(
           job, errorSummary, jobCode, /* message= */ Optional.empty());
     } catch (ResultLogException e) {
       throw new AggregationJobProcessException(
           RESULT_WRITE_ERROR, "Exception occured while writing result.", e);
-    } catch (DomainProcessException e) {
-      throw new AggregationJobProcessException(
-          INTERNAL_ERROR, "Exception in processing domain.", e);
     } catch (AccessControlException e) {
       throw new AggregationJobProcessException(
           PERMISSION_ERROR, "Exception because of missing permission.", e);
+    } catch (InternalServerException e) {
+      throw new AggregationJobProcessException(
+          INTERNAL_ERROR, "Internal Service Exception when processing reports.", e);
     } catch (ConcurrentShardReadException e) {
       // TODO(b/197999001) report exception in some monitoring counter
       throw new AggregationJobProcessException(
           INPUT_DATA_READ_FAILED, "Exception while reading reports input data.");
-    } catch (ExecutionException e) {
-      if ((e.getCause() instanceof DomainReadException)) {
-        throw new AggregationJobProcessException(
-            INPUT_DATA_READ_FAILED, "Exception while reading domain input data.", e.getCause());
-      }
-      if (e.getCause() instanceof AccessControlException) {
-        throw new AggregationJobProcessException(
-            PERMISSION_ERROR, "Exception because of missing permission.", e.getCause());
-      }
-      throw e;
     }
   }
 
@@ -393,12 +380,15 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     try {
       // Only send request to PBS if there are units to consume budget for, the list of units
       // can be empty if all reports failed decryption
-      missingPrivacyBudgetUnits =
-          privacyBudgetingServiceBridge.consumePrivacyBudget(
-              /* budgetsToConsume= */ budgetsToConsume,
-              /* attributionReportTo= */ job.requestInfo()
-                  .getJobParameters()
-                  .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
+      try (Timer t =
+          oTelConfiguration.createDebugTimerStarted("pbs_latency", toJobKeyString(job.jobKey()))) {
+        missingPrivacyBudgetUnits =
+            privacyBudgetingServiceBridge.consumePrivacyBudget(
+                /* budgetsToConsume= */ budgetsToConsume,
+                /* attributionReportTo= */ job.requestInfo()
+                    .getJobParameters()
+                    .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
+      }
     } catch (PrivacyBudgetingServiceBridgeException e) {
       if (e.getStatusCode() != null) {
         switch (e.getStatusCode()) {
@@ -459,99 +449,91 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   }
 
   private NoisedAggregatedResultSet adjustAggregationWithDomainAndNoise(
-      ListenableFuture<ImmutableSet<BigInteger>> outputDomainFuture,
-      ListenableFuture<ImmutableMap<BigInteger, AggregatedFact>> aggregationFuture,
+      ImmutableSet<BigInteger> outputDomain,
+      ImmutableMap<BigInteger, AggregatedFact> reportsAggregatedMap,
       Optional<Double> debugPrivacyEpsilon,
       Boolean debugRun) {
-    try {
-      ImmutableSet<BigInteger> outputDomain = Futures.getDone(outputDomainFuture);
-      ImmutableMap<BigInteger, AggregatedFact> aggregation = Futures.getDone(aggregationFuture);
+    // This pseudo-aggregation has all zeroes for the output domain. If a key is present in the
+    // output domain, but not in the aggregation itself, a zero is inserted which will later be
+    // noised to some value.
+    ImmutableMap<BigInteger, AggregatedFact> outputDomainPseudoAggregation =
+        outputDomain.stream()
+            .collect(
+                ImmutableMap.toImmutableMap(
+                    Function.identity(), key -> AggregatedFact.create(key, /* metric= */ 0)));
 
-      // This pseudo-aggregation has all zeroes for the output domain. If a key is present in the
-      // output domain, but not in the aggregation itself, a zero is inserted which will later be
-      // noised to some value.
-      ImmutableMap<BigInteger, AggregatedFact> outputDomainPseudoAggregation =
-          outputDomain.stream()
-              .collect(
-                  ImmutableMap.toImmutableMap(
-                      Function.identity(), key -> AggregatedFact.create(key, /* metric= */ 0)));
+    // Difference by key is computed so that the output can be adjusted for the output domain.
+    // Keys that are in the aggregation data, but not in the output domain, are subject to both
+    // noising and thresholding.
+    // Otherwise, the data is subject to noising only.
+    MapDifference<BigInteger, AggregatedFact> pseudoDiff =
+        Maps.difference(reportsAggregatedMap, outputDomainPseudoAggregation);
 
-      // Difference by key is computed so that the output can be adjusted for the output domain.
-      // Keys that are in the aggregation data, but not in the output domain, are subject to both
-      // noising and thresholding.
-      // Otherwise, the data is subject to noising only.
-      MapDifference<BigInteger, AggregatedFact> pseudoDiff =
-          Maps.difference(aggregation, outputDomainPseudoAggregation);
+    // The values for common keys should in theory be differing, since the pseudo aggregation will
+    // have all zeroes, while the 'real' aggregation will have non-zeroes, but just in case to
+    // cover overlapping zeroes, matching keys are also processed.
+    // `overlappingZeroes` includes all the keys present in both domain and reports but
+    // the values are 0.
+    Iterable<AggregatedFact> overlappingZeroes = pseudoDiff.entriesInCommon().values();
+    // `overlappingNonZeroes` includes all the keys present in both domain and reports, and the
+    // value is non-zero in reports.
+    Iterable<AggregatedFact> overlappingNonZeroes =
+        Maps.transformValues(pseudoDiff.entriesDiffering(), ValueDifference::leftValue).values();
+    // `domainOutputOnlyZeroes` only includes keys in domain.
+    Iterable<AggregatedFact> domainOutputOnlyZeroes = pseudoDiff.entriesOnlyOnRight().values();
 
-      // The values for common keys should in theory be differing, since the pseudo aggregation will
-      // have all zeroes, while the 'real' aggregation will have non-zeroes, but just in case to
-      // cover overlapping zeroes, matching keys are also processed.
-      // `overlappingZeroes` includes all the keys present in both domain and reports but
-      // the values are 0.
-      Iterable<AggregatedFact> overlappingZeroes = pseudoDiff.entriesInCommon().values();
-      // `overlappingNonZeroes` includes all the keys present in both domain and reports, and the
-      // value is non-zero in reports.
-      Iterable<AggregatedFact> overlappingNonZeroes =
-          Maps.transformValues(pseudoDiff.entriesDiffering(), ValueDifference::leftValue).values();
-      // `domainOutputOnlyZeroes` only includes keys in domain.
-      Iterable<AggregatedFact> domainOutputOnlyZeroes = pseudoDiff.entriesOnlyOnRight().values();
+    NoisedAggregationResult noisedOverlappingNoThreshold =
+        noisedAggregationRunner.noise(
+            Iterables.concat(overlappingZeroes, overlappingNonZeroes),
+            /* doThreshold= */ false,
+            debugPrivacyEpsilon);
 
-      NoisedAggregationResult noisedOverlappingNoThreshold =
+    NoisedAggregationResult noisedDomainOnlyNoThreshold =
+        noisedAggregationRunner.noise(
+            domainOutputOnlyZeroes, /* doThreshold= */ false, debugPrivacyEpsilon);
+
+    NoisedAggregationResult noisedDomainNoThreshold =
+        NoisedAggregationResult.merge(noisedOverlappingNoThreshold, noisedDomainOnlyNoThreshold);
+
+    NoisedAggregatedResultSet.Builder noisedResultSetBuilder = NoisedAggregatedResultSet.builder();
+
+    if (debugRun) {
+      // Noise values for keys that are only in reports (not in domain) without thresholding
+      NoisedAggregationResult noisedReportsOnlyNoThreshold =
           noisedAggregationRunner.noise(
-              Iterables.concat(overlappingZeroes, overlappingNonZeroes),
+              pseudoDiff.entriesOnlyOnLeft().values(),
               /* doThreshold= */ false,
               debugPrivacyEpsilon);
 
-      NoisedAggregationResult noisedDomainOnlyNoThreshold =
+      NoisedAggregationResult noisedReportsOnlyNoThresholdWithAnno =
+          NoisedAggregationResult.addDebugAnnotations(
+              noisedReportsOnlyNoThreshold, List.of(DebugBucketAnnotation.IN_REPORTS));
+      NoisedAggregationResult noisedDomainOnlyNoThresholdWithAnno =
+          NoisedAggregationResult.addDebugAnnotations(
+              noisedDomainOnlyNoThreshold, List.of(DebugBucketAnnotation.IN_DOMAIN));
+      NoisedAggregationResult noisedOverlappingNoThresholdWithAnno =
+          NoisedAggregationResult.addDebugAnnotations(
+              noisedOverlappingNoThreshold,
+              List.of(DebugBucketAnnotation.IN_REPORTS, DebugBucketAnnotation.IN_DOMAIN));
+
+      noisedResultSetBuilder.setNoisedDebugResult(
+          NoisedAggregationResult.merge(
+              noisedOverlappingNoThresholdWithAnno,
+              NoisedAggregationResult.merge(
+                  noisedReportsOnlyNoThresholdWithAnno, noisedDomainOnlyNoThresholdWithAnno)));
+    }
+
+    if (domainOptional) {
+      NoisedAggregationResult noisedReportsDomainOptional =
           noisedAggregationRunner.noise(
-              domainOutputOnlyZeroes, /* doThreshold= */ false, debugPrivacyEpsilon);
+              pseudoDiff.entriesOnlyOnLeft().values(), enableThresholding, debugPrivacyEpsilon);
 
-      NoisedAggregationResult noisedDomainNoThreshold =
-          NoisedAggregationResult.merge(noisedOverlappingNoThreshold, noisedDomainOnlyNoThreshold);
-
-      NoisedAggregatedResultSet.Builder noisedResultSetBuilder =
-          NoisedAggregatedResultSet.builder();
-
-      if (debugRun) {
-        // Noise values for keys that are only in reports (not in domain) without thresholding
-        NoisedAggregationResult noisedReportsOnlyNoThreshold =
-            noisedAggregationRunner.noise(
-                pseudoDiff.entriesOnlyOnLeft().values(),
-                /* doThreshold= */ false,
-                debugPrivacyEpsilon);
-
-        NoisedAggregationResult noisedReportsOnlyNoThresholdWithAnno =
-            NoisedAggregationResult.addDebugAnnotations(
-                noisedReportsOnlyNoThreshold, List.of(DebugBucketAnnotation.IN_REPORTS));
-        NoisedAggregationResult noisedDomainOnlyNoThresholdWithAnno =
-            NoisedAggregationResult.addDebugAnnotations(
-                noisedDomainOnlyNoThreshold, List.of(DebugBucketAnnotation.IN_DOMAIN));
-        NoisedAggregationResult noisedOverlappingNoThresholdWithAnno =
-            NoisedAggregationResult.addDebugAnnotations(
-                noisedOverlappingNoThreshold,
-                List.of(DebugBucketAnnotation.IN_REPORTS, DebugBucketAnnotation.IN_DOMAIN));
-
-        noisedResultSetBuilder.setNoisedDebugResult(
-            NoisedAggregationResult.merge(
-                noisedOverlappingNoThresholdWithAnno,
-                NoisedAggregationResult.merge(
-                    noisedReportsOnlyNoThresholdWithAnno, noisedDomainOnlyNoThresholdWithAnno)));
-      }
-
-      if (domainOptional) {
-        NoisedAggregationResult noisedReportsDomainOptional =
-            noisedAggregationRunner.noise(
-                pseudoDiff.entriesOnlyOnLeft().values(), enableThresholding, debugPrivacyEpsilon);
-
-        return noisedResultSetBuilder
-            .setNoisedResult(
-                NoisedAggregationResult.merge(noisedDomainNoThreshold, noisedReportsDomainOptional))
-            .build();
-      } else {
-        return noisedResultSetBuilder.setNoisedResult(noisedDomainNoThreshold).build();
-      }
-    } catch (ExecutionException e) {
-      throw new DomainProcessException(e);
+      return noisedResultSetBuilder
+          .setNoisedResult(
+              NoisedAggregationResult.merge(noisedDomainNoThreshold, noisedReportsDomainOptional))
+          .build();
+    } else {
+      return noisedResultSetBuilder.setNoisedResult(noisedDomainNoThreshold).build();
     }
   }
 
@@ -576,15 +558,47 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     }
   }
 
-  private Observable processData(
+  private void processReports(
+      ImmutableList<DataLocation> dataShards,
+      AtomicLong totalReportCount,
+      Job job,
+      AggregationEngine aggregationEngine,
+      ErrorSummaryAggregator errorAggregator) {
+    Flowable.fromStream(dataShards.stream())
+        // This would open connections with data and max concurrency is NUM_READ_THREADS.
+        .flatMap(
+            dataLocation -> readData(dataLocation).subscribeOn(Schedulers.from(blockingThreadPool)),
+            false,
+            NUM_READ_THREADS,
+            MAX_REPORTS_READ_BUFFER_SIZE)
+        // Specify the number of reports are grouped into a list.
+        .buffer(MAX_REPORTS_PROCESS_BUFFER_SIZE)
+        .doOnNext(encryptedReports -> totalReportCount.addAndGet(encryptedReports.size()))
+        .flatMap(
+            encryptedReportList ->
+                Flowable.just(encryptedReportList)
+                    .subscribeOn(Schedulers.from(nonBlockingThreadPool))
+                    .map(
+                        encryptedReports ->
+                            decryptAndAggregateReports(
+                                encryptedReports, job, aggregationEngine, errorAggregator)),
+            NUM_PROCESS_THREADS)
+        .blockingSubscribe();
+  }
+
+  private Observable decryptAndAggregateReports(
       List<EncryptedReport> reports,
       Job job,
       AggregationEngine aggregationEngine,
       ErrorSummaryAggregator errorAggregator) {
     reports.forEach(
         report -> {
-          DecryptionValidationResult result =
-              reportDecrypterAndValidator.decryptAndValidate(report, job);
+          DecryptionValidationResult result;
+          try (Timer t =
+              oTelConfiguration.createDebugTimerStarted(
+                  "decryption_time_per_report", toJobKeyString(job.jobKey()))) {
+            result = reportDecrypterAndValidator.decryptAndValidate(report, job);
+          }
           if (result.report().isPresent()) {
             aggregationEngine.accept(result.report().get());
           } else {

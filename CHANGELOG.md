@@ -1,29 +1,17 @@
 # Changelog
 
-## [1.0.3](https://github.com/privacysandbox/aggregation-service/compare/v1.0.2...v1.0.3) (2023-09-05)
+## [2.0.0](https://github.com/privacysandbox/aggregation-service/compare/v1.0.3...v2.0.0)
 
 ### Changes
 
--   Updated build container dependencies.
--   Updated documentation for PRIVACY_BUDGET_EXHAUSTED error code.
--   Updated aws-aggregation-service.md with a note about multiple NUMA nodes instances.
--   Added sizing-guidance.md for sizing guidance.
--   Corrected api.md url in error message referencing api.md file.
-
-## [1.0.2](https://github.com/privacysandbox/aggregation-service/compare/v1.0.1...v1.0.2) (2023-08-03)
-
-### Changes
-
--   Pinned and locked nsm-api dependency cargo versions in nitro-kms dependency.
-
-## [1.0.1](https://github.com/privacysandbox/aggregation-service/compare/v1.0.0...v1.0.1) (2023-07-26)
-
-### Changes
-
--   Fixed bug in summary report output sharding that caused aggregation service to stop processing
-    jobs.
--   Fixed LocalTestingTool Otel registration to allow for parallel execution.
--   Updated dependencies.
+-   Updated coordinator endpoints to new Google/Third-Party coordinator pair.
+-   Upgraded control plane shared library dependency to
+    [v1.2.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.2.0).
+-   Added documentation for various job validations. It can be found [here](./docs/api.md).
+-   Changes to handle null reports by filtering out the null facts before aggregation.
+-   Added certain validations around fields in SharedInfo used for privacy budget key generation.
+-   Deprecated empty("") SharedInfo version.
+-   Added report ID validation.
 
 ## [1.0.0](https://github.com/privacysandbox/aggregation-service/compare/v0.12.0...v1.0.0) (2023-07-11)
 

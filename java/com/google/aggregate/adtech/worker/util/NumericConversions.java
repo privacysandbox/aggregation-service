@@ -16,7 +16,7 @@
 
 package com.google.aggregate.adtech.worker.util;
 
-import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 import com.google.errorprone.annotations.Var;
 import java.math.BigInteger;
@@ -92,7 +92,7 @@ public final class NumericConversions {
    * @param value the value to convert. Must be greater than or equal to 0.
    * @return the value converted to bytes
    */
-  public static byte[] toUnSignedByteArray(BigInteger value) {
+  public static byte[] toUnsignedByteArray(BigInteger value) {
     // Check that the range is valid (0 <= value <= 2^128-1)
     boolean lessThanMin = value.compareTo(BigInteger.ZERO) < 0;
     boolean greaterThanMax = value.compareTo(UINT_128_MAX) > 0;
@@ -111,14 +111,25 @@ public final class NumericConversions {
     return bytes;
   }
 
-  /** Simple utility to create BigInteger from string rep from an int */
+  /**
+   * Creates BigInteger from String rep of parameter int. Uses ISO_8859_1 to convert String to byte
+   * array, as this Charset encompasses all 256 possible byte values
+   */
   public static BigInteger createBucketFromInt(int bucket) {
-    return NumericConversions.uInt128FromBytes((String.valueOf(bucket)).getBytes(US_ASCII));
+    return NumericConversions.uInt128FromBytes((String.valueOf(bucket)).getBytes(ISO_8859_1));
   }
 
-  /** Simple utility to create BigInteger from string rep from string */
+  /**
+   * Create BigInteger from String rep of a BigInt. Converts String into byte array using ISO_8859_1
+   * Charset, which encompasses all 256 possible byte values
+   */
   public static BigInteger createBucketFromString(String bucket) {
-    return NumericConversions.uInt128FromBytes(bucket.getBytes(US_ASCII));
+    return NumericConversions.uInt128FromBytes(bucket.getBytes(ISO_8859_1));
+  }
+
+  /** Creates String from byte array. Uses ISO-8859-1 to encompass all 256 possible byte values */
+  public static String createStringFromByteArray(byte[] bytes) {
+    return new String(bytes, ISO_8859_1);
   }
 
   /**

@@ -24,7 +24,6 @@ import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.g
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.waitForJobCompletions;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
@@ -40,31 +39,32 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Optional;
-import java.util.UUID;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /**
- * Aggregation runs to perform Performance Regression Test. Runs 100 Aggregation jobs with 10k
- * report size and fixed 20k domain keys.
+ * Aggregation runs to perform Performance Regression Test. Runs 50 Aggregation jobs with 500k
+ * report size and fixed 500k domain keys.
  */
 @RunWith(JUnit4.class)
 public class AwsWorkerPerformanceRegressionTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public TestName name = new TestName();
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(1000, ChronoUnit.MINUTES);
 
   private static final String PERFORMANCE_REGRESSION_DATA_BUCKET =
       "aggregate-service-performance-regression-bucket";
 
-  private static final int NUM_JOBS = 25;
-  private static final int NUM_WARMUP_RUNS = 1;
+  private static final int NUM_WARMUP_RUNS = 5;
+
   private static final int NUM_TRANSIENT_RUNS = 50;
 
   @Inject S3BlobStorageClient s3BlobStorageClient;
@@ -90,20 +90,24 @@ public class AwsWorkerPerformanceRegressionTest {
   public void aggregateARA500kTransient() throws Exception {
 
     for (int i = 1; i <= NUM_TRANSIENT_RUNS; i++) {
-      var inputKey = String.format("%s/test-inputs/500k_debug_report.avro", KOKORO_BUILD_ID);
-      var domainKey = String.format("%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
+      var inputKey = String.format("test-data/%s/test-inputs/500k_report.avro", KOKORO_BUILD_ID);
+      var domainKey = String.format("test-data/%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
       var outputKey =
           String.format(
-              "%s/test-outputs/500k_report_%s_500k_domain_output.avro", KOKORO_BUILD_ID, i);
-      String jobId = UUID.randomUUID().toString() + "-transient-" + i;
+              "test-data/%s/test-outputs/500k_report_%s_500k_domain_output.avro",
+              KOKORO_BUILD_ID, i);
       CreateJobRequest createJobRequest =
           AwsWorkerContinuousTestHelper.createJobRequest(
               getTestDataBucket(),
               inputKey,
               getTestDataBucket(),
               outputKey,
-              /* debugRun= */ true,
-              jobId,
+              /* debugRun= */ false,
+              /* jobId= */ getClass().getSimpleName()
+                  + "::"
+                  + name.getMethodName()
+                  + "_transient-"
+                  + i,
               /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
               /* outputDomainPrefix= */ Optional.of(domainKey));
       JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
@@ -127,22 +131,27 @@ public class AwsWorkerPerformanceRegressionTest {
 
     ArrayList<CreateJobRequest> warmUpJobRequests = new ArrayList<>(NUM_WARMUP_RUNS);
     ArrayList<CreateJobRequest> warmUpJobRequestsDeepCopy = new ArrayList<>(NUM_WARMUP_RUNS);
-    // Run 25 jobs to make sure at least each ec2 instance runs a job
+    // Run 40 jobs to make sure at least each ec2 instance runs a job
     for (int i = 1; i <= NUM_WARMUP_RUNS; i++) {
-      var inputKey = String.format("%s/test-inputs/500k_debug_report.avro", KOKORO_BUILD_ID);
-      var domainKey = String.format("%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
+      var inputKey =
+          String.format("test-data/%s/test-inputs/500k_debug_report.avro", KOKORO_BUILD_ID);
+      var domainKey = String.format("test-data/%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
       var outputKey =
           String.format(
-              "%s/test-outputs/500k_report_%s_500k_domain_warmup_output.avro", KOKORO_BUILD_ID, i);
-      String jobId = UUID.randomUUID().toString() + "-warmup";
+              "test-data/%s/test-outputs/500k_report_%s_500k_domain_warmup_output.avro",
+              KOKORO_BUILD_ID, i);
       CreateJobRequest createJobRequest =
           AwsWorkerContinuousTestHelper.createJobRequest(
               getTestDataBucket(),
               inputKey,
               getTestDataBucket(),
               outputKey,
-              /* debugRun= */ true,
-              jobId,
+              /* debugRun= */ false,
+              /* jobId= */ getClass().getSimpleName()
+                  + "::"
+                  + name.getMethodName()
+                  + "_warmup-"
+                  + i,
               /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
               /* outputDomainPrefix= */ Optional.of(domainKey));
       createJob(createJobRequest);
@@ -156,9 +165,11 @@ public class AwsWorkerPerformanceRegressionTest {
     for (int i = 1; i <= NUM_WARMUP_RUNS; i++) {
       String outputKey =
           String.format(
-              "%s/test-outputs/500k_report_%s_500k_domain_warmup_output.avro", KOKORO_BUILD_ID, i);
+              "test-data/%s/test-outputs/500k_report_%s_500k_domain_warmup_output.avro",
+              KOKORO_BUILD_ID, i);
       JsonNode result = getJobResult(warmUpJobRequests.get(i - 1));
-      assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
+      assertThat(result.get("result_info").get("return_code").asText())
+          .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
       assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
           .isTrue();
     }
@@ -167,7 +178,7 @@ public class AwsWorkerPerformanceRegressionTest {
   /**
    * Run Aggregation for 500k Attribution Reporting API (ARA) reports with 500k Domain keys.
    *
-   * <p>These tests are the transient runs after the warm up runs.
+   * <p>These tests are the transient runs after the warm-up runs.
    *
    * @throws Exception
    */
@@ -176,21 +187,24 @@ public class AwsWorkerPerformanceRegressionTest {
     ArrayList<CreateJobRequest> transientJobRequests = new ArrayList<>(NUM_TRANSIENT_RUNS);
     ArrayList<CreateJobRequest> transientJobRequestsDeepCopy = new ArrayList<>(NUM_TRANSIENT_RUNS);
     for (int i = 1; i <= NUM_TRANSIENT_RUNS; i++) {
-      var inputKey = String.format("%s/test-inputs/500k_debug_report.avro", KOKORO_BUILD_ID);
-      var domainKey = String.format("%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
+      var inputKey = String.format("test-data/%s/test-inputs/500k_report.avro", KOKORO_BUILD_ID);
+      var domainKey = String.format("test-data/%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
       var outputKey =
           String.format(
-              "%s/test-outputs/500k_report_%s_500k_domain_transient_output.avro",
+              "test-data/%s/test-outputs/500k_report_%s_500k_domain_transient_output.avro",
               KOKORO_BUILD_ID, i);
-      String jobId = UUID.randomUUID().toString() + "-transient-" + i;
       CreateJobRequest createJobRequest =
           AwsWorkerContinuousTestHelper.createJobRequest(
               getTestDataBucket(),
               inputKey,
               getTestDataBucket(),
               outputKey,
-              /* debugRun= */ true,
-              jobId,
+              /* debugRun= */ false,
+              /* jobId= */ getClass().getSimpleName()
+                  + "::"
+                  + name.getMethodName()
+                  + "_transient-"
+                  + i,
               /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
               /* outputDomainPrefix= */ Optional.of(domainKey));
       createJob(createJobRequest);
@@ -204,11 +218,11 @@ public class AwsWorkerPerformanceRegressionTest {
     for (int i = 1; i <= NUM_TRANSIENT_RUNS; i++) {
       var outputKey =
           String.format(
-              "%s/test-outputs/500k_report_%s_500k_domain_transient_output.avro",
+              "test-data/%s/test-outputs/500k_report_%s_500k_domain_transient_output.avro",
               KOKORO_BUILD_ID, i);
       JsonNode result = getJobResult(transientJobRequests.get(i - 1));
       assertThat(result.get("result_info").get("return_code").asText())
-          .isEqualTo(DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
+          .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
       assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
           .isTrue();
     }

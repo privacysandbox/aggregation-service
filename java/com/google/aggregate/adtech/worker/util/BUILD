@@ -32,6 +32,7 @@ java_library(
         "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/external:clients_jobclient_model",
         "//java/external:error_prone_anntotations",
+        "//java/external:guava",
         "//java/external:javax_inject",
         "//java/external:operator_protos",
         "//java/external:scp_shared_proto",

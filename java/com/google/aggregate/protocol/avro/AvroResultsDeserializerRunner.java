@@ -64,7 +64,7 @@ final class AvroResultsDeserializerRunner {
   private static String formatOutput(AggregatedFact fact, boolean outputAsHex) {
     String bucketString = fact.bucket().toString();
     if (outputAsHex) {
-      byte[] bucketBytes = NumericConversions.toUnSignedByteArray(fact.bucket());
+      byte[] bucketBytes = NumericConversions.toUnsignedByteArray(fact.bucket());
       bucketString = "0x" + BaseEncoding.base16().encode(bucketBytes);
     }
     return bucketString + "," + fact.metric();

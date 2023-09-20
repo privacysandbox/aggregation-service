@@ -18,7 +18,6 @@ package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_REPORT_API_TYPE;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.DEFAULT_VERSION;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
@@ -49,8 +48,6 @@ public class SupportedReportApiTypeValidatorTest {
 
   private Job ctx;
 
-  private static final String PRIVACY_BUDGET_KEY = "test_privacy_budget_key";
-
   // FIXED_TIME = Jan 01 2021 00:00:00 GMT+0000
   private static final Instant FIXED_TIME = Instant.ofEpochSecond(1609459200);
 
@@ -69,16 +66,6 @@ public class SupportedReportApiTypeValidatorTest {
 
   @Test
   public void attributionReportingReports_validationSucceed() {
-    SharedInfo.Builder sharedInfoVersion00Builder =
-        SharedInfo.builder()
-            .setVersion(DEFAULT_VERSION)
-            .setReportId(RANDOM_UUID)
-            .setReportingOrigin(REPORTING_ORIGIN)
-            .setPrivacyBudgetKey(PRIVACY_BUDGET_KEY)
-            .setScheduledReportTime(FIXED_TIME);
-    Report reportVersion00 =
-        reportBuilder.setSharedInfo(sharedInfoVersion00Builder.build()).build();
-
     SharedInfo.Builder sharedInfoVersion01Builder =
         SharedInfo.builder()
             .setApi(ATTRIBUTION_REPORTING_API)
@@ -91,10 +78,8 @@ public class SupportedReportApiTypeValidatorTest {
     Report reportVersion01 =
         reportBuilder.setSharedInfo(sharedInfoVersion01Builder.build()).build();
 
-    Optional<ErrorMessage> validationErrorVersion00 = validator.validate(reportVersion00, ctx);
     Optional<ErrorMessage> validationErrorVersion01 = validator.validate(reportVersion01, ctx);
 
-    assertThat(validationErrorVersion00).isEmpty();
     assertThat(validationErrorVersion01).isEmpty();
   }
 

@@ -19,6 +19,7 @@ package com.google.privacysandbox.otel;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.metrics.LongCounter;
+import java.util.Map;
 
 /**
  * Interface for management of {@link OpenTelemetry} resources.
@@ -32,6 +33,9 @@ public interface OTelConfiguration {
 
   /** Creates a gauge meter that periodically exports memory utilization */
   void createProdMemoryUtilizationGauge();
+
+  /** Creates a gauge meter that periodically exports CPU utilization */
+  void createProdCPUUtilizationGauge();
 
   /**
    * Creates a counter meter in debug and prod environments
@@ -66,13 +70,24 @@ public interface OTelConfiguration {
   Timer createDebugTimerStarted(String name);
 
   /**
-   * Creates a {@link Timer} given name in both debug environments only. Adds jobID to its attributes.
+   * Creates a {@link Timer} given name in both debug environments only. Adds jobID to its
+   * attributes.
    *
    * @param name {@link String}
    * @param jobID {@link String}
    * @return {@link Timer}
    */
   Timer createDebugTimerStarted(String name, String jobID);
+
+  /**
+   * Creates a {@link Timer} given name in both debug environments only. Add attributes to its span
+   * attributes.
+   *
+   * @param name {@link String}
+   * @param attributeMap {@link Map}
+   * @return {@link Timer}
+   */
+  Timer createDebugTimerStarted(String name, Map attributeMap);
 
   /**
    * Creates a {@link Timer} given name in both debug and prod environments
@@ -82,6 +97,16 @@ public interface OTelConfiguration {
    * @return {@link Timer}
    */
   Timer createProdTimerStarted(String name, String jobID);
+
+  /**
+   * Creates a {@link Timer} given name in both prod environments only. Add attributes to its span
+   * attributes.
+   *
+   * @param name {@link String}
+   * @param attributeMap {@link Map}
+   * @return {@link Timer}
+   */
+  Timer createProdTimerStarted(String name, Map attributeMap);
 
   /**
    * Resets OTel object for unit tests

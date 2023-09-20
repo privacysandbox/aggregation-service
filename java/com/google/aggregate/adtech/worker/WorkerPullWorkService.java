@@ -109,6 +109,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
   protected void run() {
     logger.info("Aggregation worker started");
     oTelConfiguration.createProdMemoryUtilizationRatioGauge();
+    oTelConfiguration.createProdCPUUtilizationGauge();
     setOutputShardFileSizeBytes(outputShardFileSizeBytes);
 
     while (moreNewRequests) {
@@ -136,7 +137,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
         Job currentJob = job.get();
         JobResult jobResult = null;
         String jobID = toJobKeyString(currentJob.jobKey());
-        try (Timer t = oTelConfiguration.createProdTimerStarted("total_execution", jobID)) {
+        try (Timer t = oTelConfiguration.createProdTimerStarted("total_execution_time", jobID)) {
           jobResult = jobProcessor.process(currentJob);
         }
         jobClient.markJobCompleted(jobResult);
