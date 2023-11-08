@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_REPORT_API_TYPE;
+import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
@@ -37,14 +38,9 @@ public final class SupportedReportApiTypeValidator implements ReportValidator {
       return Optional.empty();
     }
 
-    return Optional.of(
-        ErrorMessage.builder()
-            .setCategory(UNSUPPORTED_REPORT_API_TYPE)
-            .setDetailedErrorMessage(detailedErrorMessage(report.sharedInfo().api().get()))
-            .build());
-  }
-
-  private String detailedErrorMessage(String unsupportedApiType) {
-    return String.format("Report's api type %s is not supported.", unsupportedApiType);
+    return createErrorMessage(
+        UNSUPPORTED_REPORT_API_TYPE,
+        String.format(
+            "Report's api type %s is not supported.", report.sharedInfo().api().orElse("")));
   }
 }

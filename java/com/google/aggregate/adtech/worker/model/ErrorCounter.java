@@ -16,6 +16,8 @@
 
 package com.google.aggregate.adtech.worker.model;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.SUPPORTED_MAJOR_VERSIONS;
+
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 
 /**
@@ -59,7 +61,12 @@ public enum ErrorCounter {
           "The report's API type is not supported for aggregation. Supported APIs are %s",
           SharedInfo.SUPPORTED_APIS)),
   REQUIRED_SHAREDINFO_FIELD_INVALID("One or more required SharedInfo fields are empty or invalid."),
-  INVALID_REPORT_ID("Report ID missing or invalid in SharedInfo.");
+  INVALID_REPORT_ID("Report ID missing or invalid in SharedInfo."),
+  UNSUPPORTED_SHAREDINFO_VERSION(
+      String.format(
+          "Report has an unsupported version value in its shared_info. Supported values for report"
+              + " shared_info Major version(s) are- %s",
+          SUPPORTED_MAJOR_VERSIONS));
   private String description;
 
   ErrorCounter(String description) {

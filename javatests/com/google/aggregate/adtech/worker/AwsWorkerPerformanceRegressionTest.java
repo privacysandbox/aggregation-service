@@ -46,6 +46,7 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /**
@@ -133,8 +134,7 @@ public class AwsWorkerPerformanceRegressionTest {
     ArrayList<CreateJobRequest> warmUpJobRequestsDeepCopy = new ArrayList<>(NUM_WARMUP_RUNS);
     // Run 40 jobs to make sure at least each ec2 instance runs a job
     for (int i = 1; i <= NUM_WARMUP_RUNS; i++) {
-      var inputKey =
-          String.format("test-data/%s/test-inputs/500k_debug_report.avro", KOKORO_BUILD_ID);
+      var inputKey = String.format("test-data/%s/test-inputs/500k_report.avro", KOKORO_BUILD_ID);
       var domainKey = String.format("test-data/%s/test-inputs/500k_domain.avro", KOKORO_BUILD_ID);
       var outputKey =
           String.format(
@@ -238,6 +238,8 @@ public class AwsWorkerPerformanceRegressionTest {
                   .region(AWS_S3_BUCKET_REGION)
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
+      bind(S3AsyncClient.class)
+          .toInstance(S3AsyncClient.builder().region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

@@ -1,6 +1,21 @@
 # Changelog
 
-## [2.0.0](https://github.com/privacysandbox/aggregation-service/compare/v1.0.3...v2.0.0)
+## [2.1.0](https://github.com/privacysandbox/aggregation-service/compare/v2.0.0...v2.1.0) (2023-11-01)
+
+### Changes
+
+-   Added support for aggregation service on Google Cloud Platform (GCP) Follow our
+    [instructions](./docs/gcp-aggregation-service.md) to get started.
+-   Added check for source registration time being present in Attribution Reporting API (ARA) report
+    for calculation of Attribution Report Accounting Key for privacy budgeting.
+-   Added report shared_info version validations.
+
+#### [AWS only]
+
+-   Enable uploading sharded summary report to cloud storage in parallel.
+-   Stabilized script fetch_terraform.sh by cleaning up existing files.
+
+## [2.0.0](https://github.com/privacysandbox/aggregation-service/compare/v1.0.3...v2.0.0) (2023-09-20)
 
 ### Changes
 
@@ -10,8 +25,6 @@
 -   Added documentation for various job validations. It can be found [here](./docs/api.md).
 -   Changes to handle null reports by filtering out the null facts before aggregation.
 -   Added certain validations around fields in SharedInfo used for privacy budget key generation.
--   Deprecated empty("") SharedInfo version.
--   Added report ID validation.
 
 ## [1.0.0](https://github.com/privacysandbox/aggregation-service/compare/v0.12.0...v1.0.0) (2023-07-11)
 

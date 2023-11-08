@@ -4,6 +4,7 @@ bazel-*
 /.ijwb/
 /.aswb/
 /.clwb/
+__pycache__/
 .vscode
 .idea/
 *.iml

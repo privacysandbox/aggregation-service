@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.DEBUG_NOT_ENABLED;
+import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
@@ -41,10 +42,7 @@ public final class ReportForDebugValidator implements ReportValidator {
     if (!debugRun || reportDebugMode) {
       return Optional.empty();
     }
-    return Optional.of(
-        ErrorMessage.builder()
-            .setCategory(DEBUG_NOT_ENABLED)
-            .setDetailedErrorMessage("the mode is not enabled")
-            .build());
+
+    return createErrorMessage(DEBUG_NOT_ENABLED, "the mode is not enabled");
   }
 }

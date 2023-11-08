@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.ATTRIBUTION_REPORT_TO_MISMATCH;
+import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
@@ -36,19 +37,11 @@ public final class ReportingOriginMatchesRequestValidator implements ReportValid
       return Optional.empty();
     }
 
-    return Optional.of(
-        ErrorMessage.builder()
-            .setCategory(ATTRIBUTION_REPORT_TO_MISMATCH)
-            .setDetailedErrorMessage(
-                detailedErrorMessage(report.sharedInfo().reportingOrigin(), attributionReportTo))
-            .build());
-  }
-
-  private String detailedErrorMessage(
-      String reportAttributionReportTo, String requestAttributionReportTo) {
-    return String.format(
-        "Report' attributionReportTo didn't match the AdTech request. Report's"
-            + " attributionReportTo: %s, Request's attributionReportTo: %s",
-        reportAttributionReportTo, requestAttributionReportTo);
+    return createErrorMessage(
+        ATTRIBUTION_REPORT_TO_MISMATCH,
+        String.format(
+            "Report's attributionReportTo didn't match the AdTech request. Report's"
+                + " attributionReportTo: %s, Request's attributionReportTo: %s",
+            report.sharedInfo().reportingOrigin(), attributionReportTo));
   }
 }

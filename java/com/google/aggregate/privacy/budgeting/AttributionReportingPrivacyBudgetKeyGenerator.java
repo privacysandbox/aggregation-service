@@ -40,7 +40,11 @@ public class AttributionReportingPrivacyBudgetKeyGenerator implements PrivacyBud
     privacyBudgetKeyInputElements.add(sharedInfo.version());
     privacyBudgetKeyInputElements.add(sharedInfo.reportingOrigin());
     privacyBudgetKeyInputElements.add(sharedInfo.destination().get());
-    privacyBudgetKeyInputElements.add(sharedInfo.sourceRegistrationTime().get().toString());
+    // Source registration time might not be present in every valid ARA report.
+    sharedInfo
+        .sourceRegistrationTime()
+        .ifPresent(time -> privacyBudgetKeyInputElements.add(time.toString()));
+
     String privacyBudgetKeyHashInput =
         String.join(PRIVACY_BUDGET_KEY_DELIMITER, privacyBudgetKeyInputElements);
 

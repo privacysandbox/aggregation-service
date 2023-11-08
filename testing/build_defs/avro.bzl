@@ -24,7 +24,7 @@ def _generate_avro_impl(ctx):
     args.add("--distribution", "FILE")
     args.add("--distribution_file_path", ctx.file.human_readable_reports)
     args.add("--asymmetric_key_file_path", ctx.file.key)
-    args.add("--generated_report_scheduled_time", ctx.attr.generated_report_scheduled_time)
+    args.add("--scheduled_report_time", ctx.attr.scheduled_report_time)
     args.add("--domain_overlap", ctx.attr.domain_overlap)
 
     if ctx.attr.generate_output_domain:
@@ -69,10 +69,6 @@ generate_avro = rule(
         "generate_output_domain": attr.bool(
             doc = "If true, indicates that output domain of results should be generated.",
         ),
-        "generated_report_scheduled_time": attr.string(
-            doc = "Scheduled time for the generated reports",
-            default = "1970-01-01T00:00:00Z",
-        ),
         "human_readable_reports": attr.label(
             doc = "Text file containing human-readable reports.",
             allow_single_file = True,
@@ -91,6 +87,10 @@ generate_avro = rule(
         ),
         "output_domain_size": attr.int(
             doc = "Number of buckets that should be present in the output domain.",
+        ),
+        "scheduled_report_time": attr.string(
+            doc = "Scheduled time for the generated reports",
+            default = "1970-01-01T00:00:00Z",
         ),
         "_simulation": attr.label(
             default = Label("//java/com/google/aggregate/simulation:SimulationRunner"),

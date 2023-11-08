@@ -18,12 +18,14 @@ package com.google.aggregate.adtech.worker.selector;
 
 import com.google.inject.Module;
 import com.google.scp.operator.cpio.metricclient.aws.AwsMetricModule;
+import com.google.scp.operator.cpio.metricclient.gcp.GcpMetricModule;
 import com.google.scp.operator.cpio.metricclient.local.LocalMetricModule;
 
 /** CLI enum to select the job puller implementation */
 public enum MetricClientSelector {
   LOCAL(new LocalMetricModule()),
-  AWS(new AwsMetricModule());
+  AWS(new AwsMetricModule()),
+  GCP(new GcpMetricModule());
 
   private final Module guiceModule;
 

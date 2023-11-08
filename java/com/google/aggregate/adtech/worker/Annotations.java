@@ -25,83 +25,134 @@ import com.google.inject.BindingAnnotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-/** Guice annotations for dependency injection */
+/**
+ * Guice annotations for dependency injection
+ */
 public final class Annotations {
 
   /**
-   * Annotation for the {@link com.google.common.util.concurrent.ServiceManager} running the worker.
+   * Annotation for the {@link com.google.common.util.concurrent.ServiceManager} running the
+   * worker.
    */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface WorkerServiceManager {}
+  public @interface WorkerServiceManager {
 
-  /** Annotation for the {@link com.google.common.util.concurrent.Service} doing the work. */
+  }
+
+  /**
+   * Annotation for the {@link com.google.common.util.concurrent.Service} doing the work.
+   */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface PullWorkService {}
+  public @interface PullWorkService {
 
-  /** Annotation for the thread pool doing the non-blocking work. */
+  }
+
+  /**
+   * Annotation for the thread pool doing the non-blocking work.
+   */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface NonBlockingThreadPool {}
+  public @interface NonBlockingThreadPool {
 
-  /** Annotation for the thread pool doing the blocking work. */
+  }
+
+  /**
+   * Annotation for the thread pool doing the blocking work.
+   */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface BlockingThreadPool {}
+  public @interface BlockingThreadPool {
 
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface BenchmarkMode {}
-
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface DomainOptional {}
-
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface EnableThresholding {}
-
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  @interface DebugWriter {}
+  }
 
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  @interface ResultWriter {}
+  public @interface BenchmarkMode {
 
-  /** Annotation to enable or disable returning stack trace in response. */
+  }
+
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface EnableStackTraceInResponse {}
+  public @interface DomainOptional {
 
-  /** Annotation to declare the max depth of stacktrace to be returned. */
+  }
+
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface MaxDepthOfStackTrace {}
+  public @interface EnableThresholding {
 
-  /** Annotation to declare the threshold of report errors to fail the job. */
+  }
+
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface ReportErrorThresholdPercentage {}
+  @interface DebugWriter {
 
-  /** Annotation to set a size of shard with single key-value pair. */
+  }
+
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface OutputShardFileSizeBytes {}
+  @interface ResultWriter {
 
-  private Annotations() {}
+  }
+
+  /**
+   * Annotation to enable or disable returning stack trace in response.
+   */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface EnableStackTraceInResponse {
+
+  }
+
+  /**
+   * Annotation to declare the max depth of stacktrace to be returned.
+   */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface MaxDepthOfStackTrace {
+
+  }
+
+  /**
+   * Annotation to declare the threshold of report errors to fail the job.
+   */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface ReportErrorThresholdPercentage {
+
+  }
+
+  /**
+   * Annotation to set a size of shard with single key-value pair.
+   */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface OutputShardFileSizeBytes {
+
+  }
+
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface EnableParallelSummaryUpload {
+
+  }
+
+  private Annotations() {
+  }
 }

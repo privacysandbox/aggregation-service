@@ -119,7 +119,8 @@ repos:
     exclude: (?x)^(
         WORKSPACE|
         tools/opensource/inclusive_language/.*|
-        licenses/.*
+        licenses/.*|
+        kokoro/gcp_ubuntu/kokoro_update_container_dependencies.sh
       )$
 
   - id: terraform-fmt

@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.ATTRIBUTION_REPORT_TO_MALFORMED;
+import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
@@ -40,17 +41,11 @@ public final class ReportingOriginIsDomainValidator implements ReportValidator {
       return Optional.empty();
     }
 
-    return Optional.of(
-        ErrorMessage.builder()
-            .setCategory(ATTRIBUTION_REPORT_TO_MALFORMED)
-            .setDetailedErrorMessage(detailedErrorMessage(report.sharedInfo().reportingOrigin()))
-            .build());
-  }
-
-  private String detailedErrorMessage(String providedAttributionReportTo) {
-    return String.format(
-        "Report's attributionReportTo to is malformed, must be a domain. Report's"
-            + " attributionReportTo was: %s",
-        providedAttributionReportTo);
+    return createErrorMessage(
+        ATTRIBUTION_REPORT_TO_MALFORMED,
+        String.format(
+            "Report's attributionReportTo to is malformed, must be a domain. Report's"
+                + " attributionReportTo was: %s",
+            report.sharedInfo().reportingOrigin()));
   }
 }

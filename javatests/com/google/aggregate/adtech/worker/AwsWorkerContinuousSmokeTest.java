@@ -52,6 +52,7 @@ import org.junit.runners.JUnit4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /**
@@ -103,8 +104,10 @@ import software.amazon.awssdk.services.s3.S3Client;
 @RunWith(JUnit4.class)
 public class AwsWorkerContinuousSmokeTest {
 
-  @Rule public final Acai acai = new Acai(TestEnv.class);
-  @Rule public final TestName name = new TestName();
+  @Rule
+  public final Acai acai = new Acai(TestEnv.class);
+  @Rule
+  public final TestName name = new TestName();
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
@@ -114,11 +117,14 @@ public class AwsWorkerContinuousSmokeTest {
 
   private static final String TEST_DATA_S3_KEY_PREFIX = "generated-test-data";
 
-  private static Logger logger = LoggerFactory.getLogger(AwsWorkerContinuousSmokeTest.class);
+  private static final Logger logger = LoggerFactory.getLogger(AwsWorkerContinuousSmokeTest.class);
 
-  @Inject S3BlobStorageClient s3BlobStorageClient;
-  @Inject AvroResultsFileReader avroResultsFileReader;
-  @Inject private AvroDebugResultsReaderFactory readerFactory;
+  @Inject
+  S3BlobStorageClient s3BlobStorageClient;
+  @Inject
+  AvroResultsFileReader avroResultsFileReader;
+  @Inject
+  private AvroDebugResultsReaderFactory readerFactory;
 
   @Before
   public void checkBuildEnv() {
@@ -128,10 +134,8 @@ public class AwsWorkerContinuousSmokeTest {
   }
 
   private static String getTestDataBucket() {
-    if (System.getenv("TEST_DATA_BUCKET") != null) {
-      return System.getenv("TEST_DATA_BUCKET");
-    }
-    return DEFAULT_TEST_DATA_BUCKET;
+    String testDataBucket = System.getenv("TEST_DATA_BUCKET");
+    return testDataBucket != null ? testDataBucket : DEFAULT_TEST_DATA_BUCKET;
   }
 
   private static boolean runPrivateAggregationTests() {
@@ -144,15 +148,13 @@ public class AwsWorkerContinuousSmokeTest {
         && System.getenv("RUN_MULTI_OUTPUT_SHARD_TEST").equalsIgnoreCase("true");
   }
 
+  /*
+      Starts with a createJob request to API gateway with the test inputs pre-uploaded in s3
+      bucket. Ends by calling getJob API to retrieve result information. Assertions are made on
+      result status (SUCCESS) and result avro (not empty) which sits in the testing bucket.
+   */
   @Test
   public void createJobE2ETest() throws Exception {
-    // End to end testing:
-    //   Starts with a createJob request to API gateway with the test inputs pre-uploaded to s3
-    //   bucket.
-    //   Ends by calling getJob API to retrieve result information.
-    //   Assertions are made on result status (SUCCESS) and result avro (not empty) which sits in
-    //   the testing bucket.
-
     var inputKey =
         String.format(
             "%s/%s/test-inputs/10k_test_input_1.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -241,12 +243,14 @@ public class AwsWorkerContinuousSmokeTest {
     assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
     // The debug file shouldn't exist because it's not debug run
     assertThat(
-            AwsWorkerContinuousTestHelper.checkS3FileExists(
-                s3BlobStorageClient, getTestDataBucket(), getDebugFilePrefix(outputKey)))
+        AwsWorkerContinuousTestHelper.checkS3FileExists(
+            s3BlobStorageClient, getTestDataBucket(), getDebugFilePrefix(outputKey)))
         .isFalse();
   }
 
-  /** This test includes sending a debug job and aggregatable reports with debug mode enabled. */
+  /**
+   * This test includes sending a debug job and aggregatable reports with debug mode enabled.
+   */
   @Test
   public void createDebugJobE2EReportDebugModeEnabledTest() throws Exception {
     var inputKey =
@@ -335,31 +339,31 @@ public class AwsWorkerContinuousSmokeTest {
     assertThat(result.get("result_info").get("return_code").asText())
         .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
     assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("count")
-                .asInt())
+        result
+            .get("result_info")
+            .get("error_summary")
+            .get("error_counts")
+            .get(0)
+            .get("count")
+            .asInt())
         .isEqualTo(10000);
     assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("category")
-                .asText())
+        result
+            .get("result_info")
+            .get("error_summary")
+            .get("error_counts")
+            .get(0)
+            .get("category")
+            .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.name());
     assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("description")
-                .asText())
+        result
+            .get("result_info")
+            .get("error_summary")
+            .get("error_counts")
+            .get(0)
+            .get("description")
+            .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.getDescription());
 
     // Read output avro from s3.
@@ -418,35 +422,35 @@ public class AwsWorkerContinuousSmokeTest {
     assertThat(result.get("result_info").get("return_code").asText())
         .isEqualTo(AggregationWorkerReturnCode.REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD.name());
     assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("count")
-                .asInt())
+        result
+            .get("result_info")
+            .get("error_summary")
+            .get("error_counts")
+            .get(0)
+            .get("count")
+            .asInt())
         .isAtLeast(1000);
     assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("category")
-                .asText())
+        result
+            .get("result_info")
+            .get("error_summary")
+            .get("error_counts")
+            .get(0)
+            .get("category")
+            .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.name());
     assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("description")
-                .asText())
+        result
+            .get("result_info")
+            .get("error_summary")
+            .get("error_counts")
+            .get(0)
+            .get("description")
+            .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.getDescription());
     assertThat(
-            AwsWorkerContinuousTestHelper.checkS3FileExists(
-                s3BlobStorageClient, getTestDataBucket(), outputKey))
+        AwsWorkerContinuousTestHelper.checkS3FileExists(
+            s3BlobStorageClient, getTestDataBucket(), outputKey))
         .isFalse();
   }
 
@@ -506,7 +510,6 @@ public class AwsWorkerContinuousSmokeTest {
    */
   @Test
   public void createJobE2EFledgeTest() throws Exception {
-    // TODO(b/278573071) : Enable private aggregation tests in release tests
     // Do not run private aggregation test if env variable is set.
     if (!runPrivateAggregationTests()) {
       logger.info("Skipping Private Aggregation API type Fledge test");
@@ -561,7 +564,6 @@ public class AwsWorkerContinuousSmokeTest {
    */
   @Test
   public void createJobE2ESharedStorageTest() throws Exception {
-    // TODO(b/278573071) : Enable private aggregation tests in release tests
     // Do not run private aggregation test if env variable is set.
     if (!runPrivateAggregationTests()) {
       logger.info("Skipping Private Aggregation API type Shared Storage test");
@@ -654,15 +656,14 @@ public class AwsWorkerContinuousSmokeTest {
         .isTrue();
   }
 
+  /*
+    Starts with a createJob request to API gateway with the test inputs pre-uploaded to s3
+    bucket. Ends by calling getJob API to retrieve result information. Assertions are made on
+    result status (SUCCESS) and result avro (not empty) which sits in the testing bucket.
+    The output files must be sharded into 3 separate files.
+   */
   @Test
   public void createJobE2ETestWithMultiOutputShard() throws Exception {
-    // End to end testing with multiple shard output:
-    //   Starts with a createJob request to API gateway with the test inputs pre-uploaded to s3
-    //   bucket.
-    //   Ends by calling getJob API to retrieve result information.
-    //   Assertions are made on result status (SUCCESS) and result avro (not empty) which sits in
-    //   the testing bucket. The output files must be sharded into 3 separate files.
-
     // Skip this test for the case where build parameter cannot be set (ex> release image)
     if (!runMultiOutputShardTest()) {
       logger.info("Skipping multi output shard test");
@@ -723,6 +724,10 @@ public class AwsWorkerContinuousSmokeTest {
                   .region(AWS_S3_BUCKET_REGION)
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
+      bind(S3AsyncClient.class)
+          .toInstance(
+              S3AsyncClient.builder()
+                  .region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

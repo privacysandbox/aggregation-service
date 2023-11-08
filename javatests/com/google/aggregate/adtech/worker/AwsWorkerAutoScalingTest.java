@@ -54,7 +54,7 @@ public class AwsWorkerAutoScalingTest {
   private static final Duration SCALE_ACTION_COMPLETION_TIMEOUT =
       Duration.of(5, ChronoUnit.MINUTES);
 
-  private static final String DATA_BUCKET = "aggregation-service-testing";
+  private static final String DEFAULT_TEST_DATA_BUCKET = "aggregation-service-testing";
   private static final String TEST_DATA_S3_KEY_PREFIX = "generated-test-data";
 
   // Input data and domain were generated in continuous_auto_scaling_test in shared_e2e.sh.
@@ -76,6 +76,13 @@ public class AwsWorkerAutoScalingTest {
   public static final String AUTO_SCALING_GROUP = System.getenv("AUTO_SCALING_GROUP");
   private static final Integer CONCURRENT_JOBS = 5;
   private static final Integer MIN_INSTANCES = 1;
+
+  private static String getTestDataBucket() {
+    if (System.getenv("TEST_DATA_BUCKET") != null) {
+      return System.getenv("TEST_DATA_BUCKET");
+    }
+    return DEFAULT_TEST_DATA_BUCKET;
+  }
 
   @Inject AutoScalingClient autoScalingClient;
 
@@ -104,12 +111,12 @@ public class AwsWorkerAutoScalingTest {
             "%s/test-outputs/%s/%s", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID, outputFile);
     CreateJobRequest createJobRequest =
         createJobRequest(
-            DATA_BUCKET,
+            getTestDataBucket(),
             INPUT_DATA_PATH,
-            DATA_BUCKET,
+            getTestDataBucket(),
             outputDataPath,
             /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName() + "_" + jobCount,
-            Optional.of(DATA_BUCKET),
+            Optional.of(getTestDataBucket()),
             Optional.of(INPUT_DOMAIN_PATH));
     submitJob(createJobRequest, SUBMIT_JOB_TIMEOUT, false);
     return createJobRequest;

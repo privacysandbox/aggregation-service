@@ -46,6 +46,7 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /**
@@ -154,7 +155,10 @@ public class AwsWorkerContinuousOutOfMemoryTest {
                   .region(AWS_S3_BUCKET_REGION)
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
-
+      bind(S3AsyncClient.class)
+          .toInstance(
+              S3AsyncClient.builder()
+                  .region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

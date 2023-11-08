@@ -120,6 +120,7 @@ PROD_ENCLAVE_ARGS = [
     "--noising",
     "DP_NOISING",
     "--return_stack_trace",
+    "--parallel-summary-upload",
 ]
 # Check the documentation for the worker_aws_deployment macro for details on
 # what is available in this package.

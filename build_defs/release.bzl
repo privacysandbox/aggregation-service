@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ if grep -q "Skipping" "$outputfile"; then
   echo "ERROR: Artifact already exists"
   exit 1
 fi
+openssl sha256 {jar_file} || true
 """
     script = ctx.actions.declare_file("%s_script.sh" % ctx.label.name)
     script_content = script_template.format(
@@ -117,10 +118,124 @@ def s3_jar_release(
         release_bucket: s3 bucket to which the release the artifact.
         release_key: s3 key for the release artifact.
         artifact_base_name: base name of the artifact. The base name should include a "{VERSION}" substring which will be
-            replaced with the version argument. e.g. "AwsChangeHandlerLambda-{VERSION}.tgz".
-        gcloud_sdk: Path to google cloud sdk for linux.
+            replaced with the version argument. e.g. "AwsChangeHandlerLambda_{VERSION}.tgz".
     """
     s3_jar_release_rule(
+        name = name,
+        jar_target = jar_target,
+        release_bucket = release_bucket,
+        release_key = release_key,
+        artifact_base_name = artifact_base_name,
+    )
+
+def _gcs_jar_release_impl(ctx):
+    jar_file = ctx.file.jar_target
+    script_template = """#!/bin/bash
+set -eux
+# parse arguments and set up variables
+artifact_base_name="{artifact_base_name}"
+version=""
+for ARGUMENT in "$@"
+do
+    case $ARGUMENT in
+        --version=*)
+        version=$(echo $ARGUMENT | cut -f2 -d=)
+        ;;
+        *)
+        printf "ERROR: invalid argument $ARGUMENT\n"
+        exit 1
+        ;;
+    esac
+done
+## check variables and arguments
+if [[ "$version" == "" ]]; then
+    printf "ERROR: --version argument is not provided\n"
+    exit 1
+fi
+if [[ "$artifact_base_name" != *"{{VERSION}}"* ]]; then
+    printf "ERROR: artifact_base_name must include {{VERSION}} substring\n"
+    exit 1
+fi
+artifact_name=$(echo $artifact_base_name | sed -e "s/{{VERSION}}/$version/g")
+# upload artifact to gcs
+echo "Preparing release jar to gcs"
+gsutil --version
+echo "bazel working directory:"
+pwd
+echo "-------------------------"
+outputfile=$(mktemp)
+gsutil cp {jar_file} gs://{release_bucket}/{release_key}/$version/$artifact_name 2>&1 | tee $outputfile
+if grep -q "Skipping" "$outputfile"; then
+  echo "ERROR: Artifact already exists"
+  exit 1
+fi
+openssl sha256 {jar_file} || true
+"""
+    script = ctx.actions.declare_file("%s_script.sh" % ctx.label.name)
+    script_content = script_template.format(
+        jar_file = jar_file.short_path,
+        release_bucket = ctx.attr.release_bucket[BuildSettingInfo].value,
+        release_key = ctx.attr.release_key[BuildSettingInfo].value,
+        artifact_base_name = ctx.attr.artifact_base_name,
+    )
+    ctx.actions.write(script, script_content, is_executable = True)
+    runfiles = ctx.runfiles(files = [
+        jar_file,
+    ])
+    return [DefaultInfo(
+        executable = script,
+        files = depset([script, jar_file]),
+        runfiles = runfiles,
+    )]
+
+gcs_jar_release_rule = rule(
+    implementation = _gcs_jar_release_impl,
+    attrs = {
+        "artifact_base_name": attr.string(
+            mandatory = True,
+        ),
+        "jar_target": attr.label(
+            allow_single_file = True,
+            mandatory = True,
+            providers = [BuildSettingInfo],
+        ),
+        "release_bucket": attr.label(
+            mandatory = True,
+            providers = [BuildSettingInfo],
+        ),
+        "release_key": attr.label(
+            mandatory = True,
+            providers = [BuildSettingInfo],
+        ),
+    },
+    executable = True,
+)
+
+def gcs_jar_release(
+        *,
+        name,
+        jar_target = ":jar_target_flag",
+        release_bucket = ":bucket_flag",
+        release_key = ":bucket_path_flag",
+        artifact_base_name):
+    """
+    Creates targets for releasing aggregation service artifact to gcs.
+    This rule only accepts releasing one artifact (e.g. a jar file). The path in which the artifact is stored
+    is specified by the gcs bucket name, key, artifact base name, and version. The naming convention is as below:
+    `gs://bucket/key/VERSION/name_of_artifact_VERSION.tgz`
+    targets:
+      1. '%s_script.sh': script for running gsutil cli to copy code package to gcs.
+      2. artifact file: the package file being uploaded to gcs. This is built from the
+        specified build target (e.g. a `pkg_tar` target).
+    Args:
+        name: The target name used to generate the targets described above.
+        jar_target: Path to the jar build target.
+        release_bucket: gcs bucket to which the release the artifact.
+        release_key: gcs key for the release artifact.
+        artifact_base_name: base name of the artifact. The base name should include a "{VERSION}" substring which will be
+            replaced with the version argument. e.g. "WorkerScaleInCloudFunction_{VERSION}.tgz".
+    """
+    gcs_jar_release_rule(
         name = name,
         jar_target = jar_target,
         release_bucket = release_bucket,

@@ -184,6 +184,21 @@ java_test(
 )
 
 java_test(
+    name = "ReportVersionValidatorTest",
+    srcs = ["ReportVersionValidatorTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/validation",
+        "//java/external:clients_jobclient_aws",
+        "//java/external:clients_jobclient_model",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+        "//java/external:operator_protos",
+        "//java/external:shared_model",
+    ],
+)
+
+java_test(
     name = "JobValidatorTest",
     srcs = ["JobValidatorTest.java"],
     deps = [

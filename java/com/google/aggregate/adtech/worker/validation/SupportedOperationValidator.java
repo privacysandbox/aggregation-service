@@ -16,7 +16,9 @@
 
 package com.google.aggregate.adtech.worker.validation;
 
-import com.google.aggregate.adtech.worker.model.ErrorCounter;
+import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_OPERATION;
+import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
+
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
@@ -34,14 +36,12 @@ public final class SupportedOperationValidator implements ReportValidator {
     if (SharedInfo.SUPPORTED_OPERATIONS.contains(report.payload().operation())) {
       return Optional.empty();
     }
-    return Optional.of(
-        ErrorMessage.builder()
-            .setCategory(ErrorCounter.UNSUPPORTED_OPERATION)
-            .setDetailedErrorMessage(
-                String.format(
-                    DETAILED_ERROR_MESSAGE_TEMPLATE,
-                    report.payload().operation(),
-                    SharedInfo.SUPPORTED_OPERATIONS))
-            .build());
+
+    return createErrorMessage(
+        UNSUPPORTED_OPERATION,
+        String.format(
+            DETAILED_ERROR_MESSAGE_TEMPLATE,
+            report.payload().operation(),
+            SharedInfo.SUPPORTED_OPERATIONS));
   }
 }

@@ -135,6 +135,11 @@ alias(
 )
 
 alias(
+    name = "google_auth_library_oauth2_http",
+    actual = "@maven//:com_google_auth_google_auth_library_oauth2_http",
+)
+
+alias(
     name = "test_parameter_injector",
     actual = "@maven//:com_google_testparameterinjector_test_parameter_injector",
 )
@@ -255,6 +260,16 @@ alias(
 )
 
 alias(
+    name = "aws_netty_nio_client",
+    actual = "@maven//:software_amazon_awssdk_netty_nio_client",
+)
+
+alias(
+    name = "aws_s3_transfer_manager",
+    actual = "@maven//:software_amazon_awssdk_s3_transfer_manager",
+)
+
+alias(
     name = "aws_ssm",
     actual = "@maven//:software_amazon_awssdk_ssm",
 )
@@ -361,6 +376,16 @@ alias(
 )
 
 alias(
+    name = "jobqueue_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/jobqueue/gcp:gcp",
+)
+
+alias(
+    name = "shared_dao_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp:gcp",
+)
+
+alias(
     name = "clients_jobclient",
     actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/jobclient",
 )
@@ -411,8 +436,18 @@ alias(
 )
 
 alias(
+    name = "clients_distributed_privacy_budgeting_local",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/local:local_distributed_privacy_budget_client",
+)
+
+alias(
     name = "clients_distributed_privacy_budgeting_aws",
     actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/aws:aws_pbs_client_module",
+)
+
+alias(
+    name = "clients_distributed_privacy_budgeting_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/gcp:gcp_pbs_client_module",
 )
 
 alias(
@@ -433,6 +468,11 @@ alias(
 alias(
     name = "dao_metadatadb_aws",
     actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/aws",
+)
+
+alias(
+    name = "dao_metadatadb_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/gcp",
 )
 
 alias(
@@ -458,6 +498,11 @@ alias(
 alias(
     name = "dao_jobqueue_common",
     actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/jobqueue/common",
+)
+
+alias(
+    name = "dao_jobqueue_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/jobqueue/gcp",
 )
 
 alias(
@@ -528,6 +573,76 @@ alias(
 alias(
     name = "clients_cryptoclient_aws",
     actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/cryptoclient:aws",
+)
+
+alias(
+    name = "clients_blobstorageclient_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient:gcp",
+)
+
+alias(
+    name = "clients_jobclient_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/jobclient:gcp",
+)
+
+alias(
+    name = "clients_metricclient_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/metricclient:gcp",
+)
+
+alias(
+    name = "clients_configclient_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/clients/configclient:gcp",
+)
+
+alias(
+    name = "clients_configclient_gcp_operator",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/configclient:gcp",
+)
+
+alias(
+    name = "clients_cryptoclient_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/cryptoclient:gcp",
+)
+
+alias(
+    name = "worker_decryption",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/decryption",
+)
+
+alias(
+    name = "worker_hybrid_decryption",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/decryption/hybrid",
+)
+
+alias(
+    name = "operator_worker_reader",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/reader",
+)
+
+alias(
+    name = "operator_worker_reader_avro",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/reader/avro",
+)
+
+alias(
+    name = "operator_report_serdes",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/model/serdes",
+)
+
+alias(
+    name = "operator_report_serdes_proto",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/model/serdes/proto:report_serdes",
+)
+
+alias(
+    name = "shared_mapper",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/mapper",
+)
+
+alias(
+    name = "clients_lifecycleclient_gcp",
+    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/lifecycleclient:gcp",
 )
 
 alias(
@@ -687,6 +802,11 @@ alias(
 )
 
 alias(
+    name = "gcp_compute",
+    actual = "@maven//:com_google_cloud_google_cloud_compute",
+)
+
+alias(
     name = "gcp_kms",
     actual = "@maven//:com_google_cloud_google_cloud_kms",
 )
@@ -694,6 +814,11 @@ alias(
 alias(
     name = "gcp_pubsub",
     actual = "@maven//:com_google_cloud_google_cloud_pubsub",
+)
+
+alias(
+    name = "proto_gcp_compute_v1",
+    actual = "@maven//:com_google_api_grpc_proto_google_cloud_compute_v1",
 )
 
 alias(
@@ -755,6 +880,11 @@ alias(
 alias(
     name = "scp_shared_proto",
     actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/proto",
+)
+
+alias(
+    name = "keymanagement_shared_proto",
+    actual = "@com_google_adm_cloud_scp//coordinator/protos/keymanagement/shared/backend:proto",
 )
 
 alias(

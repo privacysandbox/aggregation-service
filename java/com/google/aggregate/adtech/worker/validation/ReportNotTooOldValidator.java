@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.ORIGINAL_REPORT_TIME_TOO_OLD;
+import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
@@ -46,18 +47,13 @@ public final class ReportNotTooOldValidator implements ReportValidator {
       return Optional.empty();
     }
 
-    return Optional.of(
-        ErrorMessage.builder()
-            .setCategory(ORIGINAL_REPORT_TIME_TOO_OLD)
-            .setDetailedErrorMessage(
-                detailedErrorMessage(oldestAllowedTime, report.sharedInfo().scheduledReportTime()))
-            .build());
-  }
-
-  private String detailedErrorMessage(Instant oldestAllowedTime, Instant originalReportTime) {
-    return String.format(
-        "Report's originalReportTime is too old, reports cannot be older than %s, must be more"
-            + " recent than %s but was %s",
-        SharedInfo.MAX_REPORT_AGE, oldestAllowedTime, originalReportTime);
+    return createErrorMessage(
+        ORIGINAL_REPORT_TIME_TOO_OLD,
+        String.format(
+            "Report's originalReportTime is too old, reports cannot be older than %s, must be more"
+                + " recent than %s but was %s",
+            SharedInfo.MAX_REPORT_AGE,
+            oldestAllowedTime,
+            report.sharedInfo().scheduledReportTime()));
   }
 }

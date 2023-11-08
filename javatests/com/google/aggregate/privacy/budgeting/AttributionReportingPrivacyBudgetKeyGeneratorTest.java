@@ -19,18 +19,15 @@ import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_RE
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
 
 import com.google.aggregate.adtech.worker.model.SharedInfo;
 import java.time.Instant;
-import java.util.NoSuchElementException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class AttributionReportingPrivacyBudgetKeyGeneratorTest {
-  private static final String PRIVACY_BUDGET_KEY_1 = "test_privacy_budget_key";
   // FIXED_TIME = Jan 01 2021 00:00:00 GMT+0000
   private static final Instant FIXED_TIME = Instant.ofEpochSecond(1609459200);
   private static final String DESTINATION = "https://www.destination.com";
@@ -53,8 +50,9 @@ public class AttributionReportingPrivacyBudgetKeyGeneratorTest {
   private static final String PRIVACY_BUDGET_KEY_CHROME_GOLDEN_REPORT =
       "399bd3cd2282959381e4ad6858c5f434285ec70252b5a446808815780d36140f";
 
-  AttributionReportingPrivacyBudgetKeyGenerator attributionReportingPrivacyBudgetKeyGenerator =
-      new AttributionReportingPrivacyBudgetKeyGenerator();
+  private AttributionReportingPrivacyBudgetKeyGenerator
+      attributionReportingPrivacyBudgetKeyGenerator =
+          new AttributionReportingPrivacyBudgetKeyGenerator();
 
   /** Test to verify Privacy Budget Key is generated correctly from Shared Info for VERSION_0_1. */
   @Test
@@ -165,21 +163,19 @@ public class AttributionReportingPrivacyBudgetKeyGeneratorTest {
   }
 
   @Test
-  public void validate_withoutSourceRegistrationTime_throwsException() {
-    SharedInfo.Builder sharedInfoBuilder1 =
+  public void validate_withoutSourceRegistrationTime() {
+    SharedInfo.Builder sharedInfoBuilder =
         SharedInfo.builder()
             .setVersion(VERSION_0_1)
             .setApi(ATTRIBUTION_REPORTING_API)
             .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
             .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
             .setScheduledReportTime(Instant.ofEpochSecond(1234486400));
-    SharedInfo sharedInfo = sharedInfoBuilder1.build();
+    SharedInfo sharedInfo = sharedInfoBuilder.build();
 
-    assertThrows(
-        NoSuchElementException.class,
-        () ->
-            attributionReportingPrivacyBudgetKeyGenerator
-                .generatePrivacyBudgetKey(sharedInfo)
-                .get());
+    String privacyBudgetKey =
+        attributionReportingPrivacyBudgetKeyGenerator.generatePrivacyBudgetKey(sharedInfo).get();
+
+    assertThat(privacyBudgetKey).isNotEmpty();
   }
 }

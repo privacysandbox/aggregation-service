@@ -20,12 +20,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUpload;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
-import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
+import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWorkingDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
@@ -152,7 +153,8 @@ public final class AggregationWorkerModule extends AbstractModule {
         if (!args.getLocalFileJobInfoPath().isEmpty()) {
           localJobInfoPath = Optional.of(Paths.get(args.getLocalFileJobInfoPath()));
         }
-        bind(new TypeLiteral<Optional<Path>>() {})
+        bind(new TypeLiteral<Optional<Path>>() {
+        })
             .annotatedWith(LocalFileJobHandlerResultPath.class)
             .toInstance(localJobInfoPath);
         bind(ObjectMapper.class).to(TimeObjectMapper.class);
@@ -237,11 +239,10 @@ public final class AggregationWorkerModule extends AbstractModule {
 
     install(args.getMetricClient().getMetricModule());
 
-    // Dependencies for aggregation worker processor
-
+    // Dependencies for aggregation worker processor.
     bind(RecordReaderFactory.class).to(args.getEncryptedRecordReader().getReaderFactoryClass());
 
-    // decryption and deserialization
+    // Dependencies for decryption and deserialization.
     bind(String.class)
         .annotatedWith(PrivateKeyServiceBaseUrl.class)
         .toInstance(args.getPrivateKeyServiceBaseUrl());
@@ -255,9 +256,10 @@ public final class AggregationWorkerModule extends AbstractModule {
     install(args.getDecryptionModuleSelector().getDecryptionModule());
     bind(PayloadSerdes.class).to(CborPayloadSerdes.class); // CBOR is the only allowed report format
     bind(RecordDecrypter.class).to(DeserializingReportDecrypter.class);
-    // decryption key service.
+
+    // Dependencies for the decryption key service.
     install(args.getDecryptionServiceSelector().getDecryptionKeyClientModule());
-    // determines how/where to read the decryption key.
+    // Determines how/where to read the decryption key.
     switch (args.getDecryptionServiceSelector()) {
       case LOCAL_FILE_DECRYPTION_KEY_SERVICE:
         bind(Path.class)
@@ -266,20 +268,20 @@ public final class AggregationWorkerModule extends AbstractModule {
         break;
     }
 
-    // validations
+    // Validations.
     if (args.isSimulationInputs()) {
       install(new SimulationValidationModule());
     } else {
       install(new ValidationModule());
     }
 
-    // Aggregation processor
+    // Dependency for the aggregation processor.
     bind(JobProcessor.class).to(ConcurrentAggregationProcessor.class);
 
-    // noising
+    // Noising module.
     install(args.getNoisingSelector().getNoisingModule());
 
-    // result logger
+    // Result logger module.
     install(args.resultLoggerModuleSelector().getResultLoggerModule());
     switch (args.resultLoggerModuleSelector()) {
       case LOCAL_TO_CLOUD:
@@ -288,8 +290,10 @@ public final class AggregationWorkerModule extends AbstractModule {
             .toInstance(Paths.get(args.getResultWorkingDirectoryPathString()));
         break;
     }
+    bind(boolean.class).annotatedWith(EnableParallelSummaryUpload.class)
+        .toInstance(args.isEnableParallelSummaryUpload());
 
-    // Privacy budgeting.
+    // Dependencies for privacy budgeting.
     bind(PrivacyBudgetingServiceBridge.class).to(args.getPrivacyBudgeting().getBridge());
     if (args.getPrivacyBudgeting() == PrivacyBudgetingSelector.HTTP) {
       bind(String.class)
@@ -307,10 +311,10 @@ public final class AggregationWorkerModule extends AbstractModule {
       install(new AwsPbsClientModule());
     }
 
-    // Benchmark Mode for Perftests
+    // Benchmark Mode for Perf tests.
     bind(boolean.class).annotatedWith(BenchmarkMode.class).toInstance(args.getBenchmarkMode());
 
-    // Stopwatch exporting
+    // Stopwatch exporting.
     bind(StopwatchExporter.class).to(args.getStopwatchExportSelector().getExporterClass());
     switch (args.getStopwatchExportSelector()) {
       case NO_OP:
@@ -330,7 +334,7 @@ public final class AggregationWorkerModule extends AbstractModule {
         break;
     }
 
-    // Privacy parameters
+    // Privacy parameters.
     bind(Distribution.class)
         .annotatedWith(NoisingDistribution.class)
         .toInstance(args.getNoisingDistribution());
@@ -340,10 +344,10 @@ public final class AggregationWorkerModule extends AbstractModule {
         .toInstance(args.getNoisingL1Sensitivity());
     bind(double.class).annotatedWith(NoisingDelta.class).toInstance(args.getNoisingDelta());
 
-    // Otel exporter
+    // Otel exporter.
     switch (args.getOTelExporterSelector()) {
-        // Specifying CollectorEndpoint is required for GRPC exporter because aggregation service
-        // would send metric to the CollectorEndpoint and thus collector/exporter could collect.
+      // Specifying CollectorEndpoint is required for GRPC exporter because aggregation service
+      // would send metric to the CollectorEndpoint and thus collector/exporter could collect.
       case GRPC:
         bind(String.class)
             .annotatedWith(GrpcOtelCollectorEndpoint.class)
@@ -353,7 +357,8 @@ public final class AggregationWorkerModule extends AbstractModule {
         break;
     }
     install(args.getOTelExporterSelector().getOTelConfigurationModule());
-    // Response related flags
+
+    // Response related flags.
     bind(boolean.class)
         .annotatedWith(EnableStackTraceInResponse.class)
         .toInstance(args.isEnableReturningStackTraceInResponse());

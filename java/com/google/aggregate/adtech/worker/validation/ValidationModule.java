@@ -38,5 +38,6 @@ public final class ValidationModule extends AbstractModule {
     validatorBinder.addBinding().to(SupportedReportApiTypeValidator.class);
     validatorBinder.addBinding().to(ReportPrivacyBudgetKeyValidator.class);
     validatorBinder.addBinding().to(SharedInfoReportIdValidator.class);
+    validatorBinder.addBinding().to(ReportVersionValidator.class);
   }
 }

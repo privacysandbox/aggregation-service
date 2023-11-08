@@ -389,6 +389,11 @@ public final class AggregationWorkerArgs {
       "Size of one shard of the output file. The default value is 100,000,000. (100MB)")
   private long outputShardFileSizeBytes = 100_000_000L; // 100MB
 
+  @Parameter(
+      names = "--parallel-summary-upload",
+      description = "Flag to enable parallel upload of the sharded summary reports.")
+  private boolean enableParallelSummaryUpload = false;
+
   ClientConfigSelector getClientConfigSelector() {
     return clientConfigSelector;
   }
@@ -665,5 +670,9 @@ public final class AggregationWorkerArgs {
 
   public long getOutputShardFileSizeBytes() {
     return outputShardFileSizeBytes;
+  }
+
+  public boolean isEnableParallelSummaryUpload() {
+    return enableParallelSummaryUpload;
   }
 }

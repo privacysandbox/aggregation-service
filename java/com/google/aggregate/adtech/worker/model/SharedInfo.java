@@ -46,6 +46,11 @@ public abstract class SharedInfo {
 
   public static final String VERSION_0_1 = "0.1";
   public static final String LATEST_VERSION = VERSION_0_1;
+  public static final String MAJOR_VERSION_ZERO = "0";
+  // TODO(b/303480127): Remove isZero() from Version class in ReportVersionValidator when
+  // MAJOR_VERSION_ZERO is removed from SUPPORTED_MAJOR_VERSIONS.
+  public static final ImmutableSet<String> SUPPORTED_MAJOR_VERSIONS =
+      ImmutableSet.of(MAJOR_VERSION_ZERO);
   public static final boolean DEFAULT_DEBUG_MODE = false;
   public static final String ATTRIBUTION_REPORTING_API = "attribution-reporting";
   public static final String PROTECTED_AUDIENCE_API = "protected-audience";

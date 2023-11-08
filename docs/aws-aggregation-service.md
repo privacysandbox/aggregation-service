@@ -1,14 +1,5 @@
 # Testing on AWS using encrypted reports
 
-## General Notes
-
-### Privacy Budget Enforcement
-
-Aggregation Service enforces the
-[no-duplicate](https://github.com/WICG/attribution-reporting-api/blob/main/AGGREGATION_SERVICE_TEE.md#no-duplicates-rule)
-rule. We recommend users design their systems keeping the no-duplicate rule in consideration. We
-suggest reading the [debugging](/docs/debugging.md) document for debug aggregation runs.
-
 ## Prerequisites
 
 To test the aggregation service with support for encrypted reports, you need the following:
@@ -39,7 +30,7 @@ Change into the `<repository_root>/terraform/aws` folder. See
 [clone the repository](/docs/local-testing-tool.md#clone-the-repository) if you have not cloned the
 repository so far.
 
-The setup scripts require terraform version `1.2.3`. You can download Terraform version 1.2.3 from
+The setup scripts require Terraform version `1.2.3`. You can download Terraform version `1.2.3` from
 [https://releases.hashicorp.com/terraform/1.2.3/](https://releases.hashicorp.com/terraform/1.2.3/)
 or _at your own risk_, you can install and use
 [Terraform version manager](https://github.com/tfutils/tfenv) instead.
@@ -212,7 +203,7 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
     get_job_endpoint = "GET https://<frontend_api_id>.execute-api.<aws_region>.amazonaws.com/stage/v1alpha/getJob"
     ```
 
-    The terraform scripts create `createJob` and `getJob` API endpoints:
+    The Terraform scripts create `createJob` and `getJob` API endpoints:
 
     -   Create Job Endpoint:
         `https://<frontend_api_id>.execute-api.<aws_region>.amazonaws.com/stage/v1alpha/createJob`
@@ -227,7 +218,7 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
 
 ## Testing the system
 
-To test the system, you'll need encrypted aggregatable reports in avro batch format (follow the
+To test the system, you'll need encrypted aggregatable reports in Avro batch format (follow the
 [collecting and batching instructions](/docs/collecting.md#collecting-and-batching-aggregatable-reports)
 accessible by the aggregation service.
 

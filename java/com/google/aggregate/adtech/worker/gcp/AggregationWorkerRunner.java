@@ -1,0 +1,71 @@
+/*
+ * Copyright 2023 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.aggregate.adtech.worker.gcp;
+
+import java.time.Duration;
+import java.util.concurrent.TimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.beust.jcommander.JCommander;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.ServiceManager;
+import com.google.common.util.concurrent.ServiceManager.Listener;
+import com.google.aggregate.adtech.worker.AggregationWorker;
+
+public final class AggregationWorkerRunner {
+
+  private static final Logger logger = LoggerFactory.getLogger(AggregationWorkerRunner.class);
+
+  public static void main(String[] args) {
+    logger.info("Worker Args: \n" + String.join("\n", args));
+    logger.info("Worker Max Heap Size (MiB): " + Runtime.getRuntime().maxMemory() / (1024 * 1024));
+
+    AggregationWorkerArgs cliArgs = new AggregationWorkerArgs();
+    JCommander.newBuilder().allowParameterOverwriting(true).addObject(cliArgs).build().parse(args);
+
+    AggregationWorkerModule guiceModule = new AggregationWorkerModule(cliArgs);
+
+    AggregationWorker worker = AggregationWorker.fromModule(guiceModule);
+    ServiceManager workerServiceManager = worker.createServiceManager();
+    workerServiceManager.addListener(
+        new Listener() {
+          @Override
+          public void failure(Service service) {
+            logger.error("Failure in the Aggregation Worker. Exiting the enclave process.");
+            System.exit(1);
+          }
+          @Override
+          public void healthy(){
+            logger.info("The aggregation worker is healthy.");
+          }
+        }, MoreExecutors.directExecutor());
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        // Give the service some time to stop to ensure that we are responsive to shutdown
+        // requests.
+        try {
+          workerServiceManager.stopAsync().awaitStopped(Duration.ofMinutes(1));
+        } catch (TimeoutException timeout) {
+          // Stopping timed out
+          logger.error("Unable to stop the worker service: " + timeout);
+        }
+      }
+    });
+    workerServiceManager.startAsync();
+  }
+}

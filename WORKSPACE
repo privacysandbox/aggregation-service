@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v1.2.0"  # version updated on 2023-08-28
+COORDINATOR_VERSION = "v1.4.0"  # version updated on 2023-10-19
 
 JACKSON_VERSION = "2.12.2"
 
@@ -100,6 +100,8 @@ maven_install(
         "com.amazonaws:aws-java-sdk-kms:1.11.860",
         "com.amazonaws:aws-java-sdk-core:1.11.860",
         "com.beust:jcommander:1.81",
+        "com.google.cloud.functions.invoker:java-function-invoker:1.1.0",
+        "com.google.inject.extensions:guice-testlib:5.1.0",
         "com.fasterxml.jackson.core:jackson-annotations:" + JACKSON_VERSION,
         "com.fasterxml.jackson.core:jackson-core:" + JACKSON_VERSION,
         "com.fasterxml.jackson.core:jackson-databind:" + JACKSON_VERSION,
@@ -119,6 +121,8 @@ maven_install(
         "com.google.cloud:google-cloud-pubsub:1.114.4",
         "com.google.cloud:google-cloud-storage:1.118.0",
         "com.google.cloud:google-cloud-spanner:6.12.2",
+        "com.google.cloud:google-cloud-compute:1.12.1",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.12.1",
         "com.google.cloud.functions:functions-framework-api:1.0.4",
         "commons-logging:commons-logging:1.1.1",
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
@@ -126,6 +130,7 @@ maven_install(
         "io.reactivex.rxjava3:rxjava:3.1.5",
         #"com.google.crypto.tink:tink:" + TINK_VERSION, # Using Tink from github master branch until new version releases
         "com.google.cloud:google-cloud-monitoring:3.4.1",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.12.1",
         "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.4.1",
         "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
@@ -170,6 +175,7 @@ maven_install(
         "software.amazon.awssdk:ec2:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:regions:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:s3:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:s3-transfer-manager:2.20.130",
         "software.amazon.awssdk:aws-core:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:ssm:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:sts:" + AWS_SDK_VERSION,
@@ -311,14 +317,17 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 # Containers #
 ##############
 
-# Distroless image for running Java.
-container_pull(
-    name = "java_base",
-    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-09-05.
-    digest = "sha256:052076466984fd56979c15a9c3b7433262b0ad9aae55bc0c53d1da8ffdd829c3",
-    registry = "gcr.io",
-    repository = "distroless/java17-debian11",
-)
+load("//build_defs:container_dependencies.bzl", container_dependencies = "CONTAINER_DEPS")
+
+[
+    container_pull(
+        name = img_name,
+        digest = img_info["digest"],
+        registry = img_info["registry"],
+        repository = img_info["repository"],
+    )
+    for img_name, img_info in container_dependencies.items()
+]
 
 # Distroless image for running C++.
 container_pull(
@@ -338,16 +347,6 @@ container_pull(
     # Using SHA-256 for reproducibility.
     # TODO: use digest instead of tag, currently it's not working.
     tag = "latest",
-)
-
-# Pulls AWS Otel Collector
-container_pull(
-    name = "aws_otel_collector",
-    # latest as of 2023-09-05.
-    digest = "sha256:2a6183f63e637b940584e8ebf5335bd9a2581ca16ee400e2e74b7b488825adb4",
-    registry = "public.ecr.aws",
-    repository = "aws-observability/aws-otel-collector",
-    tag = "v0.32.0",
 )
 
 #############
@@ -471,20 +470,62 @@ http_archive(
     ],
 )
 
-################################################################################
-# Download Containers: Begin
-################################################################################
+# Declare explicit protobuf version and hash, to override any implicit dependencies.
+# Please update both while upgrading to new versions.
+PROTOBUF_CORE_VERSION = "3.19.4"
 
-# Needed for reproducibly building AL2 binaries (e.g. //cc/aws/proxy)
-container_pull(
-    name = "amazonlinux_2",
-    # Latest as of 2023-09-05.
-    digest = "sha256:993d82940dba5370065dd5afb99fab56cdaf9f7b88800e88ddbd622678a6d3ea",
-    registry = "index.docker.io",
-    repository = "amazonlinux",
-    tag = "2.0.20230822.0",
+PROTOBUF_SHA_256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d2568"
+
+##########################
+# SDK Dependencies Rules #
+##########################
+
+load("@com_google_adm_cloud_scp//build_defs/cc:sdk.bzl", "sdk_dependencies")
+
+sdk_dependencies(PROTOBUF_CORE_VERSION, PROTOBUF_SHA_256)
+
+#################################
+# SCP Shared Dependencies Rules #
+#################################
+
+# This bazel file contains all the dependencies in SCP, except the dependencies
+# only used in SDK. Eventually, each project will have its own bazel file for
+# its dependencies, and this file will be removed.
+load("@com_google_adm_cloud_scp//build_defs:scp_dependencies.bzl", "scp_dependencies")
+
+scp_dependencies(PROTOBUF_CORE_VERSION, PROTOBUF_SHA_256)
+
+######### To gegerate Java interface for SDK #########
+load("@com_google_api_gax_java//:repository_rules.bzl", "com_google_api_gax_java_properties")
+
+com_google_api_gax_java_properties(
+    name = "com_google_api_gax_java_properties",
+    file = "@com_google_api_gax_java//:dependencies.properties",
 )
 
-################################################################################
-# Download Containers: End
-################################################################################
+load("@com_google_api_gax_java//:repositories.bzl", "com_google_api_gax_java_repositories")
+
+com_google_api_gax_java_repositories()
+
+load("@io_grpc_grpc_java//:repositories.bzl", "grpc_java_repositories")
+
+grpc_java_repositories()
+
+###########################
+# CC Dependencies #
+###########################
+
+# Load indirect dependencies due to
+#     https://github.com/bazelbuild/bazel/issues/1943
+load("@com_github_googleapis_google_cloud_cpp//bazel:google_cloud_cpp_deps.bzl", "google_cloud_cpp_deps")
+
+google_cloud_cpp_deps()
+
+load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
+
+switched_rules_by_language(
+    name = "com_google_googleapis_imports",
+    cc = True,
+    grpc = True,
+    java = True,
+)

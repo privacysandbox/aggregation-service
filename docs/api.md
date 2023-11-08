@@ -1,12 +1,12 @@
 # Aggregation Service API Documentation
 
-## AWS Nitro Enclave based Aggregation Service
-
 ### createJob Endpoint
 
 #### Endpoint
 
-`https://<api-gateway>/stage/v1alpha/createJob`
+AWS: `https://<api-gateway>/stage/v1alpha/createJob`
+
+GCP: `https://<cloud-run-endpoint>/v1alpha/createJob`
 
 #### Protocol
 
@@ -36,8 +36,7 @@ POST
   // Storage bucket for input data.
   "input_data_bucket_name": <string>,
 
-  // The output data path in the bucket. Currently, single output file is
-  // supported.
+  // The output data path in the bucket.
   // The output file will be named as follows:
   //     [OutputDataBlobPrefix]-[ShardId]-of-[TotalShards]
   // In the case of a single shard, the output file will still apply the
@@ -133,13 +132,15 @@ These are the validations that are done before the aggregation begins.
    Please see the createJob request parameter documentation above for more details.
 
 Return code:
-[INVALID_JOB](java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L38)
+[INVALID_JOB](../java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L39)
 
 ### getJob Endpoint
 
 #### Endpoint
 
-`https://<api-gateway>/stage/v1alpha/getJob`
+AWS: `https://<api-gateway>/stage/v1alpha/getJob`
+
+GCP: `https://<cloud-run-endpoint>/v1alpha/getJob`
 
 #### Protocol
 
@@ -232,7 +233,7 @@ present in the `result_info` section of the GetJob API response body
 
 If the job fails due to a handled exception, then `result_info.return_code` will have the
 corresponding error code in
-[AggregationWorkerReturnCode.java](https://github.com/privacysandbox/aggregation-service/blob/main/java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java)
+[AggregationWorkerReturnCode.java](../java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java)
 and `result_info.return_messages` will have the exception message followed by a few stack frames of
 the exception stacktrace for debugging.
 
@@ -245,11 +246,11 @@ The count of reports that are excluded from aggregation due to errors can be fou
 response `result_info.error_summary.error_counts` with the `category` field giving the error code
 and `count` giving the number of reports in that category.
 
-[Error categories and description](https://github.com/privacysandbox/aggregation-service/blob/main/java/com/google/aggregate/adtech/worker/model/ErrorCounter.java)
+[Error categories and description](../java/com/google/aggregate/adtech/worker/model/ErrorCounter.java)
 
 If the total number of reports with errors exceeds 10% of the total report count, then the job will
 fail early with return code
-[REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD](https://github.com/privacysandbox/aggregation-service/blob/1e8a40ef8150459b6105b4bd25f267a299fca2f2/java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L88)
+[REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD](../java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L88)
 before the privacy budget is consumed. The threshold percentage can be set in
 job.request_info.job_parameters for the key "report_error_threshold_percentage".
 

@@ -384,8 +384,8 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
           oTelConfiguration.createDebugTimerStarted("pbs_latency", toJobKeyString(job.jobKey()))) {
         missingPrivacyBudgetUnits =
             privacyBudgetingServiceBridge.consumePrivacyBudget(
-                /* budgetsToConsume= */ budgetsToConsume,
-                /* attributionReportTo= */ job.requestInfo()
+                budgetsToConsume, /* budgetsToConsume */
+                job.requestInfo() /* attributionReportTo */
                     .getJobParameters()
                     .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
       }

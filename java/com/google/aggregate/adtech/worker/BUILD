@@ -261,21 +261,32 @@ java_binary(
     ],
 )
 
-[
-    java_binary(
-        name = "WorkerRunner_{}".format(otel_lib),
-        classpath_resources = ["//java/com/google/aggregate:slf4jconfig_prod"],
-        main_class = "com.google.aggregate.adtech.worker.AggregationWorkerRunner",
-        runtime_deps = [
-            # //telemetry library should be before :worker_runner
-            "//telemetry/{t}/java/com/google/privacysandbox/otel:otel_{t}".format(t = otel_lib),
-            ":worker_runner",
-            "//java/external:commons_logging",
-            "//java/external:slf4j_simple",
-        ],
-    )
-    for otel_lib in ("prod", "debug")
-]
+java_binary(
+    name = "WorkerRunner_debug",
+    classpath_resources = ["//java/com/google/aggregate:slf4jconfig_prod"],
+    main_class = "com.google.aggregate.adtech.worker.AggregationWorkerRunner",
+    runtime_deps = [
+        # //telemetry library should be before :worker_runner
+        "//telemetry/debug/java/com/google/privacysandbox/otel:otel_debug",
+        ":worker_runner",
+        "//java/external:commons_logging",
+        "//java/external:slf4j_simple",
+    ],
+)
+
+java_binary(
+    name = "WorkerRunner_prod",
+    classpath_resources = ["//java/com/google/aggregate:slf4jconfig_prod"],
+    main_class = "com.google.aggregate.adtech.worker.AggregationWorkerRunner",
+    runtime_deps = [
+        # //telemetry library should be before :worker_runner
+        # TODO(b/305100313) Re-enable prod library when building prod jar.
+        "//telemetry/noop/java/com/google/privacysandbox/otel:otel_noop",
+        ":worker_runner",
+        "//java/external:commons_logging",
+        "//java/external:slf4j_simple",
+    ],
+)
 
 # The uber-JAR for the LocalTestingTool.
 alias(

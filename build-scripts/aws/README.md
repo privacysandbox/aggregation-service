@@ -1,4 +1,4 @@
-# Building aggregation service artifacts
+# Building aggregation service artifacts for Amazon Web Services
 
 ## Prerequisites
 
@@ -83,7 +83,7 @@ The build can take several minutes. You can check the status at
 
 ## Download artifacts
 
-To download the artifacts you can use `aws s3` commands. Download the artifacts to
+To download the artifacts you can use the `aws s3` command. Download the artifacts to
 `<repository_root>/terraform/aws/jars`. Run the following in `<repository_root>/terraform/aws`
 
 ```sh

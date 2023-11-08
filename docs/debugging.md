@@ -36,7 +36,8 @@ Service and create debug summary reports.
 To create an aggregation debug job, add the `debug_run` parameter to the `job_parameters` object of
 the `createJob` API request.
 
-`POST https://<frontend_api_id>.execute-api.us-east-1.amazonaws.com/stage/v1alpha/createJob`
+AWS: `POST https://<frontend_api_id>.execute-api.us-east-1.amazonaws.com/stage/v1alpha/createJob`
+GCP: `POST https://<cloud-run-endpoint>/v1alpha/createJob`
 
 ```json
 {

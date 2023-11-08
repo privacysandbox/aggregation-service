@@ -27,7 +27,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
-import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
@@ -43,20 +42,21 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 /**
- * End to end test for Private Aggregation API. Following report types are used - 1.
+ * End-to-end test for Private Aggregation API. Following report types are used - 1.
  * protected-audience 2. shared-storage Report size - 10k Domain size - 20k
  */
 @RunWith(JUnit4.class)
 public class AwsWorkerPrivateAggregationAPITest {
 
-  @Rule public final Acai acai = new Acai(TestEnv.class);
-  @Rule public final TestName name = new TestName();
+  @Rule
+  public final Acai acai = new Acai(TestEnv.class);
+  @Rule
+  public final TestName name = new TestName();
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
@@ -64,11 +64,10 @@ public class AwsWorkerPrivateAggregationAPITest {
 
   private static final String TEST_DATA_S3_KEY_PREFIX = "generated-test-data";
 
-  private static Logger logger = LoggerFactory.getLogger(AwsWorkerPrivateAggregationAPITest.class);
-
-  @Inject S3BlobStorageClient s3BlobStorageClient;
-  @Inject AvroResultsFileReader avroResultsFileReader;
-  @Inject private AvroDebugResultsReaderFactory readerFactory;
+  @Inject
+  S3BlobStorageClient s3BlobStorageClient;
+  @Inject
+  AvroResultsFileReader avroResultsFileReader;
 
   private static String getTestDataBucket() {
     if (System.getenv("TEST_DATA_BUCKET") != null) {
@@ -78,7 +77,7 @@ public class AwsWorkerPrivateAggregationAPITest {
   }
 
   /**
-   * End to end test for Private Aggregation API - Protected Audience reports. See <a
+   * End-to-end test for Private Aggregation API - Protected Audience reports. See <a
    * href="https://github.com/patcg-individual-drafts/private-aggregation-api#turtledovefledge-reporting">
    * Protected Audience.</a> 10k Protected Audience API type reports are provided for aggregation.
    */
@@ -171,7 +170,7 @@ public class AwsWorkerPrivateAggregationAPITest {
   }
 
   /**
-   * End to end test for Private Aggregation API - shared-storage reports. See <a
+   * End-to-end test for Private Aggregation API - shared-storage reports. See <a
    * href="https://github.com/WICG/shared-storage>Shared Storage API.</a> 10k shared-storage API
    * type reports are provided for aggregation.
    */
@@ -273,6 +272,10 @@ public class AwsWorkerPrivateAggregationAPITest {
                   .region(AWS_S3_BUCKET_REGION)
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
+      bind(S3AsyncClient.class)
+          .toInstance(
+              S3AsyncClient.builder()
+                  .region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }
