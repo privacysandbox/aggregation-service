@@ -28,8 +28,9 @@ API and other use cases, read the
 -   [Collect and batch aggregatable reports](/docs/collecting.md)
 -   [Testing locally using Local Testing Tool](docs/local-testing-tool.md)
 -   [Testing on AWS using encrypted reports](docs/aws-aggregation-service.md)
-    -   [Aggregation Service API](docs/api.md)
-    -   [Generate debug summary reports](/docs/debugging.md)
+-   [Testing on GCP using encrypted reports](docs/gcp-aggregation-service.md)
+-   [Aggregation Service API](docs/api.md)
+-   [Generate debug summary reports](/docs/debugging.md)
 
 ## Support
 
