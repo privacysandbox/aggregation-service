@@ -618,6 +618,42 @@ java_test(
 )
 
 java_test(
+    name = "GcpWorkerContinuousOutOfMemoryTest",
+    timeout = "long",
+    srcs = ["GcpWorkerContinuousOutOfMemoryTest.java"],
+    tags = ["manual"],
+    runtime_deps = [
+        "//java/external:slf4j_simple",
+    ],
+    deps = [
+        ":SmokeTestBase",
+        "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/protocol/avro:avro_debug_results",
+        "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
+        "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
+        "//java/external:acai",
+        "//java/external:apache_httpclient",
+        "//java/external:apache_httpcore",
+        "//java/external:clients_blobstorageclient",
+        "//java/external:clients_blobstorageclient_gcp",
+        "//java/external:clients_blobstorageclient_model",
+        "//java/external:frontend_java_proto",
+        "//java/external:gcp_storage",
+        "//java/external:google_auth_library_oauth2_http",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:jackson_databind",
+        "//java/external:jackson_datatype_jdk8",
+        "//java/external:jackson_datatype_jsr310",
+        "//java/external:shared_model",
+    ],
+)
+
+java_test(
     name = "WorkerPullWorkServiceTest",
     srcs = ["WorkerPullWorkServiceTest.java"],
     runtime_deps = [

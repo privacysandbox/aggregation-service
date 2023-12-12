@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.1.1](https://github.com/privacysandbox/aggregation-service/compare/v2.1.0...v2.1.1) (2023-12-05)
+
+### Changes
+
+-   Fixed document links in [REAMDE.md](./README.md).
+-   Pinned maven install rule to prevent unexpected image pcr0/hash change.
+-   Pinned the OTel dependencies to a specific version.
+
+#### [GCP Only]
+
+-   Enabled parallel upload to cloud storage of the sharded summary reports.
+
 ## [2.1.0](https://github.com/privacysandbox/aggregation-service/compare/v2.0.0...v2.1.0) (2023-11-01)
 
 ### Changes

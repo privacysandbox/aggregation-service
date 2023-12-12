@@ -33,7 +33,7 @@ TINK_VERSION = "1.5.0"
 
 AUTO_SERVICE_VERSION = "1.0"
 
-OTEL_VERSION = "1.+"
+OTEL_VERSION = "1.31.0"
 
 load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
 
@@ -68,6 +68,7 @@ git_repository(
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/scp:coordinator.patch",
+        "//build_defs/scp:gcs_storage_client.patch",
     ],
     tag = COORDINATOR_VERSION,
 )
@@ -185,12 +186,17 @@ maven_install(
         "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
     ] + OTEL_ARTIFACTS + TINK_MAVEN_ARTIFACTS,
+    maven_install_json = "//:maven_install.json",
     repositories = [
         "https://repo1.maven.org/maven2",
         "https://maven.google.com",
         "https://jcenter.bintray.com",
     ],
 )
+
+load("@maven//:defs.bzl", "pinned_maven_install")
+
+pinned_maven_install()
 
 http_archive(
     name = "rules_java",
