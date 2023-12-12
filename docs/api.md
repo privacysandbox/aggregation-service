@@ -67,7 +67,7 @@ POST
     // [Optional] differential privacy epsilon value to be used
     // for this job. 0.0 < debug_privacy_epsilon <= 64.0. The
     // value can be varied so that tests with different epsilon
-    // values can be performed during the origin trial.
+    // values can be performed.
     "debug_privacy_epsilon": <floating point, double>,
 
     // [Optional] The percentage of reports, if excluded from
