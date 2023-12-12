@@ -33,7 +33,7 @@ TINK_VERSION = "1.5.0"
 
 AUTO_SERVICE_VERSION = "1.0"
 
-OTEL_VERSION = "1.+"
+OTEL_VERSION = "1.31.0"
 
 load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
 
@@ -65,10 +65,11 @@ git_repository(
     patch_args = [
         "-p1",
     ],
-    remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/scp:coordinator.patch",
+        "//build_defs/scp:shared_libraries_v1.2.0.patch",
     ],
+    remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     tag = COORDINATOR_VERSION,
 )
 
@@ -179,12 +180,17 @@ maven_install(
         "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
     ] + OTEL_ARTIFACTS + TINK_MAVEN_ARTIFACTS,
+    maven_install_json = "//:maven_install.json",
     repositories = [
         "https://repo1.maven.org/maven2",
         "https://maven.google.com",
         "https://jcenter.bintray.com",
     ],
 )
+
+load("@maven//:defs.bzl", "pinned_maven_install")
+
+pinned_maven_install()
 
 http_archive(
     name = "rules_java",
@@ -311,14 +317,17 @@ load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
 # Containers #
 ##############
 
-# Distroless image for running Java.
-container_pull(
-    name = "java_base",
-    # Using SHA-256 for reproducibility. The tag is latest-amd64. Latest as of 2023-09-05.
-    digest = "sha256:052076466984fd56979c15a9c3b7433262b0ad9aae55bc0c53d1da8ffdd829c3",
-    registry = "gcr.io",
-    repository = "distroless/java17-debian11",
-)
+load("//build_defs:container_dependencies.bzl", container_dependencies = "CONTAINER_DEPS")
+
+[
+    container_pull(
+        name = img_name,
+        digest = img_info["digest"],
+        registry = img_info["registry"],
+        repository = img_info["repository"],
+    )
+    for img_name, img_info in container_dependencies.items()
+]
 
 # Distroless image for running C++.
 container_pull(
@@ -338,16 +347,6 @@ container_pull(
     # Using SHA-256 for reproducibility.
     # TODO: use digest instead of tag, currently it's not working.
     tag = "latest",
-)
-
-# Pulls AWS Otel Collector
-container_pull(
-    name = "aws_otel_collector",
-    # latest as of 2023-09-05.
-    digest = "sha256:2a6183f63e637b940584e8ebf5335bd9a2581ca16ee400e2e74b7b488825adb4",
-    registry = "public.ecr.aws",
-    repository = "aws-observability/aws-otel-collector",
-    tag = "v0.32.0",
 )
 
 #############
@@ -470,21 +469,3 @@ http_archive(
         "https://github.com/bazelbuild/buildtools/archive/refs/tags/4.2.2.tar.gz",
     ],
 )
-
-################################################################################
-# Download Containers: Begin
-################################################################################
-
-# Needed for reproducibly building AL2 binaries (e.g. //cc/aws/proxy)
-container_pull(
-    name = "amazonlinux_2",
-    # Latest as of 2023-09-05.
-    digest = "sha256:993d82940dba5370065dd5afb99fab56cdaf9f7b88800e88ddbd622678a6d3ea",
-    registry = "index.docker.io",
-    repository = "amazonlinux",
-    tag = "2.0.20230822.0",
-)
-
-################################################################################
-# Download Containers: End
-################################################################################

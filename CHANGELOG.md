@@ -1,6 +1,14 @@
 # Changelog
 
-## [2.0.0](https://github.com/privacysandbox/aggregation-service/compare/v1.0.3...v2.0.0)
+## [2.0.1](https://github.com/privacysandbox/aggregation-service/compare/v2.0.0...v2.0.1) (2023-12-05)
+
+### Changes
+
+-   Fixed document links in [REAMDE.md](./README.md).
+-   Stabilized script fetch_terraform.sh by cleaning up existing files.
+-   Pinned maven install rule to prevent unexpected image pcr0/hash change.
+
+## [2.0.0](https://github.com/privacysandbox/aggregation-service/compare/v1.0.3...v2.0.0) (2023-09-20)
 
 ### Changes
 
