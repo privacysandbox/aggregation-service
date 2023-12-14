@@ -100,7 +100,15 @@ public enum AggregationWorkerReturnCode {
    * error is likely caused by incorrect setup during the onboarding process or config changes in
    * privacy budget server. This error is not transient and the job cannot be retried.
    */
-  PRIVACY_BUDGET_AUTHORIZATION_ERROR;
+  PRIVACY_BUDGET_AUTHORIZATION_ERROR,
+
+  /**
+   * Aggregation Job failed because a report with higher major sharedInfo version was provided and
+   * Aggregation Service deployment is not up-to-date to support this version. An update may be
+   * required to aggregate this version reports. This error is not transient and the job cannot be
+   * retried.
+   */
+  UNSUPPORTED_REPORT_VERSION;
 
   /**
    * Convert the parameter failure code into the equivalent code for debug mode. Namely for privacy

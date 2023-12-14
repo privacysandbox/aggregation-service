@@ -130,9 +130,14 @@ These are the validations that are done before the aggregation begins.
 2. **Job parameters are valid**\
    All required `request_info.job_parameters` map entries must be set with valid values. \
    Please see the createJob request parameter documentation above for more details.
+3. Job request's `job_parameters.attribution_report_to` value should match Aggregatable Report's
+   `shared_info.reporting_origin`. Reports that fail this validation are counted in
+   ATTRIBUTION_REPORT_TO_MISMATCH error counter. Aggregatable report validations and error counters
+   can be found in the
+   [Input Aggregatable Report Validations](#input-aggregatable-report-validations) below
 
 Return code:
-[INVALID_JOB](../java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L39)
+[INVALID_JOB](java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L38)
 
 ### getJob Endpoint
 
@@ -359,3 +364,28 @@ with the following schema -
   ]
 }
 ```
+
+#### Input Aggregatable Report Validations
+
+Input aggregatable report is required to have a valid and/or supported value for the following
+report shared_info fields: `api`, `report_id`, `reporting_origin` and `scheduled_report_time`.
+Invalid aggregatable reports will not be included in the aggregation. getJob response
+`result_info.error_summary.error_counts` will have error counters for these invalid reports along
+with the error code, reason and count of reports in each category.
+
+If the invalid reports in a job exceed the `report_error_threshold_percentage` (see the
+[createJob](#createjob-endpoint) request job parameters above), the job will fail with
+REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD error.
+
+Invalid aggregatable report error counters corresponding to various validations -
+
+| shared_info field     | ErrorCode                       | Error Reason                                   |
+| --------------------- | ------------------------------- | ---------------------------------------------- |
+| api                   | UNSUPPORTED_REPORT_API_TYPE     | api is unsupported                             |
+| report_id             | INVALID_REPORT_ID               | report_id is empty                             |
+| reporting_origin      | ATTRIBUTION_REPORT_TO_MALFORMED | syntactically invalid domain                   |
+| scheduled_report_time | ORIGINAL_REPORT_TIME_TOO_OLD    | older than 90 days at the time of aggregation. |
+| version               | UNSUPPORTED_SHAREDINFO_VERSION  | unsupported report shared_info.version         |
+
+If report `shared_info.version` is higher than supported major version, the aggregation job will
+fail without consuming privacy budget with `result_info.return_code` UNSUPPORTED_REPORT_VERSION.

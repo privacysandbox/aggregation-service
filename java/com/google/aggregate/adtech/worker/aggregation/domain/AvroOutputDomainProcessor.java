@@ -40,8 +40,6 @@ import org.apache.avro.AvroRuntimeException;
 
 /**
  * Reads output domain from an avro file with schema defined in protocol/avro/output_domain.avsc
- *
- * <p>TODO(b/228085828): Add e2e tests with Avro processor after making output domain required.
  */
 public final class AvroOutputDomainProcessor extends OutputDomainProcessor {
 

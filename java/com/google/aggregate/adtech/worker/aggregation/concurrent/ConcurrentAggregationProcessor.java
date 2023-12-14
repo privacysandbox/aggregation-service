@@ -26,6 +26,8 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRI
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_WRITE_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.SUCCESS;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.UNSUPPORTED_REPORT_VERSION;
+import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
@@ -59,6 +61,7 @@ import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.util.DebugSupportHelper;
 import com.google.aggregate.adtech.worker.util.JobResultHelper;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
+import com.google.aggregate.adtech.worker.validation.ValidationException;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
@@ -352,6 +355,13 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       // TODO(b/197999001) report exception in some monitoring counter
       throw new AggregationJobProcessException(
           INPUT_DATA_READ_FAILED, "Exception while reading reports input data.");
+    } catch (ValidationException e) {
+      if (e.getCode().equals(UNSUPPORTED_SHAREDINFO_VERSION)) {
+        throw new AggregationJobProcessException(UNSUPPORTED_REPORT_VERSION, e.getMessage());
+      } else {
+        throw new AggregationJobProcessException(
+            INVALID_JOB, "Error due to validation exception.", e);
+      }
     }
   }
 

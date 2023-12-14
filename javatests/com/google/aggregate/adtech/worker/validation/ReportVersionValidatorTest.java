@@ -16,10 +16,12 @@
 
 package com.google.aggregate.adtech.worker.validation;
 
+import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
@@ -106,13 +108,13 @@ public class ReportVersionValidatorTest {
   }
 
   @Test
-  public void attributionReporting_v20Reports_validationFails() {
-    Report reportVersion20 =
+  public void attributionReporting_v10Reports_throwsException() {
+    Report reportVersion10 =
         reportBuilder
             .setSharedInfo(
                 SharedInfo.builder()
                     .setApi(ATTRIBUTION_REPORTING_API)
-                    .setVersion("2.0")
+                    .setVersion("1.0")
                     .setReportId(RANDOM_UUID)
                     .setReportingOrigin(REPORTING_ORIGIN)
                     .setScheduledReportTime(FIXED_TIME)
@@ -121,11 +123,15 @@ public class ReportVersionValidatorTest {
                     .build())
             .build();
 
-    Optional<ErrorMessage> validationErrorVersion20 = validator.validate(reportVersion20, ctx);
-
-    // v2.0 is higher major version than LATEST_VERSION 0.1. Validation should fail.
-    assertThat(validationErrorVersion20.get().category())
-        .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    // v1.0 has higher major version than LATEST_VERSION 0.1. Should throw exception.
+    ValidationException exception =
+        assertThrows(ValidationException.class, () -> validator.validate(reportVersion10, ctx));
+    assertThat(exception.getCode()).isEqualTo(UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(exception)
+        .hasMessageThat()
+        .contains(
+            "Current Aggregation Service deployment does not support Aggregatable reports with"
+                + " shared_info.version");
   }
 
   @Test
@@ -148,6 +154,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersion00.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersion00.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -170,6 +178,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersion0.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersion0.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -192,6 +202,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersion1.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersion1.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -215,6 +227,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersionEmpty.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersionEmpty.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -237,6 +251,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersion123.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersion123.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -260,6 +276,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersionInvalid.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersionInvalid.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -283,6 +301,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersionInvalid.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersionInvalid.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -306,6 +326,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersionInvalid.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersionInvalid.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -329,6 +351,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersionInvalid.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersionInvalid.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -352,6 +376,8 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersionNegative.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersionNegative.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 
   @Test
@@ -375,5 +401,7 @@ public class ReportVersionValidatorTest {
 
     assertThat(validationErrorVersionInvalidPositive.get().category())
         .isEqualTo(ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION);
+    assertThat(validationErrorVersionInvalidPositive.get().detailedErrorMessage())
+        .contains("Report has an unsupported version value in its shared_info.");
   }
 }

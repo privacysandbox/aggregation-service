@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_SHAREDINFO_VERSION;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SUPPORTED_MAJOR_VERSIONS;
 import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 
@@ -36,24 +37,42 @@ import java.util.regex.Pattern;
  */
 public final class ReportVersionValidator implements ReportValidator {
 
+  private static final Version latestVersion = Version.parse(LATEST_VERSION);
+
   @Override
   public Optional<ErrorMessage> validate(Report report, Job unused) {
     try {
       Version version = Version.parse(report.sharedInfo().version());
-      if (!version.isZero()
-          && SUPPORTED_MAJOR_VERSIONS.contains(Integer.toString(version.major()))) {
+      if (version.isZero()) {
+        // 0.0 is not supported sharedInfo version.
+        return createErrorMessage(
+            UNSUPPORTED_SHAREDINFO_VERSION, UNSUPPORTED_SHAREDINFO_VERSION.getDescription());
+      } else if (isReportVersionHigherThanLatestVersion(version)) {
+        // throw exception to fail job.
+        throw new ValidationException(
+            UNSUPPORTED_SHAREDINFO_VERSION,
+            String.format(
+                "Current Aggregation Service deployment does not support Aggregatable reports with"
+                    + " shared_info.version %s. This may require an Aggregation Service update. To"
+                    + " continue please update Aggregation service or use only Aggregatable reports"
+                    + " with supported major shared_info.version(s) are- %s",
+                version, SUPPORTED_MAJOR_VERSIONS));
+      } else if (SUPPORTED_MAJOR_VERSIONS.contains(Integer.toString(version.major()))) {
         // Pass validation for reports when SharedInfo Major Version is part of
         // SUPPORTED_MAJOR_VERSIONS.
         return Optional.empty();
       }
     } catch (IllegalArgumentException ex) {
-      // Provided Version is not supported, count the report in error counter.
       return createErrorMessage(
           UNSUPPORTED_SHAREDINFO_VERSION, UNSUPPORTED_SHAREDINFO_VERSION.getDescription());
     }
 
     return createErrorMessage(
         UNSUPPORTED_SHAREDINFO_VERSION, UNSUPPORTED_SHAREDINFO_VERSION.getDescription());
+  }
+
+  private boolean isReportVersionHigherThanLatestVersion(Version version) {
+    return (version.major() > latestVersion.major());
   }
 
   @AutoValue
@@ -68,11 +87,7 @@ public final class ReportVersionValidator implements ReportValidator {
     static Version parse(String version) throws IllegalArgumentException {
       Preconditions.checkArgument(VERSION_PATTERN.matcher(version).matches());
       String[] parts = version.split("\\.", 2);
-      try {
-        return Version.create(Integer.valueOf(parts[0]), Integer.valueOf(parts[1]));
-      } catch (NumberFormatException ex) {
-        throw new IllegalArgumentException();
-      }
+      return Version.create(Integer.valueOf(parts[0]), Integer.valueOf(parts[1]));
     }
 
     // TODO(b/303480127): Remove isZero() from Version class in ReportVersionValidator when

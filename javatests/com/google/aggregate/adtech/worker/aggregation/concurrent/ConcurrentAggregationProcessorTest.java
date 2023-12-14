@@ -24,6 +24,7 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRI
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_AUTHORIZATION_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_WRITE_ERROR;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.UNSUPPORTED_REPORT_VERSION;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_ATTRIBUTION_REPORT_TO;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_PRIVACY_EPSILON;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_RUN;
@@ -88,6 +89,7 @@ import com.google.aggregate.adtech.worker.testing.FakeValidator;
 import com.google.aggregate.adtech.worker.testing.InMemoryResultLogger;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.adtech.worker.validation.ReportValidator;
+import com.google.aggregate.adtech.worker.validation.ReportVersionValidator;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
@@ -183,7 +185,9 @@ public class ConcurrentAggregationProcessorTest {
   @Inject OutputDomainProcessorHelper outputDomainProcessorHelper;
   private Path outputDomainDirectory;
   private Path reportsDirectory;
+  private Path invalidReportsDirectory;
   private Job ctx;
+  private Job ctxInvalidReport;
   private JobResult expectedJobResult;
   private ResultInfo.Builder resultInfoBuilder;
   private ImmutableList<EncryptedReport> encryptedReports1;
@@ -192,6 +196,7 @@ public class ConcurrentAggregationProcessorTest {
   private String reportId2 = String.valueOf(UUID.randomUUID());
   private String reportId3 = String.valueOf(UUID.randomUUID());
   private String reportId4 = String.valueOf(UUID.randomUUID());
+  private String reportId5 = String.valueOf(UUID.randomUUID());
 
   // Under test
   @Inject private Provider<ConcurrentAggregationProcessor> processor;
@@ -203,11 +208,11 @@ public class ConcurrentAggregationProcessorTest {
     fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
   }
 
-  private EncryptedReport generateEncryptedReport(int param, String reportId) {
+  private EncryptedReport generateEncryptedReportWithVersion(
+      int param, String reportId, String version) {
     String keyId = UUID.randomUUID().toString();
     Report report =
-        FakeReportGenerator.generateWithFixedReportId(
-            param, reportId, /* reportVersion */ LATEST_VERSION);
+        FakeReportGenerator.generateWithFixedReportId(param, reportId, /* reportVersion */ version);
     String sharedInfoString = sharedInfoSerdes.reverse().convert(Optional.of(report.sharedInfo()));
     try {
       ByteSource firstReportBytes =
@@ -226,6 +231,15 @@ public class ConcurrentAggregationProcessorTest {
     }
   }
 
+  private EncryptedReport generateEncryptedReport(int param, String reportId) {
+    return generateEncryptedReportWithVersion(param, reportId, LATEST_VERSION);
+  }
+
+  private EncryptedReport generateInvalidVersionEncryptedReport(
+      int param, String reportId, String invalidVersion) {
+    return generateEncryptedReportWithVersion(param, reportId, invalidVersion);
+  }
+
   @Before
   public void setUp() throws Exception {
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
@@ -233,34 +247,34 @@ public class ConcurrentAggregationProcessorTest {
 
     outputDomainDirectory = testWorkingDir.getRoot().toPath().resolve("output_domain");
     reportsDirectory = testWorkingDir.getRoot().toPath().resolve("reports");
+    invalidReportsDirectory = testWorkingDir.getRoot().toPath().resolve("invalid-reports");
 
     Files.createDirectory(outputDomainDirectory);
     Files.createDirectory(reportsDirectory);
+    Files.createDirectory(invalidReportsDirectory);
 
     ctx = FakeJobGenerator.generateBuilder("foo").build();
-
-    // Add the debugPrivacyBudgetLimit to the job (stored RequestInfo)
-    RequestInfo requestInfo = ctx.requestInfo();
-    Map<String, String> jobParameters = new HashMap<>(requestInfo.getJobParameters());
-    jobParameters.put("report_error_threshold_percentage", "100");
-    RequestInfo newRequestInfo =
-        requestInfo.toBuilder()
-            .putAllJobParameters(jobParameters)
-            // Simulating 2 shards of input.
-            .setInputDataBucketName(reportsDirectory.toAbsolutePath().toString())
-            .setInputDataBlobPrefix("")
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                getRequestInfoWithInputDataBucketName(ctx.requestInfo(), reportsDirectory))
             .build();
-
-    ctx = ctx.toBuilder().setRequestInfo(newRequestInfo).build();
-
     resultInfoBuilder =
         ResultInfo.newBuilder()
             .setReturnCode(AggregationWorkerReturnCode.SUCCESS.name())
             .setReturnMessage(RESULT_SUCCESS_MESSAGE)
             .setFinishedAt(ProtoUtil.toProtoTimestamp(FIXED_TIME))
             .setErrorSummary(ErrorSummary.getDefaultInstance());
-
     expectedJobResult = makeExpectedJobResult();
+
+    // Job context for job with invalid version input report.
+    ctxInvalidReport = FakeJobGenerator.generateBuilder("bar").build();
+    ctxInvalidReport =
+        ctxInvalidReport.toBuilder()
+            .setRequestInfo(
+                getRequestInfoWithInputDataBucketName(
+                    ctxInvalidReport.requestInfo(), invalidReportsDirectory))
+            .build();
 
     EncryptedReport firstReport = generateEncryptedReport(1, reportId1);
     EncryptedReport secondReport = generateEncryptedReport(2, reportId2);
@@ -275,6 +289,24 @@ public class ConcurrentAggregationProcessorTest {
     // 2 shards of same contents.
     writeReports(reportsDirectory.resolve("reports_1.avro"), encryptedReports1);
     writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports2);
+
+    EncryptedReport invalidEncryptedReport =
+        generateInvalidVersionEncryptedReport(1, reportId5, "1.0");
+    writeReports(
+        invalidReportsDirectory.resolve("invalid_reports.avro"),
+        ImmutableList.of(invalidEncryptedReport));
+  }
+
+  private RequestInfo getRequestInfoWithInputDataBucketName(
+      RequestInfo requestInfo, Path inputReportDirectory) {
+    Map<String, String> jobParameters = new HashMap<>(requestInfo.getJobParameters());
+    jobParameters.put("report_error_threshold_percentage", "100");
+    return requestInfo.toBuilder()
+        .putAllJobParameters(jobParameters)
+        // Simulating shards of input.
+        .setInputDataBucketName(inputReportDirectory.toAbsolutePath().toString())
+        .setInputDataBlobPrefix("")
+        .build();
   }
 
   @Test
@@ -286,6 +318,18 @@ public class ConcurrentAggregationProcessorTest {
         .containsExactly(
             AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 2, 2L),
             AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 8, 8L));
+  }
+
+  @Test
+  public void aggregate_invalidVersionReport() throws Exception {
+    AggregationJobProcessException ex =
+        assertThrows(
+            AggregationJobProcessException.class, () -> processor.get().process(ctxInvalidReport));
+    assertThat(ex.getCode()).isEqualTo(UNSUPPORTED_REPORT_VERSION);
+    assertThat(ex.getMessage())
+        .contains(
+            "Current Aggregation Service deployment does not support Aggregatable reports with"
+                + " shared_info.version");
   }
 
   @Test
@@ -1402,6 +1446,7 @@ public class ConcurrentAggregationProcessorTest {
       Multibinder<ReportValidator> reportValidatorMultibinder =
           Multibinder.newSetBinder(binder(), ReportValidator.class);
       reportValidatorMultibinder.addBinding().to(FakeValidator.class);
+      reportValidatorMultibinder.addBinding().to(ReportVersionValidator.class);
 
       // noising
       bind(FakeNoiseApplierSupplier.class).in(TestScoped.class);

@@ -33,8 +33,6 @@ import java.util.stream.Stream;
 /**
  * Implementation of {@code NoisedAggregationRunner} that uses Google's differential privacy library
  * through {@code NoiseApplier} to apply noise.
- *
- * <p>TODO: Implement NoiseApplier using the differential privacy library.
  */
 public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunner {
 

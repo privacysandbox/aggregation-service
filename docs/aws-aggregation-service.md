@@ -82,6 +82,16 @@ For manual download into the `<repository_root>/terraform/aws/jars` folder you c
 from the links on our
 [releases page](https://github.com/privacysandbox/aggregation-service/releases).
 
+To copy the AMI to another account and/or region, follow the steps below.
+
+1. Open the EC2 console at <https://console.aws.amazon.com/ec2/>.
+2. In the navigation pane, choose AMI under images.
+3. Select the AMI aggregation-service-enclave\_[VERSION]--[DATETIME]. It will be under "Public
+   Images" category.
+4. To copy the AMI, select the "Actions" -> "Copy AMI" for the selected AMI.
+5. [Optional] Change the Destination Region if another one is preferred.
+6. Click on "Copy AMI".
+
 ## Set up your deployment environment
 
 We use the following folder structure
@@ -133,6 +143,8 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
         onboarding or upgrade email
     -   alarm_notification_email: Email to receive alarm notifications. Requires confirmation
         subscription through sign up email sent to this address.
+    -   region: The region of the AMI. It is set to "us-east-1" by default. If the AMI is self-built
+        or is copied to another region, then this value needs to be updated.
 
     Note: If you want to use an instance type other than the default one specified in the
     configuration, we recommend using an instance type with single NUMA node. Memory and CPUs for
@@ -143,8 +155,8 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
 
 1.  **Skip this step if you use our prebuilt AMI and Lambda jars**
 
-    If you [self-build your AMI and jars](/build-scripts/aws/README.md), you need to copy the
-    contents of the `release_params.auto.tfvars` file into a new file
+    If you [self-build your AMI and jars](/build-scripts/aws/README.md) or copied the AMI to your
+    account, you need to copy the contents of the `release_params.auto.tfvars` file into a new file
     `self_build_params.auto.tfvars` remove the `release_params.auto.tfvars` file afterwards.
 
     To copy without symlink, run the following in the

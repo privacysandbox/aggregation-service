@@ -51,6 +51,8 @@ public class LocalRunnerTest {
   @Rule public final TemporaryFolder testWorkingDir = new TemporaryFolder();
   private Path workingDirectory;
   private Path baseDirectory;
+
+  private Path sampleDataDirectory;
   private Path expectedOutputJson;
   private Path outputDirectoryPath;
   private ObjectMapper objectMapper = new ObjectMapper();
@@ -76,6 +78,7 @@ public class LocalRunnerTest {
     workingDirectory = testWorkingDir.getRoot().toPath();
     outputDirectoryPath = Path.of("worker/testing/data/library/");
     baseDirectory = Path.of("worker/testing/data/library/");
+    sampleDataDirectory = Path.of("sampledata/");
   }
 
   @Test
@@ -218,6 +221,42 @@ public class LocalRunnerTest {
           "--help",
         };
     LocalRunner.internalMain(cli);
+  }
+
+  /**
+   * Test to validate sampledata.
+   *
+   * @throws IOException
+   * @throws TimeoutException
+   */
+  @Test
+  public void testMainMethodJsonOutputConstantNoise_sampleData()
+      throws IOException, TimeoutException {
+    String pathToAvro = sampleDataDirectory.resolve("output_debug_reports.avro").toString();
+    String pathToDomain = sampleDataDirectory.resolve("output_domain.avro").toString();
+    Path expectedOutputJson = sampleDataDirectory.resolve("aggregate_result.json");
+
+    String[] cli =
+        new String[] {
+          "--input_data_avro_file",
+          pathToAvro,
+          "--domain_avro_file",
+          pathToDomain,
+          "--output_directory",
+          sampleDataDirectory.toString(),
+          "--no_noising",
+          "--json_output",
+        };
+    ServiceManager serviceManager = LocalRunner.internalMain(cli);
+    serviceManager.awaitStopped(Duration.ofMinutes(5));
+
+    Path outputJson = sampleDataDirectory.resolve("output.json");
+    List<AggregatedFact> output =
+        convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
+    List<AggregatedFact> expectedOutput =
+        convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(expectedOutputJson)));
+
+    assertThat(output).containsExactlyElementsIn(expectedOutput);
   }
 
   @Test
@@ -714,8 +753,7 @@ public class LocalRunnerTest {
               try {
                 writtenResults.add(
                     AggregatedFact.create(
-                        NumericConversions.uInt128FromBytes(
-                            entry.get("bucket").binaryValue()),
+                        NumericConversions.uInt128FromBytes(entry.get("bucket").binaryValue()),
                         entry.get("metric").asLong()));
               } catch (IOException e) {
                 fail(e.getMessage());

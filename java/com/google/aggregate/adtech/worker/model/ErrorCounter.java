@@ -24,7 +24,6 @@ import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSumm
  * Describes a category of error message, used to distinguish between processing or validation
  * failures reported by the {@link ErrorSummary} class.
  */
-// TODO(b/277005581): Add external documentation
 public enum ErrorCounter {
   ATTRIBUTION_REPORT_TO_MALFORMED(
       "Report's shared_info.reporting_origin domain is malformed. Domain must be syntactically"
@@ -65,7 +64,7 @@ public enum ErrorCounter {
   UNSUPPORTED_SHAREDINFO_VERSION(
       String.format(
           "Report has an unsupported version value in its shared_info. Supported values for report"
-              + " shared_info Major version(s) are- %s",
+              + " shared_info major version(s) are: %s",
           SUPPORTED_MAJOR_VERSIONS));
   private String description;
 
@@ -73,7 +72,9 @@ public enum ErrorCounter {
     this.description = description;
   }
 
-  /** Returns the description of the error category. */
+  /**
+   * Returns the description of the error category.
+   */
   public String getDescription() {
     return description;
   }

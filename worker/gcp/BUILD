@@ -72,6 +72,7 @@ worker_gcp_deployment(
     ],
     entrypoint = [
         "/usr/bin/java",
+        "-XX:+ExitOnOutOfMemoryError",
         "-XX:MaxRAMPercentage=75.0",
         "-jar",
     ],

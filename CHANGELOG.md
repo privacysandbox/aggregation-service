@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.2.0](https://github.com/privacysandbox/aggregation-service/compare/v2.1.0...v2.2.0)
+
+### Changes
+
+-   Added additional shared_info version validation in case of version greater than LATEST_VERSION
+    and updated [documentation](./docs/api.md).
+-   Upgraded control plane shared library dependency to
+    [v1.5.0](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.5.0)
+-   Updated [operating documentation references](./README.md#operating-documentation).
+-   Pinned maven install rule to prevent unexpected image pcr0/hash change.
+
+#### [GCP Only]
+
+-   Enabled parallel upload to cloud storage of the sharded summary reports.
+
+## [2.1.1](https://github.com/privacysandbox/aggregation-service/compare/v2.1.0...v2.1.1) (2023-12-05)
+
+### Changes
+
+-   Fixed document links in [REAMDE.md](./README.md).
+-   Pinned maven install rule to prevent unexpected image pcr0/hash change.
+-   Pinned the OTel dependencies to a specific version.
+
+#### [GCP Only]
+
+-   Enabled parallel upload to cloud storage of the sharded summary reports.
+
 ## [2.1.0](https://github.com/privacysandbox/aggregation-service/compare/v2.0.0...v2.1.0) (2023-11-01)
 
 ### Changes
@@ -14,6 +41,14 @@
 
 -   Enable uploading sharded summary report to cloud storage in parallel.
 -   Stabilized script fetch_terraform.sh by cleaning up existing files.
+
+## [2.0.1](https://github.com/privacysandbox/aggregation-service/compare/v2.0.0...v2.0.1) (2023-12-05)
+
+### Changes
+
+-   Fixed document links in [REAMDE.md](./README.md).
+-   Stabilized script fetch_terraform.sh by cleaning up existing files.
+-   Pinned maven install rule to prevent unexpected image pcr0/hash change.
 
 ## [2.0.0](https://github.com/privacysandbox/aggregation-service/compare/v1.0.3...v2.0.0) (2023-09-20)
 

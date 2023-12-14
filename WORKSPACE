@@ -19,21 +19,19 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v1.4.0"  # version updated on 2023-10-19
+COORDINATOR_VERSION = "v1.5.0"  # version updated on 2023-12-07
 
-JACKSON_VERSION = "2.12.2"
+JACKSON_VERSION = "2.15.3"
 
 AUTO_VALUE_VERSION = "1.7.4"
 
-AWS_SDK_VERSION = "2.17.239"
+AWS_SDK_VERSION = "2.21.16"
 
-GOOGLE_GAX_VERSION = "2.4.0"
+GOOGLE_GAX_VERSION = "2.37.0"
 
-TINK_VERSION = "1.5.0"
+AUTO_SERVICE_VERSION = "1.1.1"
 
-AUTO_SERVICE_VERSION = "1.0"
-
-OTEL_VERSION = "1.+"
+OTEL_VERSION = "1.31.0"
 
 load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
 
@@ -68,13 +66,11 @@ git_repository(
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/scp:coordinator.patch",
+        "//build_defs/scp:gcs_storage_client.patch",
+        "//build_defs/scp:dependency_update.patch",
     ],
     tag = COORDINATOR_VERSION,
 )
-
-load("@com_google_adm_cloud_scp//build_defs/tink:tink_defs.bzl", "TINK_MAVEN_ARTIFACTS", "import_tink_git")
-
-import_tink_git(repo_name = "@com_google_adm_cloud_scp")
 
 OTEL_ARTIFACTS = [
     "com.google.errorprone:error_prone_annotations:2.+",
@@ -92,15 +88,16 @@ OTEL_ARTIFACTS = [
 
 maven_install(
     artifacts = [
-        "com.amazonaws:aws-lambda-java-core:1.2.1",
-        "com.amazonaws:aws-lambda-java-events:3.8.0",
+        "com.amazonaws:aws-lambda-java-core:1.2.3",
+        "com.amazonaws:aws-lambda-java-events:3.11.3",
         "com.amazonaws:aws-lambda-java-events-sdk-transformer:3.1.0",
-        "com.amazonaws:aws-java-sdk-sqs:1.11.860",
-        "com.amazonaws:aws-java-sdk-s3:1.11.860",
-        "com.amazonaws:aws-java-sdk-kms:1.11.860",
-        "com.amazonaws:aws-java-sdk-core:1.11.860",
-        "com.beust:jcommander:1.81",
-        "com.google.cloud.functions.invoker:java-function-invoker:1.1.0",
+        "com.amazonaws:aws-java-sdk-sqs:1.12.582",
+        "com.amazonaws:aws-java-sdk-s3:1.12.582",
+        "com.amazonaws:aws-java-sdk-kms:1.12.582",
+        "com.amazonaws:aws-java-sdk-core:1.12.582",
+        "com.beust:jcommander:1.82",
+        "com.google.cloud.functions.invoker:java-function-invoker:1.3.1",
+        "com.google.inject:guice:5.1.0",
         "com.google.inject.extensions:guice-testlib:5.1.0",
         "com.fasterxml.jackson.core:jackson-annotations:" + JACKSON_VERSION,
         "com.fasterxml.jackson.core:jackson-core:" + JACKSON_VERSION,
@@ -110,72 +107,68 @@ maven_install(
         "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:" + JACKSON_VERSION,
         "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:" + JACKSON_VERSION,
         "com.google.acai:acai:1.1",
-        "com.google.auto.factory:auto-factory:1.0",
+        "com.google.auto.factory:auto-factory:1.0.1",
         "com.google.auto.service:auto-service-annotations:" + AUTO_SERVICE_VERSION,
         "com.google.auto.service:auto-service:" + AUTO_SERVICE_VERSION,
         "com.google.auto.value:auto-value-annotations:" + AUTO_VALUE_VERSION,
         "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
         "com.google.code.findbugs:jsr305:3.0.2",
-        "com.google.cloud:google-cloud-kms:2.1.2",
-        "com.google.cloud:google-cloud-secretmanager:2.2.0",
-        "com.google.cloud:google-cloud-pubsub:1.114.4",
+        "com.google.cloud:google-cloud-kms:2.33.0",
+        "com.google.cloud:google-cloud-secretmanager:2.30.0",
+        "com.google.cloud:google-cloud-pubsub:1.125.11",
         "com.google.cloud:google-cloud-storage:1.118.0",
-        "com.google.cloud:google-cloud-spanner:6.12.2",
-        "com.google.cloud:google-cloud-compute:1.12.1",
+        "com.google.cloud:google-cloud-spanner:6.52.1",
+        "com.google.cloud:google-cloud-compute:1.40.0",
         "com.google.api.grpc:proto-google-cloud-compute-v1:1.12.1",
         "com.google.cloud.functions:functions-framework-api:1.0.4",
-        "commons-logging:commons-logging:1.1.1",
+        "commons-logging:commons-logging:1.2",
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
-        "com.google.http-client:google-http-client-jackson2:1.40.0",
-        "io.reactivex.rxjava3:rxjava:3.1.5",
-        #"com.google.crypto.tink:tink:" + TINK_VERSION, # Using Tink from github master branch until new version releases
-        "com.google.cloud:google-cloud-monitoring:3.4.1",
-        "com.google.api.grpc:proto-google-cloud-compute-v1:1.12.1",
-        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.4.1",
+        "com.google.http-client:google-http-client-jackson2:1.43.3",
+        "io.reactivex.rxjava3:rxjava:3.1.8",
+        "com.google.cloud:google-cloud-monitoring:3.31.0",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.40.0",
+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.31.0",
         "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
-        "com.google.guava:guava:30.1-jre",
-        "com.google.guava:guava-testlib:30.1-jre",
-        "com.google.inject:guice:5.1.0",
-        "com.google.jimfs:jimfs:1.2",
-        "com.google.testparameterinjector:test-parameter-injector:1.1",
-        "com.google.truth.extensions:truth-java8-extension:1.1.2",
-        "com.google.truth.extensions:truth-proto-extension:1.1.2",
-        "com.google.truth:truth:1.1.2",
-        "com.jayway.jsonpath:json-path:2.5.0",
+        "com.google.guava:guava:32.1.3-jre",
+        "com.google.guava:guava-testlib:32.1.3-jre",
+        "com.google.jimfs:jimfs:1.3.0",
+        "com.google.testparameterinjector:test-parameter-injector:1.14",
+        "com.google.truth.extensions:truth-java8-extension:1.1.5",
+        "com.google.truth.extensions:truth-proto-extension:1.1.5",
+        "com.google.truth:truth:1.1.5",
+        "com.jayway.jsonpath:json-path:2.8.0",
         "io.github.resilience4j:resilience4j-core:1.7.1",
         "io.github.resilience4j:resilience4j-retry:1.7.1",
         "javax.inject:javax.inject:1",
-        "io.github.resilience4j:resilience4j-core:1.7.1",
-        "io.github.resilience4j:resilience4j-retry:1.7.1",
-        "junit:junit:4.12",
-        "org.apache.avro:avro:1.10.2",
+        "junit:junit:4.13.2",
+        "org.apache.avro:avro:1.11.3",
         "org.apache.commons:commons-math3:3.6.1",
-        "org.apache.httpcomponents:httpcore:4.4.14",
-        "org.apache.httpcomponents:httpclient:4.5.13",
-        "org.apache.httpcomponents.client5:httpclient5:5.1.3",
-        "org.apache.httpcomponents.core5:httpcore5:5.1.4",
-        "org.apache.httpcomponents.core5:httpcore5-h2:5.1.4",
-        "org.apache.logging.log4j:log4j-1.2-api:2.17.0",
-        "org.apache.logging.log4j:log4j-core:2.17.0",
-        "org.awaitility:awaitility:3.0.0",
+        "org.apache.httpcomponents:httpcore:4.4.16",
+        "org.apache.httpcomponents:httpclient:4.5.14",
+        "org.apache.httpcomponents.client5:httpclient5:5.2.1",
+        "org.apache.httpcomponents.core5:httpcore5:5.2.3",
+        "org.apache.httpcomponents.core5:httpcore5-h2:5.2.3",
+        "org.apache.logging.log4j:log4j-1.2-api:2.21.1",
+        "org.apache.logging.log4j:log4j-core:2.21.1",
+        "org.awaitility:awaitility:3.1.6",
         "org.mock-server:mockserver-core:5.11.2",
         "org.mock-server:mockserver-junit-rule:5.11.2",
         "org.mock-server:mockserver-client-java:5.11.2",
         "org.hamcrest:hamcrest-library:1.3",
         "org.mockito:mockito-core:3.11.2",
-        "org.slf4j:slf4j-api:1.7.30",
-        "org.slf4j:slf4j-simple:1.7.30",
-        "org.slf4j:slf4j-log4j12:1.7.30",
-        "org.testcontainers:testcontainers:1.15.3",
-        "org.testcontainers:localstack:1.15.3",
+        "org.slf4j:slf4j-api:1.7.36",
+        "org.slf4j:slf4j-simple:1.7.36",
+        "org.slf4j:slf4j-log4j12:1.7.33",
+        "org.testcontainers:testcontainers:1.19.1",
+        "org.testcontainers:localstack:1.19.1",
         "software.amazon.awssdk:aws-sdk-java:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:dynamodb-enhanced:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:dynamodb:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:ec2:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:regions:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:s3:" + AWS_SDK_VERSION,
-        "software.amazon.awssdk:s3-transfer-manager:2.20.130",
+        "software.amazon.awssdk:s3-transfer-manager:2.21.15",
         "software.amazon.awssdk:aws-core:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:ssm:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:sts:" + AWS_SDK_VERSION,
@@ -184,13 +177,21 @@ maven_install(
         "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
-    ] + OTEL_ARTIFACTS + TINK_MAVEN_ARTIFACTS,
+        "com.google.crypto.tink:tink:1.11.0",
+        "com.google.crypto.tink:tink-gcpkms:1.9.0",
+        "com.google.oauth-client:google-oauth-client:1.34.1",
+    ] + OTEL_ARTIFACTS,
+    maven_install_json = "//:maven_install.json",
     repositories = [
         "https://repo1.maven.org/maven2",
         "https://maven.google.com",
         "https://jcenter.bintray.com",
     ],
 )
+
+load("@maven//:defs.bzl", "pinned_maven_install")
+
+pinned_maven_install()
 
 http_archive(
     name = "rules_java",

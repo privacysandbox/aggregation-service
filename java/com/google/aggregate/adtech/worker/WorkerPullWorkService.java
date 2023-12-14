@@ -46,7 +46,9 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Guava service for repeatedly pulling from the pubsub and processing the request */
+/**
+ * Guava service for repeatedly pulling from the pubsub and processing the request
+ */
 public final class WorkerPullWorkService extends AbstractExecutionThreadService {
 
   private static final Logger logger = LoggerFactory.getLogger(WorkerPullWorkService.class);
@@ -104,7 +106,6 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     this.outputShardFileSizeBytes = outputShardFileSizeBytes;
   }
 
-  // TODO(b/271323750) Implement unit tests
   @Override
   protected void run() {
     logger.info("Aggregation worker started");
@@ -202,7 +203,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
    * Handles the exception from job validation.
    *
    * @param iae an instance of IllegalArgumentException thrown when validating the job
-   * @param job
+   * @param job Job that threw the exception when run
    */
   private void processValidationException(IllegalArgumentException iae, Job job) {
     logger.error(String.format("Exception when validating the job : %s", job.jobKey()), iae);
