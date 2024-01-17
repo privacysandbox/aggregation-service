@@ -22,16 +22,16 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.util.NumericConversions;
+import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.inject.Inject;
 
 /**
  * Local writer result implementation in json format. This helps standalone library to be in
@@ -39,16 +39,22 @@ import java.util.stream.Stream;
  */
 public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
 
+  private final ObjectMapper mapper = new ObjectMapper();
+  private final SimpleModule module = new SimpleModule();
+
+  @Inject
+  LocalJsonResultFileWriter() {
+    module.addSerializer(EncryptedReport.class, new EncryptedReportSerializer());
+    module.addSerializer(AggregatedFact.class, new AggregatedFactSerializer());
+    mapper.registerModule(module);
+  }
+
   @Override
   public void writeLocalFile(Stream<AggregatedFact> results, Path resultFile)
       throws FileWriteException {
 
     try {
       List<AggregatedFact> aggregatedFactList = results.collect(Collectors.toList());
-      ObjectMapper mapper = new ObjectMapper();
-      SimpleModule module = new SimpleModule();
-      module.addSerializer(AggregatedFact.class, new AggregatedFactSerializer());
-      mapper.registerModule(module);
       String prettyJson =
           mapper.writerWithDefaultPrettyPrinter().writeValueAsString(aggregatedFactList);
       Files.writeString(resultFile, prettyJson, StandardOpenOption.CREATE);
@@ -58,17 +64,30 @@ public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
   }
 
   @Override
+  public void writeLocalReportFile(Stream<EncryptedReport> reports, Path resultFilePath)
+      throws FileWriteException {
+    try {
+      List<EncryptedReport> encryptedReportsList = reports.collect(Collectors.toList());
+      String prettyJson =
+          mapper.writerWithDefaultPrettyPrinter().writeValueAsString(encryptedReportsList);
+      Files.writeString(resultFilePath, prettyJson, StandardOpenOption.CREATE);
+    } catch (Exception e) {
+      throw new FileWriteException("Failed to write reports to local Json file", e);
+    }
+  }
+
+  @Override
   public String getFileExtension() {
     return ".json";
   }
 
-  class AggregatedFactSerializer extends StdSerializer<AggregatedFact> {
+  private static class AggregatedFactSerializer extends StdSerializer<AggregatedFact> {
 
-    public AggregatedFactSerializer() {
+    AggregatedFactSerializer() {
       this(null);
     }
 
-    public AggregatedFactSerializer(Class<AggregatedFact> t) {
+    AggregatedFactSerializer(Class<AggregatedFact> t) {
       super(t);
     }
 
@@ -79,6 +98,28 @@ public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
       jgen.writeStartObject();
       jgen.writeBinaryField("bucket", aggregatedFact.bucket().toByteArray());
       jgen.writeNumberField("metric", aggregatedFact.metric());
+      jgen.writeEndObject();
+    }
+  }
+
+  private static class EncryptedReportSerializer extends StdSerializer<EncryptedReport> {
+
+    EncryptedReportSerializer() {
+      super(EncryptedReport.class);
+    }
+
+    EncryptedReportSerializer(Class<EncryptedReport> t) {
+      super(t);
+    }
+
+    @Override
+    public void serialize(
+        EncryptedReport encryptedReport, JsonGenerator jgen, SerializerProvider serializerProvider)
+        throws IOException {
+      jgen.writeStartObject();
+      jgen.writeStringField("key_id", encryptedReport.keyId());
+      jgen.writeBinaryField("payload", encryptedReport.payload().read());
+      jgen.writeStringField("shared_info", encryptedReport.sharedInfo());
       jgen.writeEndObject();
     }
   }

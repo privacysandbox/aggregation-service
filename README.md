@@ -11,10 +11,9 @@ individual events in the client software, such as a Chrome browser or an Android
 
 This repository contains instructions and scripts to set up and test the Aggregation Service for
 [Aggregatable Reports](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATION_SERVICE_TEE.md#aggregatable-reports)
-locally and on Amazon Web Services
-[Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/). If you want to learn more about
-the [Privacy Sandbox](https://privacysandbox.com/) Aggregation Service for the Attribution Reporting
-API and other use cases, read the
+locally and on Cloud (AWS and GCP). If you want to learn more about the
+[Privacy Sandbox](https://privacysandbox.com/) Aggregation Service for the Attribution Reporting API
+and other use cases, read the
 [Aggregation Service proposal](https://github.com/WICG/conversion-measurement-api/blob/main/AGGREGATION_SERVICE_TEE.md#aggregatable-reports).
 
 ## Key documents

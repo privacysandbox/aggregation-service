@@ -21,7 +21,6 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.common.primitives.Bytes;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;

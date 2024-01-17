@@ -18,15 +18,18 @@ package com.google.aggregate.adtech.worker;
 
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.common.collect.ImmutableList;
-import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.jobclient.model.Job;
-import java.util.stream.Stream;
 
 /** Interface for storing the results of the aggregation worker */
 public interface ResultLogger {
 
   /** Takes the aggregation results and logs them to results. */
-  void logResults(
-      ImmutableList<AggregatedFact> results, Job ctx, boolean isDebugRun) throws ResultLogException;
+  void logResults(ImmutableList<AggregatedFact> results, Job ctx, boolean isDebugRun)
+      throws ResultLogException;
+
+  /** Logs encrypted aggregatable reports. */
+  void logReports(ImmutableList<EncryptedReport> results, Job ctx, String shardNumber)
+      throws ResultLogException;
 }

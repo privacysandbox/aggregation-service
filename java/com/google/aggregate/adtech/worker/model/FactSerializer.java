@@ -36,13 +36,16 @@ public final class FactSerializer extends StdSerializer<Fact> {
   @Override
   public void serialize(Fact fact, JsonGenerator jsonGenerator, SerializerProvider unused)
       throws IOException {
-    // Convert bucket and value to bytes
     byte[] bucketBytes = NumericConversions.toUnsignedByteArray(fact.bucket());
     byte[] valueBytes = NumericConversions.toUnsignedByteArray(BigInteger.valueOf(fact.value()));
 
     jsonGenerator.writeStartObject();
     jsonGenerator.writeBinaryField("bucket", bucketBytes);
     jsonGenerator.writeBinaryField("value", valueBytes);
+    if (fact.id().isPresent()) {
+      jsonGenerator.writeBinaryField(
+          "id", NumericConversions.toUnsignedByteArray(BigInteger.valueOf(fact.id().get())));
+    }
     jsonGenerator.writeEndObject();
   }
 }

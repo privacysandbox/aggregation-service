@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
+import static com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import static com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.getDataLocation;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 import static java.lang.annotation.ElementType.FIELD;
@@ -30,8 +31,10 @@ import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUploa
 import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
+import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -42,6 +45,7 @@ import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.jobclient.model.Job;
+import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Files;
@@ -56,8 +60,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
- * Implementation of {@code ResultLogger} that writes a local file then uploads it to cloud
- * storage.
+ * Implementation of {@code ResultLogger} that writes a local file then uploads it to cloud storage.
  */
 public final class LocalFileToCloudStorageLogger implements ResultLogger {
 
@@ -66,6 +69,7 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
   private final BlobStorageClient blobStorageClient;
   private final Path workingDirectory;
   private final ListeningExecutorService blockingThreadPool;
+  private static final String reencryptedReportFileNamePrefix = "reencrypted-";
 
   @Inject
   LocalFileToCloudStorageLogger(
@@ -82,8 +86,8 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
     if (enableParallelUpload) {
       this.blockingThreadPool = blockingThreadPool;
     } else {
-      this.blockingThreadPool = MoreExecutors.listeningDecorator(
-          Executors.newSingleThreadExecutor());
+      this.blockingThreadPool =
+          MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
     }
   }
 
@@ -107,41 +111,50 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
     if (remainingRecordsAtTheEnd > 0) {
       totalShards++;
     }
-    String fileExtension = isDebugRun
-        ? localDebugResultFileWriter.getFileExtension()
-        : localResultFileWriter.getFileExtension();
+    String fileExtension =
+        isDebugRun
+            ? localDebugResultFileWriter.getFileExtension()
+            : localResultFileWriter.getFileExtension();
 
     // Stream shardId to write and upload each shard in parallel.
     // In every shard, ImmutableList.subList provides a view of a sharded portion
     // of the results for each shard ID.
     final int finalTotalShards = totalShards; // For lambda function.
 
-    ListenableFuture<List<Void>> fileLogResults = Futures.allAsList(
-        IntStream.range(1, totalShards + 1)
-            .boxed()
-            .map(shardId -> {
-              String localFileName = isDebugRun
-                  ? getLocalDebugFileName(ctx, shardId, fileExtension)
-                  : getLocalFileName(ctx, shardId, fileExtension);
-              Path localResultsFilePath =
-                  workingDirectory
-                      .getFileSystem()
-                      .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
+    ListenableFuture<List<Void>> fileLogResults =
+        Futures.allAsList(
+            IntStream.range(1, totalShards + 1)
+                .boxed()
+                .map(
+                    shardId -> {
+                      String localFileName =
+                          isDebugRun
+                              ? getLocalDebugFileName(ctx, shardId, fileExtension)
+                              : getLocalFileName(ctx, shardId, fileExtension);
+                      Path localResultsFilePath =
+                          workingDirectory
+                              .getFileSystem()
+                              .getPath(
+                                  Paths.get(workingDirectory.toString(), localFileName).toString());
 
-              return writeFile(
-                  results.subList(
-                          Long.valueOf((shardId - 1) * recordsPerShard).intValue(),
-                          OutputShardFileHelper.getEndIndexOfShard(
-                              shardId, finalTotalShards, recordsPerShard, remainingRecordsAtTheEnd))
-                      .stream(),
-                  ctx,
-                  localResultsFilePath,
-                  isDebugRun ? localDebugResultFileWriter : localResultFileWriter,
-                  isDebugRun,
-                  shardId,
-                  finalTotalShards);
-            })
-            .collect(ImmutableList.toImmutableList()));
+                      return writeFile(
+                          results
+                              .subList(
+                                  Long.valueOf((shardId - 1) * recordsPerShard).intValue(),
+                                  OutputShardFileHelper.getEndIndexOfShard(
+                                      shardId,
+                                      finalTotalShards,
+                                      recordsPerShard,
+                                      remainingRecordsAtTheEnd))
+                              .stream(),
+                          ctx,
+                          localResultsFilePath,
+                          isDebugRun ? localDebugResultFileWriter : localResultFileWriter,
+                          isDebugRun,
+                          shardId,
+                          finalTotalShards);
+                    })
+                .collect(ImmutableList.toImmutableList()));
 
     try {
       fileLogResults.get();
@@ -149,6 +162,26 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
       throw new ResultLogException(e);
     } catch (ExecutionException e) {
       throw new ResultLogException(e.getCause());
+    }
+  }
+
+  @Override
+  public void logReports(ImmutableList<EncryptedReport> reports, Job ctx, String shardNumber)
+      throws ResultLogException {
+    String localFileName =
+        toJobKeyString(ctx.jobKey())
+            + "-"
+            + reencryptedReportFileNamePrefix
+            + shardNumber
+            + ".avro";
+    Path localReportsFilePath =
+        workingDirectory
+            .getFileSystem()
+            .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
+    try {
+      writeReportsToCloud(reports.stream(), ctx, localReportsFilePath, localResultFileWriter);
+    } catch (FileWriteException | BlobStorageClientException | IOException e) {
+      throw new ResultLogException(e);
     }
   }
 
@@ -161,7 +194,8 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
       Boolean isDebugFile,
       int shardId,
       int numShards) {
-    return Futures.submitAsync(() -> {
+    return Futures.submitAsync(
+        () -> {
           Files.createDirectories(workingDirectory);
           writer.writeLocalFile(aggregatedFacts, localFilepath);
 
@@ -184,6 +218,21 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
           return Futures.immediateVoidFuture();
         },
         blockingThreadPool);
+  }
+
+  private void writeReportsToCloud(
+      Stream<EncryptedReport> reports, Job ctx, Path localFilepath, LocalResultFileWriter writer)
+      throws IOException, FileWriteException, BlobStorageClientException {
+    Files.createDirectories(workingDirectory);
+    writer.writeLocalReportFile(reports, localFilepath);
+
+    String outputDataBlobBucket = ctx.requestInfo().getOutputDataBucketName();
+    String outputDataBlobPrefix = localFilepath.getFileName().toString();
+
+    DataLocation resultLocation = getDataLocation(outputDataBlobBucket, outputDataBlobPrefix);
+
+    blobStorageClient.putBlob(resultLocation, localFilepath);
+    Files.deleteIfExists(localFilepath);
   }
 
   /**
@@ -219,7 +268,5 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface ResultWorkingDirectory {
-
-  }
+  public @interface ResultWorkingDirectory {}
 }

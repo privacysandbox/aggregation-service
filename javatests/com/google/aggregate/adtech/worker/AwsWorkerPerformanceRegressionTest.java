@@ -59,7 +59,7 @@ public class AwsWorkerPerformanceRegressionTest {
   @Rule public final Acai acai = new Acai(TestEnv.class);
   @Rule public TestName name = new TestName();
 
-  private static final Duration COMPLETION_TIMEOUT = Duration.of(1000, ChronoUnit.MINUTES);
+  private static final Duration COMPLETION_TIMEOUT = Duration.of(30, ChronoUnit.MINUTES);
 
   private static final String PERFORMANCE_REGRESSION_DATA_BUCKET =
       "aggregate-service-performance-regression-bucket";

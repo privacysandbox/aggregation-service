@@ -16,14 +16,22 @@
 
 package com.google.aggregate.adtech.worker.writer.avro;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
+import com.google.aggregate.protocol.avro.AvroRecordWriter.MetadataElement;
+import com.google.aggregate.protocol.avro.AvroReportRecord;
+import com.google.aggregate.protocol.avro.AvroReportWriter;
+import com.google.aggregate.protocol.avro.AvroReportWriterFactory;
 import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
+import com.google.common.collect.ImmutableList;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,10 +49,13 @@ import org.apache.avro.io.DatumWriter;
 public final class LocalAvroResultFileWriter implements LocalResultFileWriter {
 
   private AvroResultsSchemaSupplier schemaSupplier;
+  private final AvroReportWriterFactory reportsWriterFactory;
 
   @Inject
-  LocalAvroResultFileWriter(AvroResultsSchemaSupplier schemaSupplier) {
+  LocalAvroResultFileWriter(
+      AvroResultsSchemaSupplier schemaSupplier, AvroReportWriterFactory reportsWriterFactory) {
     this.schemaSupplier = schemaSupplier;
+    this.reportsWriterFactory = reportsWriterFactory;
   }
 
   /**
@@ -80,6 +91,23 @@ public final class LocalAvroResultFileWriter implements LocalResultFileWriter {
       dataFileWriter.close();
     } catch (IOException e) {
       throw new FileWriteException("Failed to write local Avro file", e);
+    }
+  }
+
+  @Override
+  public void writeLocalReportFile(Stream<EncryptedReport> reports, Path resultFilePath)
+      throws FileWriteException {
+    try (OutputStream outputAvroStream =
+            Files.newOutputStream(resultFilePath, CREATE, TRUNCATE_EXISTING);
+        AvroReportWriter avroReportWriter = reportsWriterFactory.create(outputAvroStream)) {
+      ImmutableList<MetadataElement> metaData = ImmutableList.of();
+      Stream<AvroReportRecord> reportsRecords =
+          reports.map(
+              (report ->
+                  AvroReportRecord.create(report.payload(), report.keyId(), report.sharedInfo())));
+      avroReportWriter.writeRecords(metaData, reportsRecords.collect(toImmutableList()));
+    } catch (IOException e) {
+      throw new FileWriteException("Failed to write local Avro report file.", e);
     }
   }
 

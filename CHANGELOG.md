@@ -1,6 +1,14 @@
 # Changelog
 
-## [2.2.0](https://github.com/privacysandbox/aggregation-service/compare/v2.1.0...v2.2.0)
+## [2.3.0](https://github.com/privacysandbox/aggregation-service/compare/v2.2.0...v2.3.0) (2024-01-012)
+
+### Changes
+
+-   Upgraded control plane shared library dependency to
+    [v1.5.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.5.1)
+-   Updated dependencies to address security vulnerabilities.
+
+## [2.2.0](https://github.com/privacysandbox/aggregation-service/compare/v2.1.0...v2.2.0) (2023-12-07)
 
 ### Changes
 

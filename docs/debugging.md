@@ -51,7 +51,7 @@ GCP: `POST https://<cloud-run-endpoint>/v1alpha/createJob`
         "output_domain_bucket_name": "<data_bucket>",
         "debug_run": "true"
     },
-    "Job_request_id": "test01"
+    "job_request_id": "test01"
 }
 ```
 

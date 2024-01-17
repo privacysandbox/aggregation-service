@@ -72,7 +72,7 @@ public final class GcpWorkerPerformanceRegressionTest {
   private static final int NUM_WARMUP_RUNS = 5;
   private static final int NUM_TRANSIENT_RUNS = 50;
 
-  private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
+  private static final Duration COMPLETION_TIMEOUT = Duration.of(45, ChronoUnit.MINUTES);
 
   @Before
   public void checkBuildEnv() {

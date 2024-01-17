@@ -27,6 +27,16 @@ receivers:
     transport: udp
 
 processors:
+  filter/spans:
+    spans:
+      include:
+        match_type: strict
+        span_names: ${file:spans.yaml}
+  filter/metrics:
+    metrics:
+      include:
+        match_type: strict
+        metric_names: ${file:metrics.yaml}
   batch/traces:
     timeout: 1s
     send_batch_size: 1
@@ -45,10 +55,10 @@ service:
   pipelines:
     traces:
       receivers: [otlp,awsxray]
-      processors: [batch/traces]
+      processors: [batch/traces,filter/spans]
       exporters: [awsxray]
     # Metrics are exported to both Cloudwatch.
     metrics:
       receivers: [otlp]
-      processors: [batch/metrics]
+      processors: [batch/metrics,filter/metrics]
       exporters: [awsemf]

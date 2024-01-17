@@ -30,7 +30,7 @@ string_flag(
 gcs_jar_release(
     name = "worker_scale_in_cloud_function_release",
     artifact_base_name = "WorkerScaleInCloudFunction_{VERSION}.jar",
-    jar_target = "@com_google_adm_cloud_scp//java/com/google/scp/operator/autoscaling/app/gcp:WorkerScaleInCloudFunctionDeploy",
+    jar_target = "@shared_libraries//java/com/google/scp/operator/autoscaling/app/gcp:WorkerScaleInCloudFunctionDeploy",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
@@ -38,7 +38,7 @@ gcs_jar_release(
 gcs_jar_release(
     name = "frontend_service_http_cloud_function_release",
     artifact_base_name = "FrontendServiceHttpCloudFunction_{VERSION}.jar",
-    jar_target = "@com_google_adm_cloud_scp//java/com/google/scp/operator/frontend/service/gcp:FrontendServiceHttpCloudFunctionDeploy",
+    jar_target = "@shared_libraries//java/com/google/scp/operator/frontend/service/gcp:FrontendServiceHttpCloudFunctionDeploy",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )

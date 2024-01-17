@@ -68,6 +68,7 @@ import com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobNumAtte
 import com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobProcessingTimeSecondsParameter;
 import com.google.scp.operator.cpio.configclient.local.Annotations.ScaleInHookParameter;
 import com.google.scp.operator.cpio.configclient.local.Annotations.SqsJobQueueUrlParameter;
+import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.HttpPrivateKeyFetchingService.PrivateKeyServiceBaseUrl;
@@ -292,6 +293,9 @@ public final class AggregationWorkerModule extends AbstractModule {
     }
     bind(boolean.class).annotatedWith(EnableParallelSummaryUpload.class)
         .toInstance(args.isEnableParallelSummaryUpload());
+
+    // Parameter to set key cache. This is a test only flag.
+    bind(Long.class).annotatedWith(DecrypterCacheEntryTtlSec.class).toInstance(args.getDecrypterCacheEntryTtlSec());
 
     // Dependencies for privacy budgeting.
     bind(PrivacyBudgetingServiceBridge.class).to(args.getPrivacyBudgeting().getBridge());

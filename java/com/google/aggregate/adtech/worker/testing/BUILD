@@ -152,6 +152,20 @@ java_library(
 )
 
 java_library(
+    name = "avro_reports_file_reader",
+    srcs = ["AvroReportsFileReader.java"],
+    javacopts = ["-Xep:Var"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/protocol/avro:avro_reports_schema_supplier",
+        "//java/external:avro",
+        "//java/external:guava",
+        "//java/external:javax_inject",
+    ],
+)
+
+java_library(
     name = "fake_private_key_fetching_service",
     srcs = ["FakePrivateKeyFetchingService.java"],
     javacopts = ["-Xep:Var"],

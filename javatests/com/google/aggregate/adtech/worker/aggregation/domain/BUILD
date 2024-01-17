@@ -31,7 +31,7 @@ java_test(
         "//java/external:google_truth",
         "//java/external:guice",
         "//java/external:javax_inject",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient",
+        "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient",
     ],
 )
 
@@ -50,6 +50,6 @@ java_test(
         "//java/external:google_truth",
         "//java/external:guice",
         "//java/external:javax_inject",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient",
+        "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient",
     ],
 )

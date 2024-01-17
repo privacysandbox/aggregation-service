@@ -35,8 +35,8 @@ java_test(
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
         "//java/external:operator_protos",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/jobclient:model",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/model",
+        "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:model",
+        "@shared_libraries//java/com/google/scp/operator/shared/model",
     ],
 )
 

@@ -47,8 +47,8 @@ java_library(
         "//java/external:clients_blobstorageclient_model",
         "//java/external:guava",
         "//java/external:javax_inject",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient:model",
+        "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient",
+        "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient:model",
     ],
 )
 
@@ -68,7 +68,7 @@ java_library(
         "//java/external:clients_blobstorageclient_model",
         "//java/external:guava",
         "//java/external:javax_inject",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient",
-        "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient:model",
+        "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient",
+        "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient:model",
     ],
 )

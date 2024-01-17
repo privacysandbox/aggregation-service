@@ -225,6 +225,30 @@ public class CborPayloadSerdesTest {
     assertThat(serialized.isEmpty()).isTrue();
   }
 
+  @Test
+  public void withIdsInFact() {
+    Payload payload =
+        Payload.builder()
+            .addFact(
+                Fact.builder()
+                    .setBucket(BigInteger.valueOf(12345))
+                    .setValue(12345)
+                    .setId(5)
+                    .build())
+            .addFact(
+                Fact.builder()
+                    .setBucket(BigInteger.valueOf(987654321))
+                    .setValue(987654321)
+                    .setId(Integer.MAX_VALUE - 1)
+                    .build())
+            .build();
+
+    ByteSource serialized = cborPayloadSerdes.reverse().convert(Optional.of(payload));
+    Optional<Payload> deserialized = cborPayloadSerdes.convert(serialized);
+
+    assertThat(deserialized).hasValue(payload);
+  }
+
   /** No overrides or bindings needed */
   private static final class TestEnv extends AbstractModule {}
 }

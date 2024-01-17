@@ -362,302 +362,307 @@ alias(
 
 alias(
     name = "clients_blobstorageclient",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient",
 )
 
 alias(
     name = "clients_blobstorageclient_model",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient:model",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient:model",
 )
 
 alias(
     name = "clients_blobstorageclient_aws",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient:aws",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient:aws",
 )
 
 alias(
     name = "jobqueue_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/jobqueue/gcp:gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/gcp:gcp",
 )
 
 alias(
     name = "shared_dao_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp:gcp",
+    actual = "@shared_libraries//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp:gcp",
 )
 
 alias(
     name = "clients_jobclient",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/jobclient",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/jobclient",
 )
 
 alias(
     name = "clients_jobclient_model",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/jobclient:model",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:model",
 )
 
 alias(
     name = "clients_jobclient_aws",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/jobclient:aws",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:aws",
 )
 
 alias(
     name = "clients_lifecycleclient_aws",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/lifecycleclient:aws",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/lifecycleclient:aws",
 )
 
 alias(
     name = "clients_lifecycleclient_local",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/lifecycleclient:local",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/lifecycleclient:local",
 )
 
 alias(
     name = "clients_metricclient",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/metricclient",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/metricclient",
 )
 
 alias(
     name = "clients_metricclient_model",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/metricclient:model",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/metricclient:model",
 )
 
 alias(
     name = "clients_metricclient_aws",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/metricclient:aws",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/metricclient:aws",
 )
 
 alias(
     name = "clients_privacy_budgeting",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/privacybudgetclient",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/privacybudgetclient",
 )
 
 alias(
     name = "clients_distributed_privacy_budgeting",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/distributedprivacybudgetclient:distributed_privacy_budget_client",
 )
 
 alias(
     name = "clients_distributed_privacy_budgeting_local",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/local:local_distributed_privacy_budget_client",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/local:local_distributed_privacy_budget_client",
 )
 
 alias(
     name = "clients_distributed_privacy_budgeting_aws",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/aws:aws_pbs_client_module",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/aws:aws_pbs_client_module",
 )
 
 alias(
     name = "clients_distributed_privacy_budgeting_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/gcp:gcp_pbs_client_module",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/gcp:gcp_pbs_client_module",
 )
 
 alias(
     name = "model_privacy_budgeting",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/coordinator/privacy/budgeting/model",
+    actual = "@shared_libraries//java/com/google/scp/coordinator/privacy/budgeting/model",
 )
 
 alias(
     name = "dao_metadatadb_aws_model",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/aws/model",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/aws/model",
 )
 
 alias(
     name = "dao_metadatadb_aws_model_converter",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/aws/model/converter",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/aws/model/converter",
 )
 
 alias(
     name = "dao_metadatadb_aws",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/aws",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/aws",
 )
 
 alias(
     name = "dao_metadatadb_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/gcp",
 )
 
 alias(
     name = "dao_metadatadb_common",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/common",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/common",
 )
 
 alias(
     name = "dao_metadatadb_testing_jobgenerator",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
 )
 
 alias(
     name = "dao_metadatadb_testing_fakemetadatadb",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_metadata_db",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_metadata_db",
 )
 
 alias(
     name = "dao_jobqueue_aws",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/jobqueue/aws",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/aws",
 )
 
 alias(
     name = "dao_jobqueue_common",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/jobqueue/common",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/common",
 )
 
 alias(
     name = "dao_jobqueue_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/jobqueue/gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/gcp",
 )
 
 alias(
     name = "dao_jobqueue_testing",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/dao/jobqueue/testing",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/testing",
 )
 
 alias(
     name = "frontend_testing",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/frontend/testing",
+    actual = "@shared_libraries//java/com/google/scp/operator/frontend/testing",
 )
 
 alias(
     name = "frontend_testing_fake_jobmetadata_change_handler",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/frontend/testing:fake_jobmetadata_change_handler",
+    actual = "@shared_libraries//java/com/google/scp/operator/frontend/testing:fake_jobmetadata_change_handler",
 )
 
 alias(
     name = "frontend_validation",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/frontend/tasks/validation",
+    actual = "@shared_libraries//java/com/google/scp/operator/frontend/tasks/validation",
 )
 
 alias(
     name = "frontend_java_proto",
-    actual = "@com_google_adm_cloud_scp//operator/protos/frontend/api/v1:java_proto",
+    actual = "@shared_libraries//operator/protos/frontend/api/v1:java_proto",
 )
 
 alias(
     name = "shared_model",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/model",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/model",
 )
 
 alias(
     name = "clients_configclient",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/clients/configclient",
+    actual = "@shared_libraries//java/com/google/scp/shared/clients/configclient",
 )
 
 alias(
     name = "clients_configclient_operator",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/configclient",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/configclient",
 )
 
 alias(
     name = "shared_testing",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/shared/testing",
+    actual = "@shared_libraries//java/com/google/scp/operator/shared/testing",
 )
 
 alias(
     name = "clients_configclient_aws",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/clients/configclient:aws",
+    actual = "@shared_libraries//java/com/google/scp/shared/clients/configclient:aws",
 )
 
 alias(
     name = "clients_configclient_aws_operator",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/configclient:aws",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/configclient:aws",
 )
 
 alias(
     name = "clients_configclient_model",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/clients/configclient:model",
+    actual = "@shared_libraries//java/com/google/scp/shared/clients/configclient:model",
 )
 
 alias(
     name = "clients_cryptoclient",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/cryptoclient",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/cryptoclient",
 )
 
 alias(
     name = "clients_cryptoclient_aws",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/cryptoclient:aws",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/cryptoclient:aws",
 )
 
 alias(
     name = "clients_blobstorageclient_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/blobstorageclient:gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient:gcp",
 )
 
 alias(
     name = "clients_jobclient_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/jobclient:gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:gcp",
 )
 
 alias(
     name = "clients_metricclient_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/metricclient:gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/metricclient:gcp",
 )
 
 alias(
     name = "clients_configclient_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/clients/configclient:gcp",
+    actual = "@shared_libraries//java/com/google/scp/shared/clients/configclient:gcp",
 )
 
 alias(
     name = "clients_configclient_gcp_operator",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/configclient:gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/configclient:gcp",
 )
 
 alias(
     name = "clients_cryptoclient_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/cryptoclient:gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/cryptoclient:gcp",
 )
 
 alias(
     name = "worker_decryption",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/decryption",
+    actual = "@shared_libraries//java/com/google/scp/operator/worker/decryption",
 )
 
 alias(
     name = "worker_hybrid_decryption",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/decryption/hybrid",
+    actual = "@shared_libraries//java/com/google/scp/operator/worker/decryption/hybrid",
 )
 
 alias(
     name = "operator_worker_reader",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/reader",
+    actual = "@shared_libraries//java/com/google/scp/operator/worker/reader",
 )
 
 alias(
     name = "operator_worker_reader_avro",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/reader/avro",
+    actual = "@shared_libraries//java/com/google/scp/operator/worker/reader/avro",
 )
 
 alias(
     name = "operator_report_serdes",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/model/serdes",
+    actual = "@shared_libraries//java/com/google/scp/operator/worker/model/serdes",
 )
 
 alias(
     name = "operator_report_serdes_proto",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/worker/model/serdes/proto:report_serdes",
+    actual = "@shared_libraries//java/com/google/scp/operator/worker/model/serdes/proto:report_serdes",
 )
 
 alias(
     name = "shared_mapper",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/mapper",
+    actual = "@shared_libraries//java/com/google/scp/shared/mapper",
 )
 
 alias(
     name = "clients_lifecycleclient_gcp",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/operator/cpio/lifecycleclient:gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/lifecycleclient:gcp",
 )
 
 alias(
     name = "crypto_tink_integration_awskmsv2",
-    actual = "@com_google_adm_cloud_scp//java/com/google/crypto/tink/integration/awskmsv2",
+    actual = "@shared_libraries//java/com/google/crypto/tink/integration/awskmsv2",
 )
 
 alias(
     name = "keymanagement_keyhosting_java_proto",
-    actual = "@com_google_adm_cloud_scp//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
+    actual = "@shared_libraries//coordinator/protos/keymanagement/keyhosting/api/v1:java_proto",
 )
 
 alias(
     name = "keymanagement_shared_util",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/util",
+    actual = "@shared_libraries//java/com/google/scp/shared/util",
+)
+
+alias(
+    name = "api_shared_util",
+    actual = "@shared_libraries//java/com/google/scp/shared/api/util:util",
 )
 
 alias(
@@ -665,7 +670,7 @@ alias(
     # Sync Tink version with SCP repo's
     # TODO: This is no longer needed once the changes SCP depends on are
     # published to Maven.
-    actual = "@com_google_adm_cloud_scp//java/external:tink",
+    actual = "@shared_libraries//java/external:tink",
 )
 
 alias(
@@ -873,28 +878,38 @@ alias(
 )
 
 alias(
+    name = "aws_xray",
+    actual = "@maven//:com_amazonaws_aws_java_sdk_xray",
+)
+
+alias(
+    name = "aws_cloudwatch",
+    actual = "@maven//:com_amazonaws_aws_java_sdk_cloudwatch",
+)
+
+alias(
     name = "aws_auto_scaling",
     actual = "@maven//:software_amazon_awssdk_autoscaling",
 )
 
 alias(
     name = "scp_shared_proto",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/proto",
+    actual = "@shared_libraries//java/com/google/scp/shared/proto",
 )
 
 alias(
     name = "keymanagement_shared_proto",
-    actual = "@com_google_adm_cloud_scp//coordinator/protos/keymanagement/shared/backend:proto",
+    actual = "@shared_libraries//coordinator/protos/keymanagement/shared/backend:proto",
 )
 
 alias(
     name = "operator_protos",
-    actual = "@com_google_adm_cloud_scp//operator/protos/shared/backend:java_proto",
+    actual = "@shared_libraries//operator/protos/shared/backend:java_proto",
 )
 
 alias(
     name = "operator_metadatadb_protos",
-    actual = "@com_google_adm_cloud_scp//operator/protos/shared/backend/metadatadb:java_proto",
+    actual = "@shared_libraries//operator/protos/shared/backend/metadatadb:java_proto",
 )
 
 alias(
@@ -964,5 +979,5 @@ alias(
 
 alias(
     name = "scp_credsprovider",
-    actual = "@com_google_adm_cloud_scp//java/com/google/scp/shared/aws/credsprovider:credsprovider",
+    actual = "@shared_libraries//java/com/google/scp/shared/aws/credsprovider:credsprovider",
 )

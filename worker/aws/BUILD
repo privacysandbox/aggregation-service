@@ -14,7 +14,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
-load("@com_google_adm_cloud_scp//operator/worker/aws/build_defs:deploy.bzl", "worker_aws_deployment")
+load("@shared_libraries//operator/worker/aws/build_defs:deploy.bzl", "worker_aws_deployment")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -28,7 +28,7 @@ exports_files([
 pkg_tar(
     name = "libnsm-tar",
     srcs = [
-        "@com_google_adm_cloud_scp//build_defs/aws/kmstool:libnsm.so",
+        "@shared_libraries//build_defs/aws/kmstool:libnsm.so",
     ],
     mode = "0644",
     package_dir = "/lib/x86_64-linux-gnu/",
@@ -39,11 +39,11 @@ pkg_tar(
     name = "all_licenses",
     deps = [
         "//licenses:licenses_tar",
-        "@com_google_adm_cloud_scp//licenses:licenses_tar",
+        "@shared_libraries//licenses:licenses_tar",
     ],
 )
 
-TEE_REPO_NAME = "@com_google_adm_cloud_scp"
+TEE_REPO_NAME = "@shared_libraries"
 
 DEFAULT_ENCLAVE_ARGS = [
     "--client_config_env",

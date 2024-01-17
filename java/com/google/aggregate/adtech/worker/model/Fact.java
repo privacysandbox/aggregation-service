@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
 import java.math.BigInteger;
+import java.util.Optional;
 
 /**
  * n-Query fact holding the aggregation key and other data
@@ -42,12 +43,17 @@ public abstract class Fact {
   /** Value associated with the bucket. */
   public abstract Long value();
 
+  /** Filtering id for the contribution. */
+  public abstract Optional<Integer> id();
+
   @AutoValue.Builder
   public abstract static class Builder {
 
     public abstract Builder setBucket(BigInteger aggregationKey);
 
     public abstract Builder setValue(long value);
+
+    public abstract Builder setId(int id);
 
     public abstract Fact build();
   }

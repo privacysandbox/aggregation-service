@@ -22,14 +22,40 @@ instance_id="$(curl -s --fail-with-body http://169.254.169.254/latest/meta-data/
 tags="$(aws --region "${region}" ec2 describe-tags --filters Name=resource-id,Values="${instance_id}")"
 tags_kv="$(echo "${tags}" | jq "[.Tags[] | {key:.Key, value:.Value}] | from_entries")"
 env_name="$(echo "${tags_kv}" | jq -r ".environment")"
+allowed_metrics="$(echo "${tags_kv}" | jq -r ".otel_metrics" | jq -r '.[]')"
+allowed_spans="$(echo "${tags_kv}" | jq -r ".otel_spans" | jq -r '.[]')"
 
-declare COLLECTOR_IMAGE=public.ecr.aws/aws-observability/aws-otel-collector:v0.28.0
+# Generate otel filter yaml file.
+generate_filter_yaml_file(){
+  allowed_values=$1
+  output_yaml_file=$2
+  # allowed_values can be empty due to the tag not set in terraform or it's empty.
+  if [ -z "${allowed_values}" ];
+  then
+     values_list="- \n"
+  else
+    mapfile -t allowed_values_arr <<< "$allowed_values"
+    values_list=""
+    for value in "${allowed_values_arr[@]}"
+    do
+        values_list+="- $value \n"
+    done
+  fi
+  echo -e "${values_list}" > "${output_yaml_file}"
+}
+
+generate_filter_yaml_file "${allowed_metrics}" /opt/otel/metrics.yaml
+generate_filter_yaml_file "${allowed_spans}" /opt/otel/spans.yaml
+
+declare COLLECTOR_IMAGE=public.ecr.aws/aws-observability/aws-otel-collector:v0.32.0
 declare -r COLLECTOR_NAME="otel-collector"
 declare -a DOCKER_FLAGS=(
   --detach
   --publish "127.0.0.1:4317:4317"
   --name "${COLLECTOR_NAME}"
   --volume /opt/otel/otel_collector_config.yaml:/otel_collector_config.yaml
+  --volume /opt/otel/metrics.yaml:/metrics.yaml
+  --volume /opt/otel/spans.yaml:/spans.yaml
   --user "$(id -u):$(id -g)"
   --network host
   --env "ENV_NAME=${env_name}"

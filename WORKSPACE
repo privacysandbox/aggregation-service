@@ -19,7 +19,7 @@ http_archive(
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.19.4"
 
-COORDINATOR_VERSION = "v1.5.0"  # version updated on 2023-12-07
+COORDINATOR_VERSION = "v1.5.1"  # version updated on 2024-01-09
 
 JACKSON_VERSION = "2.15.3"
 
@@ -27,7 +27,7 @@ AUTO_VALUE_VERSION = "1.7.4"
 
 AWS_SDK_VERSION = "2.21.16"
 
-GOOGLE_GAX_VERSION = "2.37.0"
+GOOGLE_GAX_VERSION = "2.20.1"
 
 AUTO_SERVICE_VERSION = "1.1.1"
 
@@ -54,20 +54,21 @@ http_archive(
 
 # Use following instead of git_repository for local development
 #local_repository(
-#    name = "com_google_adm_cloud_scp",
+#    name = "shared_libraries",
 #    path = "<LOCAL PATH TO SCP REPO>",
 #)
 
 git_repository(
-    name = "com_google_adm_cloud_scp",
+    name = "shared_libraries",
     patch_args = [
         "-p1",
     ],
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
-        "//build_defs/scp:coordinator.patch",
-        "//build_defs/scp:gcs_storage_client.patch",
-        "//build_defs/scp:dependency_update.patch",
+        "//build_defs/shared_libraries:coordinator.patch",
+        "//build_defs/shared_libraries:gcs_storage_client.patch",
+        "//build_defs/shared_libraries:dependency_update.patch",
+        "//build_defs/shared_libraries:key_cache_ttl.patch",
     ],
     tag = COORDINATOR_VERSION,
 )
@@ -95,8 +96,10 @@ maven_install(
         "com.amazonaws:aws-java-sdk-s3:1.12.582",
         "com.amazonaws:aws-java-sdk-kms:1.12.582",
         "com.amazonaws:aws-java-sdk-core:1.12.582",
+        "com.amazonaws:aws-java-sdk-xray:1.12.582",
+        "com.amazonaws:aws-java-sdk-cloudwatch:1.12.582",
         "com.beust:jcommander:1.82",
-        "com.google.cloud.functions.invoker:java-function-invoker:1.3.1",
+        "com.google.cloud.functions.invoker:java-function-invoker:1.1.0",
         "com.google.inject:guice:5.1.0",
         "com.google.inject.extensions:guice-testlib:5.1.0",
         "com.fasterxml.jackson.core:jackson-annotations:" + JACKSON_VERSION,
@@ -113,21 +116,20 @@ maven_install(
         "com.google.auto.value:auto-value-annotations:" + AUTO_VALUE_VERSION,
         "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
         "com.google.code.findbugs:jsr305:3.0.2",
-        "com.google.cloud:google-cloud-kms:2.33.0",
-        "com.google.cloud:google-cloud-secretmanager:2.30.0",
-        "com.google.cloud:google-cloud-pubsub:1.125.11",
-        "com.google.cloud:google-cloud-storage:1.118.0",
-        "com.google.cloud:google-cloud-spanner:6.52.1",
-        "com.google.cloud:google-cloud-compute:1.40.0",
-        "com.google.api.grpc:proto-google-cloud-compute-v1:1.12.1",
-        "com.google.cloud.functions:functions-framework-api:1.0.4",
+        "com.google.cloud:google-cloud-kms:2.10.0",
+        "com.google.cloud:google-cloud-secretmanager:2.7.0",
+        "com.google.cloud:google-cloud-pubsub:1.122.2",
+        "com.google.cloud:google-cloud-storage:2.13.1",
+        "com.google.cloud:google-cloud-spanner:6.34.1",
+        "com.google.cloud:google-cloud-compute:1.17.0",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.17.0",
+        "com.google.cloud.functions:functions-framework-api:1.1.0",
         "commons-logging:commons-logging:1.2",
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
         "com.google.http-client:google-http-client-jackson2:1.43.3",
         "io.reactivex.rxjava3:rxjava:3.1.8",
-        "com.google.cloud:google-cloud-monitoring:3.31.0",
-        "com.google.api.grpc:proto-google-cloud-compute-v1:1.40.0",
-        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.31.0",
+        "com.google.cloud:google-cloud-monitoring:3.8.0",
+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.8.0",
         "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
         "com.google.guava:guava:32.1.3-jre",
@@ -138,9 +140,9 @@ maven_install(
         "com.google.truth.extensions:truth-proto-extension:1.1.5",
         "com.google.truth:truth:1.1.5",
         "com.jayway.jsonpath:json-path:2.8.0",
+        "javax.inject:javax.inject:1",
         "io.github.resilience4j:resilience4j-core:1.7.1",
         "io.github.resilience4j:resilience4j-retry:1.7.1",
-        "javax.inject:javax.inject:1",
         "junit:junit:4.13.2",
         "org.apache.avro:avro:1.11.3",
         "org.apache.commons:commons-math3:3.6.1",
@@ -392,9 +394,9 @@ rules_proto_toolchains()
 ###############################
 
 # Download the AWS enclave SDK repo and apply a patch for building the kmstool dependencies.
-load("@com_google_adm_cloud_scp//build_defs/shared:enclaves_kmstools.bzl", "import_aws_nitro_enclaves_sdk_c")
+load("@shared_libraries//build_defs/shared:enclaves_kmstools.bzl", "import_aws_nitro_enclaves_sdk_c")
 
-import_aws_nitro_enclaves_sdk_c(repo_name = "@com_google_adm_cloud_scp")
+import_aws_nitro_enclaves_sdk_c(repo_name = "@shared_libraries")
 
 ###########################
 # Binary Dev Dependencies #
@@ -481,7 +483,7 @@ PROTOBUF_SHA_256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d
 # SDK Dependencies Rules #
 ##########################
 
-load("@com_google_adm_cloud_scp//build_defs/cc:sdk.bzl", "sdk_dependencies")
+load("@shared_libraries//build_defs/cc:sdk.bzl", "sdk_dependencies")
 
 sdk_dependencies(PROTOBUF_CORE_VERSION, PROTOBUF_SHA_256)
 
@@ -492,7 +494,7 @@ sdk_dependencies(PROTOBUF_CORE_VERSION, PROTOBUF_SHA_256)
 # This bazel file contains all the dependencies in SCP, except the dependencies
 # only used in SDK. Eventually, each project will have its own bazel file for
 # its dependencies, and this file will be removed.
-load("@com_google_adm_cloud_scp//build_defs:scp_dependencies.bzl", "scp_dependencies")
+load("@shared_libraries//build_defs:scp_dependencies.bzl", "scp_dependencies")
 
 scp_dependencies(PROTOBUF_CORE_VERSION, PROTOBUF_SHA_256)
 

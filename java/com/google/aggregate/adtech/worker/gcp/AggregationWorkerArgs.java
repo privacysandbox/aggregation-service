@@ -336,6 +336,11 @@ public class AggregationWorkerArgs {
       description = "Flag to enable parallel upload of the sharded summary reports.")
   private boolean enableParallelSummaryUpload = false;
 
+  @Parameter(
+      names = "--decrypter_cache_entry_ttl_sec",
+      description = "Flag to set the private key cache time to live. Used for testing only.")
+  private long decrypterCacheEntryTtlSec = 3600;
+
   ResultLoggerModuleSelector resultLoggerModuleSelector() {
     return resultLoggerModuleSelector;
   }
@@ -578,5 +583,9 @@ public class AggregationWorkerArgs {
 
   public boolean isEnableParallelSummaryUpload() {
     return enableParallelSummaryUpload;
+  }
+
+  public long getDecrypterCacheEntryTtlSec() {
+    return decrypterCacheEntryTtlSec;
   }
 }

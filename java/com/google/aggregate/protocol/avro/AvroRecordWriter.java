@@ -16,15 +16,33 @@
 
 package com.google.aggregate.protocol.avro;
 
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Spliterator;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
 
 /**
@@ -37,6 +55,7 @@ import org.apache.avro.generic.GenericRecord;
 public abstract class AvroRecordWriter<Record> implements AutoCloseable {
 
   private static final int RECORDS_PER_FLUSH = 10000;
+  private static final int BLOCKING_QUEUE_CAPACITY = 100000;
 
   private final DataFileWriter<GenericRecord> avroWriter;
   private final OutputStream outStream;
@@ -74,6 +93,79 @@ public abstract class AvroRecordWriter<Record> implements AutoCloseable {
 
       streamWriter.flush();
       outStream.flush();
+    }
+  }
+
+  public void writeRecordsToShards(
+      ImmutableList<MetadataElement> metadata,
+      Stream<Record> records,
+      Path recordPath,
+      int numRecords,
+      int numShards,
+      String shardFilePrefix)
+      throws IOException, InterruptedException, ExecutionException {
+
+    Schema schema = schemaSupplier.get();
+    int coreCount = Runtime.getRuntime().availableProcessors();
+    records = records.parallel().unordered();
+    Stream<GenericRecord> genericRecords =
+        records.map(
+            record -> {
+              try {
+                return serializeRecordToGeneric(record, schema);
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            });
+
+    final LinkedBlockingQueue<GenericRecord> recordQueue =
+        new LinkedBlockingQueue(BLOCKING_QUEUE_CAPACITY);
+    Callable<Void> processRecords = getRecordEnqueueProcessor(genericRecords, recordQueue);
+
+    ListeningExecutorService recordProcessorService =
+        MoreExecutors.listeningDecorator(new ForkJoinPool(coreCount));
+    ListenableFuture<Void> recordProcessorFuture = recordProcessorService.submit(processRecords);
+
+    ListeningExecutorService writerService =
+        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(coreCount));
+    List<ListenableFuture> writerFutures = new ArrayList<>();
+    int minRecordsPerShard = numRecords / numShards;
+    int numShardsWithSpillover = numRecords % numShards;
+    try {
+      for (int currentShard = 0; currentShard < numShards; currentShard++) {
+        int spilloverRecordsInCurrentShard = currentShard < numShardsWithSpillover ? 1 : 0;
+        int recordsToWrite = minRecordsPerShard + spilloverRecordsInCurrentShard;
+        Path shardPath =
+            numShards > 1
+                ? recordPath.resolve(shardFilePrefix + "_shard_" + currentShard + ".avro")
+                : recordPath;
+
+        Runnable shardWriter =
+            createShardWriter(schema, metadata, shardPath, recordQueue, recordsToWrite);
+
+        writerFutures.add(writerService.submit(shardWriter));
+      }
+
+      Futures.addCallback(
+          recordProcessorFuture,
+          new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(Void unused) {}
+
+            @Override
+            public void onFailure(Throwable throwable) {
+              writerFutures.forEach(future -> future.cancel(/* mayInterruptIfRunning */ true));
+            }
+          },
+          recordProcessorService);
+
+    } finally {
+      writerService.shutdown();
+      recordProcessorService.shutdown();
+      for (ListenableFuture future : writerFutures) {
+        future.get();
+      }
+      recordProcessorFuture.get();
     }
   }
 
@@ -131,6 +223,51 @@ public abstract class AvroRecordWriter<Record> implements AutoCloseable {
       streamWriter.flush();
       outStream.flush();
     }
+  }
+
+  private static Callable<Void> getRecordEnqueueProcessor(
+      Stream<GenericRecord> genericRecords, LinkedBlockingQueue<GenericRecord> recordQueue) {
+    return new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        genericRecords.forEach(
+            record -> {
+              try {
+                recordQueue.put(record);
+              } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+              }
+            });
+        return null;
+      }
+    };
+  }
+
+  private static Runnable createShardWriter(
+      Schema schema,
+      ImmutableList<MetadataElement> metadata,
+      Path shardPath,
+      LinkedBlockingQueue<GenericRecord> recordQueue,
+      int recordsToWrite) {
+    return () -> {
+      DataFileWriter<GenericRecord> avroWriter =
+          new DataFileWriter<>(new GenericDatumWriter<>(schema));
+      metadata.forEach(meta -> avroWriter.setMeta(meta.key(), meta.value()));
+
+      try (OutputStream outputAvroStream =
+              Files.newOutputStream(shardPath, CREATE, TRUNCATE_EXISTING);
+          DataFileWriter<GenericRecord> streamWriter =
+              avroWriter.create(schema, outputAvroStream)) {
+        for (int record = 0; record < recordsToWrite; record++) {
+          streamWriter.append(recordQueue.take());
+          if (record % RECORDS_PER_FLUSH == 0) {
+            streamWriter.flush();
+          }
+        }
+      } catch (IOException | InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    };
   }
 
   @Override

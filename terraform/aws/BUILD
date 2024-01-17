@@ -30,7 +30,7 @@ string_flag(
 s3_jar_release(
     name = "aws_change_handler_lambda_release",
     artifact_base_name = "AwsChangeHandlerLambda_{VERSION}.jar",
-    jar_target = "@com_google_adm_cloud_scp//java/com/google/scp/operator/frontend/service/aws:AwsChangeHandlerLambdaDeploy",
+    jar_target = "@shared_libraries//java/com/google/scp/operator/frontend/service/aws:AwsChangeHandlerLambdaDeploy",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
@@ -38,7 +38,7 @@ s3_jar_release(
 s3_jar_release(
     name = "asg_capacity_handler_lambda_release",
     artifact_base_name = "AsgCapacityHandlerLambda_{VERSION}.jar",
-    jar_target = "@com_google_adm_cloud_scp//java/com/google/scp/operator/autoscaling/app/aws:AsgCapacityHandlerLambdaDeploy",
+    jar_target = "@shared_libraries//java/com/google/scp/operator/autoscaling/app/aws:AsgCapacityHandlerLambdaDeploy",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
@@ -46,7 +46,7 @@ s3_jar_release(
 s3_jar_release(
     name = "terminated_instance_handler_lambda_release",
     artifact_base_name = "TerminatedInstanceHandlerLambda_{VERSION}.jar",
-    jar_target = "@com_google_adm_cloud_scp//java/com/google/scp/operator/autoscaling/app/aws:TerminatedInstanceHandlerLambdaDeploy",
+    jar_target = "@shared_libraries//java/com/google/scp/operator/autoscaling/app/aws:TerminatedInstanceHandlerLambdaDeploy",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
@@ -54,7 +54,7 @@ s3_jar_release(
 s3_jar_release(
     name = "aws_api_gateway_frontend_handler_lambda_release",
     artifact_base_name = "AwsApiGatewayFrontend_{VERSION}.jar",
-    jar_target = "@com_google_adm_cloud_scp//java/com/google/scp/operator/frontend:AwsApiGatewayFrontendDeploy",
+    jar_target = "@shared_libraries//java/com/google/scp/operator/frontend:AwsApiGatewayFrontendDeploy",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
@@ -62,7 +62,7 @@ s3_jar_release(
 s3_jar_release(
     name = "aws_frontend_cleanup_handler_lambda_release",
     artifact_base_name = "AwsFrontendCleanupLambda_{VERSION}.jar",
-    jar_target = "@com_google_adm_cloud_scp//java/com/google/scp/operator/frontend/service/aws:AwsFrontendCleanupLambdaDeploy",
+    jar_target = "@shared_libraries//java/com/google/scp/operator/frontend/service/aws:AwsFrontendCleanupLambdaDeploy",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
