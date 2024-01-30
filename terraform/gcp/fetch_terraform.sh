@@ -48,7 +48,7 @@ fi
 git -C "${CONTROL_PLANE_REPO_DIR}" checkout "${CONTROL_PLANE_SHARED_LIBRARIES_VERSION}"
 git -C "${CONTROL_PLANE_REPO_DIR}" clean -df
 git -C "${CONTROL_PLANE_REPO_DIR}" reset --hard HEAD
-for patch in ${WORKSPACE_DIR}/build_defs/scp/*.patch; do
+for patch in ${WORKSPACE_DIR}/build_defs/shared_libraries/*.patch; do
   git -C "${CONTROL_PLANE_REPO_DIR}" apply --reject --whitespace=fix "${patch}"
 done
 
