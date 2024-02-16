@@ -29,6 +29,7 @@ java_test(
         "//java/com/google/aggregate/tools/shard:avro_shard",
         "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
     ],

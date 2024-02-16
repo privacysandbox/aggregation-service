@@ -24,5 +24,6 @@ java_test(
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
         "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
     ],
 )

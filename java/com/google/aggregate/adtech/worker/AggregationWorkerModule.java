@@ -27,6 +27,7 @@ import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
+import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
 import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWorkingDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
@@ -45,6 +46,7 @@ import com.google.aggregate.perf.export.AwsStopwatchExporter.StopwatchBucketName
 import com.google.aggregate.perf.export.AwsStopwatchExporter.StopwatchKeyName;
 import com.google.aggregate.perf.export.PlainFileStopwatchExporter;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.shared.mapper.TimeObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -68,9 +70,9 @@ import com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobNumAtte
 import com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobProcessingTimeSecondsParameter;
 import com.google.scp.operator.cpio.configclient.local.Annotations.ScaleInHookParameter;
 import com.google.scp.operator.cpio.configclient.local.Annotations.SqsJobQueueUrlParameter;
-import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBEncryptionKeyServiceBaseUrl;
+import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.HttpPrivateKeyFetchingService.PrivateKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.aws.Annotations.KmsEndpointOverride;
 import com.google.scp.operator.cpio.cryptoclient.local.LocalFileDecryptionKeyServiceModule.DecryptionKeyFilePath;
@@ -279,6 +281,9 @@ public final class AggregationWorkerModule extends AbstractModule {
     // Dependency for the aggregation processor.
     bind(JobProcessor.class).to(ConcurrentAggregationProcessor.class);
 
+    bind(boolean.class).annotatedWith(StreamingOutputDomainProcessing.class)
+        .toInstance(args.isStreamingOutputDomainProcessing());
+
     // Noising module.
     install(args.getNoisingSelector().getNoisingModule());
 
@@ -295,7 +300,8 @@ public final class AggregationWorkerModule extends AbstractModule {
         .toInstance(args.isEnableParallelSummaryUpload());
 
     // Parameter to set key cache. This is a test only flag.
-    bind(Long.class).annotatedWith(DecrypterCacheEntryTtlSec.class).toInstance(args.getDecrypterCacheEntryTtlSec());
+    bind(Long.class).annotatedWith(DecrypterCacheEntryTtlSec.class)
+        .toInstance(args.getDecrypterCacheEntryTtlSec());
 
     // Dependencies for privacy budgeting.
     bind(PrivacyBudgetingServiceBridge.class).to(args.getPrivacyBudgeting().getBridge());
@@ -314,6 +320,7 @@ public final class AggregationWorkerModule extends AbstractModule {
           .toInstance(args.getCoordinatorBPrivacyBudgetServiceAuthEndpoint());
       install(new AwsPbsClientModule());
     }
+    install(new PrivacyBudgetKeyGeneratorModule());
 
     // Benchmark Mode for Perf tests.
     bind(boolean.class).annotatedWith(BenchmarkMode.class).toInstance(args.getBenchmarkMode());

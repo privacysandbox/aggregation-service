@@ -16,6 +16,8 @@
 
 package com.google.aggregate.adtech.worker.validation;
 
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_FILTERING_IDS;
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_FILTERING_IDS_DELIMITER;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
@@ -33,7 +35,6 @@ public final class JobValidator {
   /**
    * validates the job parameters are valid.
    *
-   * @param job
    * @param domainOptional if the output domain is optional. If not set, then output_domain path
    *     should be set.
    */
@@ -41,16 +42,16 @@ public final class JobValidator {
     checkArgument(job.isPresent(), "Job metadata not found.");
     String jobKey = toJobKeyString(job.get().jobKey());
     checkArgument(
-        job.get().requestInfo().getJobParameters().containsKey("attribution_report_to")
+        job.get().requestInfo().getJobParametersMap().containsKey("attribution_report_to")
             && !job.get()
                 .requestInfo()
-                .getJobParameters()
+                .getJobParametersMap()
                 .get("attribution_report_to")
                 .trim()
                 .isEmpty(),
         String.format(
             "Job parameters does not have an attribution_report_to field for the Job %s.", jobKey));
-    Map<String, String> jobParams = job.get().requestInfo().getJobParameters();
+    Map<String, String> jobParams = job.get().requestInfo().getJobParametersMap();
     checkArgument(
         domainOptional
             || (jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME)
@@ -71,13 +72,27 @@ public final class JobValidator {
             "Job parameters for the job '%s' should have a valid value between 0 and 100 for"
                 + " 'report_error_threshold_percentage' parameter.",
             jobKey));
+
+    String filteringIds = jobParams.getOrDefault(JOB_PARAM_FILTERING_IDS, null);
+    checkArgument(
+        validStringOfIntegers(filteringIds, JOB_PARAM_FILTERING_IDS_DELIMITER),
+        String.format(
+            "Job parameters for the job '%s' should have comma separated integers for"
+                + " 'filtering_ids' parameter.",
+            jobKey));
   }
 
-  /**
-   * Validates that the string representation has a valid percentage value.
-   *
-   * @param percentageInString
-   */
+  /** Checks if the given string is a list of integers separated by delimiter. */
+  private static boolean validStringOfIntegers(String stringOfNumbers, String delimiter) {
+    try {
+      NumericConversions.getIntegersFromString(stringOfNumbers, delimiter);
+      return true;
+    } catch (IllegalArgumentException iae) {
+      return false;
+    }
+  }
+
+  /** Validates that the string representation has a valid percentage value. */
   private static boolean validPercentValue(String percentageInString) {
     try {
       NumericConversions.getPercentageValue(percentageInString);

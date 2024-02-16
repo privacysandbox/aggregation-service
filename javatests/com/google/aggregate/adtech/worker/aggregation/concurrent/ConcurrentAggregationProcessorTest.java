@@ -30,6 +30,8 @@ import static com.google.aggregate.adtech.worker.aggregation.concurrent.Concurre
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_RUN;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.NUM_REPORTS_WITH_ERRORS;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_1_0;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_WITH_ERRORS_MESSAGE;
@@ -59,11 +61,13 @@ import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
+import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
 import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.aggregation.domain.AvroOutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.TextOutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
+import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngineFactory;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
@@ -79,7 +83,9 @@ import com.google.aggregate.adtech.worker.model.AvroRecordEncryptedReportConvert
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.model.ErrorCounter;
+import com.google.aggregate.adtech.worker.model.Fact;
 import com.google.aggregate.adtech.worker.model.Report;
+import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.aggregate.adtech.worker.model.serdes.PayloadSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.SharedInfoSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.cbor.CborPayloadSerdes;
@@ -98,6 +104,9 @@ import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBrid
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetingServiceBridgeException;
 import com.google.aggregate.privacy.budgeting.bridge.UnlimitedPrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorFactory;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.aggregate.privacy.noise.Annotations.Threshold;
 import com.google.aggregate.privacy.noise.NoiseApplier;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
@@ -141,8 +150,11 @@ import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSumm
 import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
 import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
 import com.google.scp.shared.proto.ProtoUtil;
+import com.google.testing.junit.testparameterinjector.TestParameter;
+import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -162,9 +174,8 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
-@RunWith(JUnit4.class)
+@RunWith(TestParameterInjector.class)
 public class ConcurrentAggregationProcessorTest {
 
   private static final Instant FIXED_TIME = Instant.parse("2021-01-01T00:00:00Z");
@@ -192,33 +203,46 @@ public class ConcurrentAggregationProcessorTest {
   private ResultInfo.Builder resultInfoBuilder;
   private ImmutableList<EncryptedReport> encryptedReports1;
   private ImmutableList<EncryptedReport> encryptedReports2;
-  private String reportId1 = String.valueOf(UUID.randomUUID());
-  private String reportId2 = String.valueOf(UUID.randomUUID());
-  private String reportId3 = String.valueOf(UUID.randomUUID());
-  private String reportId4 = String.valueOf(UUID.randomUUID());
-  private String reportId5 = String.valueOf(UUID.randomUUID());
+  private final String reportId1 = String.valueOf(UUID.randomUUID());
+  private final String reportId2 = String.valueOf(UUID.randomUUID());
+  private final String reportId3 = String.valueOf(UUID.randomUUID());
+  private final String reportId4 = String.valueOf(UUID.randomUUID());
+  private final String reportId5 = String.valueOf(UUID.randomUUID());
 
-  // Under test
+  // Run all tests with streamingOutputDomain enabled and disabled.
+  @TestParameter boolean streamingOutputDomainTestParam;
+
+  // Under test.
   @Inject private Provider<ConcurrentAggregationProcessor> processor;
 
+  @Inject private PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory;
+
   @Before
-  public void beforeTest() {
+  public void setUpFlags() {
     outputDomainProcessorHelper.setAvroOutputDomainProcessor(true);
+    outputDomainProcessorHelper.setDomainOptional(true);
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
     fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
+
+    outputDomainProcessorHelper.setStreamingOutputDomainProcessing(streamingOutputDomainTestParam);
   }
 
   private EncryptedReport generateEncryptedReportWithVersion(
       int param, String reportId, String version) {
-    String keyId = UUID.randomUUID().toString();
     Report report =
         FakeReportGenerator.generateWithFixedReportId(param, reportId, /* reportVersion */ version);
-    String sharedInfoString = sharedInfoSerdes.reverse().convert(Optional.of(report.sharedInfo()));
+    return getEncryptedReport(report);
+  }
+
+  private EncryptedReport getEncryptedReport(Report unencryptedreport) {
     try {
+      String sharedInfoString =
+          sharedInfoSerdes.reverse().convert(Optional.of(unencryptedreport.sharedInfo()));
+      String keyId = UUID.randomUUID().toString();
       ByteSource firstReportBytes =
           fakeDecryptionKeyService.generateCiphertext(
               keyId,
-              payloadSerdes.reverse().convert(Optional.of(report.payload())),
+              payloadSerdes.reverse().convert(Optional.of(unencryptedreport.payload())),
               sharedInfoString);
       return EncryptedReport.builder()
           .setPayload(firstReportBytes)
@@ -241,7 +265,7 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Before
-  public void setUp() throws Exception {
+  public void setUpInputData() throws Exception {
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         new UnlimitedPrivacyBudgetingServiceBridge());
 
@@ -291,7 +315,7 @@ public class ConcurrentAggregationProcessorTest {
     writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports2);
 
     EncryptedReport invalidEncryptedReport =
-        generateInvalidVersionEncryptedReport(1, reportId5, "1.0");
+        generateInvalidVersionEncryptedReport(1, reportId5, "55.0");
     writeReports(
         invalidReportsDirectory.resolve("invalid_reports.avro"),
         ImmutableList.of(invalidEncryptedReport));
@@ -299,7 +323,7 @@ public class ConcurrentAggregationProcessorTest {
 
   private RequestInfo getRequestInfoWithInputDataBucketName(
       RequestInfo requestInfo, Path inputReportDirectory) {
-    Map<String, String> jobParameters = new HashMap<>(requestInfo.getJobParameters());
+    Map<String, String> jobParameters = new HashMap<>(requestInfo.getJobParametersMap());
     jobParameters.put("report_error_threshold_percentage", "100");
     return requestInfo.toBuilder()
         .putAllJobParameters(jobParameters)
@@ -310,7 +334,7 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void aggregate() throws Exception {
+  public void aggregate_domainOptionalAndNoOutputDomain() throws Exception {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
@@ -321,7 +345,7 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void aggregate_invalidVersionReport() throws Exception {
+  public void aggregate_invalidVersionReport() {
     AggregationJobProcessException ex =
         assertThrows(
             AggregationJobProcessException.class, () -> processor.get().process(ctxInvalidReport));
@@ -345,25 +369,51 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
+  public void aggregate_withOutputDomain_overlappingDomainKeysInResults() throws Exception {
+    outputDomainProcessorHelper.setDomainOptional(false);
+
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "1");
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_2.avro"), "2");
+
+    ctx = addOutputDomainToJob();
+    JobResult jobResultProcessor = processor.get().process(ctx);
+
+    assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
+    // Key 3 added as an extra key from the output domain.
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(1), /* metric= */ 2, /* unnoisedMetric= */ 2L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L));
+  }
+
+  @Test
+  public void aggregate_withOutputDomain_noOverlappingDomainKeys() throws Exception {
+    outputDomainProcessorHelper.setDomainOptional(false);
+
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "3");
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_2.avro"), "4");
+
+    ctx = addOutputDomainToJob();
+    JobResult jobResultProcessor = processor.get().process(ctx);
+
+    assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
+    // Key 3 added as an extra key from the output domain.
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(3), /* metric= */ 0, /* unnoisedMetric= */ 0L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(4), /* metric= */ 0, /* unnoisedMetric= */ 0L));
+  }
+
+  @Test
   public void aggregate_withOutputDomain_thresholding() throws Exception {
-    writeOutputDomainAvroFile(
-        outputDomainDirectory.resolve("output_domain_1.avro"),
-        "2"); // 1 is not in output domain, so thresholding applies
-    DataLocation outputDomainLocation = getOutputDomainLocation();
-    ImmutableMap<String, String> jobParams =
-        ImmutableMap.of(
-            JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME,
-            outputDomainLocation.blobStoreDataLocation().bucket(),
-            JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
-            outputDomainLocation.blobStoreDataLocation().key());
-    ctx =
-        ctx.toBuilder()
-            .setRequestInfo(
-                ctx.requestInfo().toBuilder()
-                    .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
-                    .build())
-            .build();
+    outputDomainProcessorHelper.setDomainOptional(true);
+    // Key 1 is not in output domain, so thresholding applies.
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "2");
+    ctx = addOutputDomainToJob();
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.get().process(ctx);
@@ -376,9 +426,8 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void aggregate_withOutputDomain_thresholding_debugEpsilon() throws Exception {
-    writeOutputDomainAvroFile(
-        outputDomainDirectory.resolve("output_domain_1.avro"),
-        "2"); // 1 is not in output domain, so thresholding applies
+    // Key 1 is not in output domain, so thresholding applies.
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "2");
     DataLocation outputDomainLocation = getOutputDomainLocation();
     ImmutableMap<String, String> jobParams =
         ImmutableMap.of(
@@ -395,7 +444,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
@@ -411,9 +460,8 @@ public class ConcurrentAggregationProcessorTest {
   @Test
   public void aggregate_withOutputDomain_thresholding_debugEpsilonMalformedValue()
       throws Exception {
-    writeOutputDomainAvroFile(
-        outputDomainDirectory.resolve("output_domain_1.avro"),
-        "2"); // 1 is not in output domain, so thresholding applies
+    // Key 1 is not in output domain, so thresholding applies.
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "2");
     DataLocation outputDomainLocation = getOutputDomainLocation();
     ImmutableMap<String, String> jobParams =
         ImmutableMap.of(
@@ -430,7 +478,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
@@ -463,7 +511,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
@@ -502,7 +550,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
@@ -533,10 +581,8 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void aggregate_withOutputDomain_thresholding_withDebugRun() throws Exception {
-    writeOutputDomainAvroFile(
-        outputDomainDirectory.resolve("output_domain_1.avro"),
-        "2",
-        "3"); // 1 is not in output domain, so thresholding applies
+    // Key 1 is not in output domain, so thresholding applies.
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "2", "3");
     DataLocation outputDomainLocation = getOutputDomainLocation();
     ImmutableMap<String, String> jobParams =
         ImmutableMap.of(
@@ -553,7 +599,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
@@ -589,25 +635,9 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void aggregate_withOutputDomain_noThresholding() throws Exception {
-    writeOutputDomainAvroFile(
-        outputDomainDirectory.resolve("output_domain_1.avro"),
-        "1"); // 1 is in output domain, so no thresholding applies
-    DataLocation outputDomainLocation = getOutputDomainLocation();
-    ImmutableMap<String, String> jobParams =
-        ImmutableMap.of(
-            JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME,
-            outputDomainLocation.blobStoreDataLocation().bucket(),
-            JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
-            outputDomainLocation.blobStoreDataLocation().key());
-
-    ctx =
-        ctx.toBuilder()
-            .setRequestInfo(
-                ctx.requestInfo().toBuilder()
-                    .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
-                    .build())
-            .build();
+    // Key 1 is in output domain, so no thresholding applies.
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "1");
+    ctx = addOutputDomainToJob();
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(-3));
 
     JobResult jobResultProcessor = processor.get().process(ctx);
@@ -622,25 +652,13 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void aggregate_withOutputDomain_addKeys() throws Exception {
+  public void aggregation_withOutputDomainAndDomainRequired_addKeys() throws Exception {
+    outputDomainProcessorHelper.setDomainOptional(false);
+
     writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "3");
     writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_2.avro"), "1", "2");
-    DataLocation outputDomainLocation = getOutputDomainLocation();
-    ImmutableMap<String, String> jobParams =
-        ImmutableMap.of(
-            JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME,
-            outputDomainLocation.blobStoreDataLocation().bucket(),
-            JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
-            outputDomainLocation.blobStoreDataLocation().key());
-    ctx =
-        ctx.toBuilder()
-            .setRequestInfo(
-                ctx.requestInfo().toBuilder()
-                    .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
-                    .build())
-            .build();
 
+    ctx = addOutputDomainToJob();
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
@@ -656,28 +674,31 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void aggregate_withOutputDomain_addKeysAndExtra() throws Exception {
+  public void aggregate_withOutputDomainAndDomainOptional_addKeys() throws Exception {
     writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "3");
-    writeOutputDomainAvroFile(
-        outputDomainDirectory.resolve("output_domain_2.avro"),
-        "2",
-        "3"); // 3 is intentionally duplicate.
-    DataLocation outputDomainLocation = getOutputDomainLocation();
-    ImmutableMap<String, String> jobParams =
-        ImmutableMap.of(
-            JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME,
-            outputDomainLocation.blobStoreDataLocation().bucket(),
-            JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
-            outputDomainLocation.blobStoreDataLocation().key());
-    ctx =
-        ctx.toBuilder()
-            .setRequestInfo(
-                ctx.requestInfo().toBuilder()
-                    .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
-                    .build())
-            .build();
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_2.avro"), "1", "2");
 
+    ctx = addOutputDomainToJob();
+    JobResult jobResultProcessor = processor.get().process(ctx);
+
+    assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
+    // Key 3 added as an extra key from the output domain.
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(1), /* metric= */ 2, /* unnoisedMetric= */ 2L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(3), /* metric= */ 0, /* unnoisedMetric= */ 0L));
+  }
+
+  @Test
+  public void aggregate_withOutputDomain_addKeysWithDuplicates() throws Exception {
+    // 3 is duplicate in the output domain.
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "3");
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_2.avro"), "2", "3");
+    ctx = addOutputDomainToJob();
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
@@ -694,23 +715,10 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void aggregate_withOutputDomain_domainNotExistent() throws Exception {
-    // Intentionally skipping the output domain generation here.
-    DataLocation outputDomainLocation = getOutputDomainLocation();
-    ImmutableMap<String, String> jobParams =
-        ImmutableMap.of(
-            JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME,
-            outputDomainLocation.blobStoreDataLocation().bucket(),
-            JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
-            outputDomainLocation.blobStoreDataLocation().key());
-    ctx =
-        ctx.toBuilder()
-            .setRequestInfo(
-                ctx.requestInfo().toBuilder()
-                    .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
-                    .build())
-            .build();
+  public void aggregate_nonExistentOutputDomainLocationSpecified_throwsException() {
+    // Domain is optional but output domain location is specified.
+    // Skip the output domain generation.
+    ctx = addOutputDomainToJob();
 
     AggregationJobProcessException ex =
         assertThrows(AggregationJobProcessException.class, () -> processor.get().process(ctx));
@@ -720,25 +728,25 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
+  public void aggregate_emptyOutputDomainFiles_throwsException() throws Exception {
+    // Write an empty output domain file.
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"));
+    ctx = addOutputDomainToJob();
+
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.get().process(ctx));
+
+    assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
+    assertThat(ex.getMessage()).contains("Exception while reading domain input data.");
+    assertThat(ex.getCause().getMessage()).contains("No output domain provided in the location");
+  }
+
+  @Test
   public void aggregate_withOutputDomain_avroDomainNotReadable() throws Exception {
-    // Intentionally skipping the output domain generation here.
+    // Skip the output domain generation, specifying an empty file.
     Path badDataShard = outputDomainDirectory.resolve("domain_bad.avro");
     writeOutputDomainTextFile(badDataShard, "bad shard");
-    DataLocation outputDomainLocation = getOutputDomainLocation();
-    ImmutableMap<String, String> jobParams =
-        ImmutableMap.of(
-            JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME,
-            outputDomainLocation.blobStoreDataLocation().bucket(),
-            JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
-            outputDomainLocation.blobStoreDataLocation().key());
-    ctx =
-        ctx.toBuilder()
-            .setRequestInfo(
-                ctx.requestInfo().toBuilder()
-                    .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
-                    .build())
-            .build();
+    ctx = addOutputDomainToJob();
 
     AggregationJobProcessException ex =
         assertThrows(AggregationJobProcessException.class, () -> processor.get().process(ctx));
@@ -764,7 +772,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
 
@@ -979,7 +987,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
 
@@ -1044,7 +1052,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
 
@@ -1095,6 +1103,38 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
+  public void process_withNoQueriedFilteringId() throws Exception {
+    Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
+    Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
+    EncryptedReport reportWithoutId =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithoutId, nullFact1), VERSION_0_1));
+
+    Fact factWithDefaultId =
+        Fact.builder().setBucket(new BigInteger("11111")).setValue(11).setId(0).build();
+    Fact factWithId =
+        Fact.builder().setBucket(new BigInteger("33333")).setValue(33).setId(12).build();
+    Fact nullFact2 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(0).build();
+    EncryptedReport reportWithIds =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithDefaultId, factWithId, nullFact2), VERSION_1_0));
+
+    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+
+    processor.get().process(ctx);
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(
+                /* bucket= */ new BigInteger("11111"),
+                /* metric= */ 22,
+                /* unnoisedMetric= */ 22L));
+  }
+
+  @Test
   public void processingWithWrongSharedInfo() throws Exception {
     String keyId = UUID.randomUUID().toString();
     Report report = FakeReportGenerator.generateWithParam(1, /* reportVersion */ LATEST_VERSION);
@@ -1131,7 +1171,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
 
@@ -1143,7 +1183,7 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void aggregate_withPrivacyBudgeting_noBudget() throws Exception {
+  public void aggregate_withPrivacyBudgeting_noBudget() {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     // No budget given, i.e. all the budgets are depleted for this test.
@@ -1159,18 +1199,10 @@ public class ConcurrentAggregationProcessorTest {
   public void aggregate_withPrivacyBudgeting() throws Exception {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
-    // privacy budget key generated from encryptedReports1
-    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create(
-            "feb6671c7739adeb5140f2af92bb345545e8f16e1761292ac871eaae7904393f",
-            Instant.ofEpochMilli(0)),
-        1);
-    // privacy budget key generated from encryptedReports2
-    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create(
-            "455919cec4e33a989ebbebc13084da12209dc920620d8bd821a48c0e721bc631",
-            Instant.ofEpochMilli(0)),
-        1);
+    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
+    PrivacyBudgetUnit privacyBudgetUnit2 = getPrivacyBudgetUnit(encryptedReports1.get(1));
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit2, 1);
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
 
@@ -1185,11 +1217,11 @@ public class ConcurrentAggregationProcessorTest {
                 /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L));
     // Check that the right attributionReportTo and debugPrivacyBudgetLimit were sent to the bridge
     assertThat(fakePrivacyBudgetingServiceBridge.getLastAttributionReportToSent())
-        .hasValue(ctx.requestInfo().getJobParameters().get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
+        .hasValue(ctx.requestInfo().getJobParametersMap().get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
   }
 
   @Test
-  public void aggregate_withPrivacyBudgeting_unauthenticatedException_failJob() throws Exception {
+  public void aggregate_withPrivacyBudgeting_unauthenticatedException_failJob() {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
 
@@ -1205,7 +1237,7 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void aggregate_withPrivacyBudgeting_unauthorizedException_failJob() throws Exception {
+  public void aggregate_withPrivacyBudgeting_unauthorizedException_failJob() {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
 
@@ -1221,7 +1253,7 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void aggregate_withPrivacyBudgeting_oneBudgetMissing() throws Exception {
+  public void aggregate_withPrivacyBudgeting_oneBudgetMissing() {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
@@ -1240,7 +1272,7 @@ public class ConcurrentAggregationProcessorTest {
    * nonexistent.
    */
   @Test
-  public void aggregate_withNonExistentBucket() throws Exception {
+  public void aggregate_withNonExistentBucket() {
     Path nonExistentReportsDirectory =
         testWorkingDir.getRoot().toPath().resolve("nonExistentBucket");
     ctx =
@@ -1251,11 +1283,10 @@ public class ConcurrentAggregationProcessorTest {
                     .setInputDataBlobPrefix("")
                     .build())
             .build();
-    // TODO(b/258078789): Passing nonexistent reports folder should throw
-    // TODO(b/258082317): Add assertion on return message.
     AggregationJobProcessException ex =
         assertThrows(AggregationJobProcessException.class, () -> processor.get().process(ctx));
     assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
+    assertThat(ex.getMessage()).contains("Exception while reading reports input data.");
   }
 
   /**
@@ -1263,7 +1294,7 @@ public class ConcurrentAggregationProcessorTest {
    * nonexistent.
    */
   @Test
-  public void aggregate_withNonExistentReportFile() throws Exception {
+  public void aggregate_withNonExistentReportFile() {
     ctx =
         ctx.toBuilder()
             .setRequestInfo(
@@ -1288,7 +1319,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
 
@@ -1320,7 +1351,7 @@ public class ConcurrentAggregationProcessorTest {
             .setRequestInfo(
                 ctx.requestInfo().toBuilder()
                     .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParameters(), jobParams))
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
                     .build())
             .build();
 
@@ -1364,6 +1395,21 @@ public class ConcurrentAggregationProcessorTest {
         .build();
   }
 
+  private PrivacyBudgetUnit getPrivacyBudgetUnit(EncryptedReport encryptedReport) {
+    SharedInfo sharedInfo = sharedInfoSerdes.convert(encryptedReport.sharedInfo()).get();
+    PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator =
+        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo).get();
+    PrivacyBudgetUnit privacyBudgetUnit =
+        PrivacyBudgetUnit.create(
+            privacyBudgetKeyGenerator.generatePrivacyBudgetKey(
+                PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
+                    .setFilteringId(0)
+                    .setSharedInfo(sharedInfo)
+                    .build()),
+            Instant.ofEpochMilli(0));
+    return privacyBudgetUnit;
+  }
+
   private void writeReports(Path reportsPath, ImmutableList<EncryptedReport> encryptedReports)
       throws IOException {
     try (OutputStream avroStream = Files.newOutputStream(reportsPath, CREATE, TRUNCATE_EXISTING);
@@ -1378,6 +1424,23 @@ public class ConcurrentAggregationProcessorTest {
     return DataLocation.ofBlobStoreDataLocation(
         BlobStoreDataLocation.create(
             /* bucket= */ outputDomainDirectory.toAbsolutePath().toString(), /* key= */ ""));
+  }
+
+  private Job addOutputDomainToJob() {
+    DataLocation outputDomainLocation = getOutputDomainLocation();
+    ImmutableMap<String, String> jobParams =
+        ImmutableMap.of(
+            JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME,
+            outputDomainLocation.blobStoreDataLocation().bucket(),
+            JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
+            outputDomainLocation.blobStoreDataLocation().key());
+    return ctx.toBuilder()
+        .setRequestInfo(
+            ctx.requestInfo().toBuilder()
+                .putAllJobParameters(
+                    combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                .build())
+        .build();
   }
 
   /**
@@ -1410,13 +1473,32 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   private static class OutputDomainProcessorHelper {
+
     boolean isAvroOutputDomainProcessor = true;
+    boolean streamingOutputDomainProcessing = false;
+    boolean domainOptional = true;
+
+    public boolean isDomainOptional() {
+      return domainOptional;
+    }
+
+    public void setDomainOptional(boolean domainOptional) {
+      this.domainOptional = domainOptional;
+    }
+
+    public boolean isStreamingOutputDomainProcessing() {
+      return streamingOutputDomainProcessing;
+    }
+
+    public void setStreamingOutputDomainProcessing(boolean streamingProcessing) {
+      this.streamingOutputDomainProcessing = streamingProcessing;
+    }
 
     void setAvroOutputDomainProcessor(Boolean flag) {
       isAvroOutputDomainProcessor = flag;
     }
 
-    boolean getAvroOutputDomainProcessor() {
+    boolean isAvroOutputDomainProcessor() {
       return isAvroOutputDomainProcessor;
     }
   }
@@ -1462,6 +1544,7 @@ public class ConcurrentAggregationProcessorTest {
       // Privacy budgeting
       bind(ProxyPrivacyBudgetingServiceBridge.class).in(TestScoped.class);
       bind(PrivacyBudgetingServiceBridge.class).to(ProxyPrivacyBudgetingServiceBridge.class);
+      install(new PrivacyBudgetKeyGeneratorModule());
 
       // Privacy parameters
       bind(Distribution.class)
@@ -1470,11 +1553,6 @@ public class ConcurrentAggregationProcessorTest {
       bind(double.class).annotatedWith(NoisingEpsilon.class).toInstance(0.1);
       bind(long.class).annotatedWith(NoisingL1Sensitivity.class).toInstance(4L);
       bind(double.class).annotatedWith(NoisingDelta.class).toInstance(5.00);
-
-      // TODO(b/227210339) Add a test with false value for domainOptional
-      boolean domainOptional = true;
-      bind(Boolean.class).annotatedWith(DomainOptional.class).toInstance(domainOptional);
-      bind(Boolean.class).annotatedWith(EnableThresholding.class).toInstance(domainOptional);
 
       // Otel collector
       install(new OtlpJsonLoggingOTelConfigurationModule());
@@ -1485,21 +1563,48 @@ public class ConcurrentAggregationProcessorTest {
     }
 
     @Provides
+    @EnableThresholding
+    boolean providesEnableThresholding() {
+      return helper.isDomainOptional();
+    }
+
+    @Provides
+    @StreamingOutputDomainProcessing
+    boolean providesStreamingOutputDomainProcessing() {
+      return helper.isStreamingOutputDomainProcessing();
+    }
+
+    @Provides
+    @DomainOptional
+    boolean providesDomainOptional() {
+      return helper.isDomainOptional();
+    }
+
+    @Provides
     OutputDomainProcessor provideDomainProcess(
         @BlockingThreadPool ListeningExecutorService blockingThreadPool,
         @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
         BlobStorageClient blobStorageClient,
         StopwatchRegistry stopwatchRegistry,
-        AvroOutputDomainReaderFactory avroOutputDomainReaderFactory) {
-      return helper.getAvroOutputDomainProcessor()
+        AvroOutputDomainReaderFactory avroOutputDomainReaderFactory,
+        @EnableThresholding Boolean enableThresholding,
+        @DomainOptional Boolean domainOptional) {
+      return helper.isAvroOutputDomainProcessor()
           ? new AvroOutputDomainProcessor(
               blockingThreadPool,
               nonBlockingThreadPool,
               blobStorageClient,
               avroOutputDomainReaderFactory,
-              stopwatchRegistry)
+              stopwatchRegistry,
+              domainOptional,
+              enableThresholding)
           : new TextOutputDomainProcessor(
-              blockingThreadPool, nonBlockingThreadPool, blobStorageClient, stopwatchRegistry);
+              blockingThreadPool,
+              nonBlockingThreadPool,
+              blobStorageClient,
+              stopwatchRegistry,
+              domainOptional,
+              enableThresholding);
     }
 
     @Provides
@@ -1542,8 +1647,8 @@ public class ConcurrentAggregationProcessorTest {
     }
 
     @Provides
-    AggregationEngine provideAggregationEngine() {
-      return AggregationEngine.create();
+    AggregationEngine provideAggregationEngine(AggregationEngineFactory aggregationEngineFactory) {
+      return aggregationEngineFactory.create();
     }
   }
 }

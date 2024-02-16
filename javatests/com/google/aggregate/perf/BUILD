@@ -23,6 +23,7 @@ java_test(
         "//java/com/google/aggregate/perf",
         "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guava_testlib",
         "//java/external:guice",
     ],

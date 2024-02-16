@@ -18,6 +18,8 @@ package com.google.aggregate.adtech.worker.util;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.Var;
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -36,7 +38,7 @@ public final class NumericConversions {
    * to 2^32-1 inclusive.
    *
    * @param bytes the byte array to read from. Must be 4 bytes or shorter.
-   * @return the decoded 16-bit integer as a {@link Long}
+   * @return the decoded 32-bit integer as a {@link Long}
    */
   public static Long uInt32FromBytes(byte[] bytes) {
     if (bytes.length > 4) {
@@ -57,6 +59,24 @@ public final class NumericConversions {
           "Value outside of valid range. Valid range is 0 to " + UINT_32_MAX);
     }
     return longValue;
+  }
+
+  /**
+   * Reads a 32-bit integer from a big-endian byte array.
+   *
+   * @param bytes the byte array to read from. Must be 4 bytes or shorter.
+   * @return the decoded 32-bit integer.
+   */
+  public static int getInt32FromBytes(byte[] bytes) {
+    if (bytes.length > 4) {
+      throw new IllegalArgumentException(
+          "Byte array provided was too long. Must be 4 bytes or shorter. Length was "
+              + bytes.length);
+    }
+
+    // Decode from big-endian bytes. BigInteger assumes the byte array is big endian.
+    BigInteger bigIntegerValue = new BigInteger(bytes);
+    return bigIntegerValue.intValueExact();
   }
 
   /**
@@ -165,6 +185,24 @@ public final class NumericConversions {
     }
 
     return percentValue;
+  }
+
+  /**
+   * Gets the list of integer from its string representation separated by the given delimiter.
+   *
+   * @param stringOfNumbers integers separated by delimiter in string.
+   * @param delimiter the delimiter separating the numbers.
+   */
+  public static ImmutableSet<Integer> getIntegersFromString(
+      String stringOfNumbers, String delimiter) {
+    if (Strings.isNullOrEmpty(stringOfNumbers)) {
+      return ImmutableSet.of();
+    }
+
+    return Arrays.stream(stringOfNumbers.trim().split(delimiter))
+        .filter(id -> !id.trim().isEmpty())
+        .map(id -> Integer.valueOf(id.trim()))
+        .collect(ImmutableSet.toImmutableSet());
   }
 
   /** This class should not be instantiated */

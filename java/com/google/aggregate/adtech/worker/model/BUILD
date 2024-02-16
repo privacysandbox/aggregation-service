@@ -32,6 +32,7 @@ java_library(
         "Payload.java",
         "Report.java",
         "SharedInfo.java",
+        "Version.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [

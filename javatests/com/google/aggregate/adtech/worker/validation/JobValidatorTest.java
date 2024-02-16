@@ -47,10 +47,7 @@ public class JobValidatorTest {
   @Test
   public void validate_noAttributionReportToKeyInParams_fails() {
     ImmutableMap jobParams = ImmutableMap.of();
-    Job job =
-        jobBuilder
-            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
-            .build();
+    Job job = buildJob(jobParams).build();
 
     IllegalArgumentException exception =
         assertThrows(
@@ -65,10 +62,7 @@ public class JobValidatorTest {
   @Test
   public void validate_noAttributionReportTo_fails() {
     ImmutableMap jobParams = ImmutableMap.of("attribution_report_to", "");
-    Job job =
-        jobBuilder
-            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
-            .build();
+    Job job = buildJob(jobParams).build();
 
     IllegalArgumentException exception =
         assertThrows(
@@ -83,10 +77,7 @@ public class JobValidatorTest {
   @Test
   public void validate_noOutputDomain_domainOptional_succeeds() {
     ImmutableMap jobParams = ImmutableMap.of("attribution_report_to", "foo.com");
-    Job job =
-        jobBuilder
-            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
-            .build();
+    Job job = buildJob(jobParams).build();
 
     JobValidator.validate(Optional.of(job), /* domainOptional= */ true);
   }
@@ -94,10 +85,7 @@ public class JobValidatorTest {
   @Test
   public void validate_noOutputDomain_domainNotOptional_fails() {
     ImmutableMap jobParams = ImmutableMap.of("attribution_report_to", "foo.com");
-    Job job =
-        jobBuilder
-            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
-            .build();
+    Job job = buildJob(jobParams).build();
 
     IllegalArgumentException exception =
         assertThrows(
@@ -122,10 +110,7 @@ public class JobValidatorTest {
             "prefix_",
             "output_domain_bucket_name",
             "bucket");
-    Job job =
-        jobBuilder
-            .setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build())
-            .build();
+    Job job = buildJob(jobParams).build();
 
     JobValidator.validate(Optional.of(job), /* domainOptional= */ false);
   }
@@ -143,52 +128,30 @@ public class JobValidatorTest {
   @Test
   public void validate_validReportErrorThresholdPercentage_succeeds() {
     Job job1 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            "0"))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to", "foo.com", "report_error_threshold_percentage", "0"))
             .build();
     Job job2 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            "67.0%"))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to",
+                    "foo.com",
+                    "report_error_threshold_percentage",
+                    "67.0%"))
             .build();
     Job job3 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            "100     "))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to",
+                    "foo.com",
+                    "report_error_threshold_percentage",
+                    "100     "))
             .build();
     Job job4 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            "0.1"))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to", "foo.com", "report_error_threshold_percentage", "0.1"))
             .build();
 
     JobValidator.validate(Optional.of(job1), /* domainOptional= */ true);
@@ -200,40 +163,22 @@ public class JobValidatorTest {
   @Test
   public void validate_invalidReportErrorThresholdPercentage_fails() {
     Job job1 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            "-1"))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to", "foo.com", "report_error_threshold_percentage", "-1"))
             .build();
     Job job2 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            "121"))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to", "foo.com", "report_error_threshold_percentage", "121"))
             .build();
     Job job3 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            "100.1"))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to",
+                    "foo.com",
+                    "report_error_threshold_percentage",
+                    "100.1"))
             .build();
 
     IllegalArgumentException exception1 =
@@ -268,40 +213,25 @@ public class JobValidatorTest {
   @Test
   public void validate_reportErrorThresholdPercentageNotANumber_fails() {
     Job job1 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            ""))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to", "foo.com", "report_error_threshold_percentage", ""))
             .build();
     Job job2 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            "Not a number"))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to",
+                    "foo.com",
+                    "report_error_threshold_percentage",
+                    "Not a number"))
             .build();
     Job job3 =
-        jobBuilder
-            .setRequestInfo(
-                requestInfoBuilder
-                    .putAllJobParameters(
-                        ImmutableMap.of(
-                            "attribution_report_to",
-                            "foo.com",
-                            "report_error_threshold_percentage",
-                            "%   "))
-                    .build())
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to",
+                    "foo.com",
+                    "report_error_threshold_percentage",
+                    "%   "))
             .build();
 
     IllegalArgumentException exception1 =
@@ -331,5 +261,44 @@ public class JobValidatorTest {
         .containsMatch(
             "Job parameters for the job .* should have a valid value between 0 and 100 for"
                 + " 'report_error_threshold_percentage' parameter");
+  }
+
+  @Test
+  public void validate_validfilteringIds_succeeds() {
+    Job jobWithNoFilteringId =
+        buildJob(ImmutableMap.of("attribution_report_to", "foo.com")).build();
+    Job jobWithEmptyFilteringId =
+        buildJob(ImmutableMap.of("attribution_report_to", "foo.com", "filtering_ids", "      "))
+            .build();
+    Job jobWithOneFilteringId =
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to", "foo.com", "filtering_ids", "   100, ,     "))
+            .build();
+    Job jobWithManyFilteringIds =
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to", "foo.com", "filtering_ids", " 1,  2  , 3, ,,4,5, 6"))
+            .build();
+
+    JobValidator.validate(Optional.of(jobWithNoFilteringId), /* domainOptional= */ true);
+    JobValidator.validate(Optional.of(jobWithEmptyFilteringId), /* domainOptional= */ true);
+    JobValidator.validate(Optional.of(jobWithOneFilteringId), /* domainOptional= */ true);
+    JobValidator.validate(Optional.of(jobWithManyFilteringIds), /* domainOptional= */ true);
+  }
+
+  @Test
+  public void validate_invalidFilteringIds_throws() {
+    Job jobWithNonNumberIds =
+        buildJob(ImmutableMap.of("attribution_report_to", "foo.com", "filtering_ids", "1,2,null,5"))
+            .build();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> JobValidator.validate(Optional.of(jobWithNonNumberIds), /* domainOptional= */ true));
+  }
+
+  private Job.Builder buildJob(ImmutableMap jobParams) {
+    return jobBuilder.setRequestInfo(requestInfoBuilder.putAllJobParameters(jobParams).build());
   }
 }

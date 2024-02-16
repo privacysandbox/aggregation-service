@@ -108,13 +108,13 @@ public class ReportVersionValidatorTest {
   }
 
   @Test
-  public void attributionReporting_v10Reports_throwsException() {
-    Report reportVersion10 =
+  public void attributionReporting_UnsupportedFutureMajorVersionReports_throwsException() {
+    Report unsupportedReport =
         reportBuilder
             .setSharedInfo(
                 SharedInfo.builder()
                     .setApi(ATTRIBUTION_REPORTING_API)
-                    .setVersion("1.0")
+                    .setVersion("5.0")
                     .setReportId(RANDOM_UUID)
                     .setReportingOrigin(REPORTING_ORIGIN)
                     .setScheduledReportTime(FIXED_TIME)
@@ -123,9 +123,8 @@ public class ReportVersionValidatorTest {
                     .build())
             .build();
 
-    // v1.0 has higher major version than LATEST_VERSION 0.1. Should throw exception.
     ValidationException exception =
-        assertThrows(ValidationException.class, () -> validator.validate(reportVersion10, ctx));
+        assertThrows(ValidationException.class, () -> validator.validate(unsupportedReport, ctx));
     assertThat(exception.getCode()).isEqualTo(UNSUPPORTED_SHAREDINFO_VERSION);
     assertThat(exception)
         .hasMessageThat()

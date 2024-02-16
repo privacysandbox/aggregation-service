@@ -42,6 +42,7 @@ java_library(
         "//java/external:clients_blobstorageclient_model",
         "//java/external:clients_distributed_privacy_budgeting",
         "//java/external:clients_jobclient_model",
+        "//java/external:error_prone_anntotations",
         "//java/external:guava",
         "//java/external:javax_inject",
         "//java/external:operator_protos",

@@ -32,7 +32,8 @@ public final class ReportingOriginMatchesRequestValidator implements ReportValid
 
   @Override
   public Optional<ErrorMessage> validate(Report report, Job ctx) {
-    String attributionReportTo = ctx.requestInfo().getJobParameters().get("attribution_report_to");
+    String attributionReportTo =
+        ctx.requestInfo().getJobParametersMap().get("attribution_report_to");
     if (report.sharedInfo().reportingOrigin().equals(attributionReportTo)) {
       return Optional.empty();
     }

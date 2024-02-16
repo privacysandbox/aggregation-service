@@ -17,10 +17,12 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.MAJOR_VERSION_ONE;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.MAJOR_VERSION_ZERO;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 
+import com.google.aggregate.adtech.worker.model.Version;
 import com.google.aggregate.adtech.worker.validation.v01.AttributionReportingPrivacyBudgetKeyFieldsValidator;
 import com.google.aggregate.adtech.worker.validation.v01.ProtectedAudiencePrivacyBudgetKeyFieldsValidator;
 import com.google.aggregate.adtech.worker.validation.v01.SharedStoragePrivacyBudgetKeyFieldsValidator;
@@ -30,52 +32,85 @@ import java.util.Optional;
 
 /**
  * Factory class to supply PrivacyBudgetKeyValidator implementation based on SharedInfo API and
- * Version type.
+ * Major Version type.
  */
 public final class PrivacyBudgetKeyValidatorFactory {
 
-  private static final ApiAndVersion ATTRIBUTION_REPORTING_V01 =
-      ApiAndVersion.builder().setApi(ATTRIBUTION_REPORTING_API).setVersion(VERSION_0_1).build();
-  private static final ApiAndVersion PROTECTED_AUDIENCE_API_V01 =
-      ApiAndVersion.builder().setApi(PROTECTED_AUDIENCE_API).setVersion(VERSION_0_1).build();
-  private static final ApiAndVersion SHARED_STORAGE_API_V01 =
-      ApiAndVersion.builder().setApi(SHARED_STORAGE_API).setVersion(VERSION_0_1).build();
-  private static final ImmutableMap<ApiAndVersion, PrivacyBudgetKeyValidator>
+  private static final ApiAndMajorVersion ATTRIBUTION_REPORTING_V0 =
+      ApiAndMajorVersion.builder()
+          .setApi(ATTRIBUTION_REPORTING_API)
+          .setMajorVersion(MAJOR_VERSION_ZERO)
+          .build();
+  private static final ApiAndMajorVersion ATTRIBUTION_REPORTING_V1 =
+      ApiAndMajorVersion.builder()
+          .setApi(ATTRIBUTION_REPORTING_API)
+          .setMajorVersion(MAJOR_VERSION_ONE)
+          .build();
+  private static final ApiAndMajorVersion PROTECTED_AUDIENCE_API_V0 =
+      ApiAndMajorVersion.builder()
+          .setApi(PROTECTED_AUDIENCE_API)
+          .setMajorVersion(MAJOR_VERSION_ZERO)
+          .build();
+  private static final ApiAndMajorVersion PROTECTED_AUDIENCE_API_V1 =
+      ApiAndMajorVersion.builder()
+          .setApi(PROTECTED_AUDIENCE_API)
+          .setMajorVersion(MAJOR_VERSION_ONE)
+          .build();
+  private static final ApiAndMajorVersion SHARED_STORAGE_API_V0 =
+      ApiAndMajorVersion.builder()
+          .setApi(SHARED_STORAGE_API)
+          .setMajorVersion(MAJOR_VERSION_ZERO)
+          .build();
+  private static final ApiAndMajorVersion SHARED_STORAGE_API_V1 =
+      ApiAndMajorVersion.builder()
+          .setApi(SHARED_STORAGE_API)
+          .setMajorVersion(MAJOR_VERSION_ONE)
+          .build();
+  private static final ImmutableMap<ApiAndMajorVersion, PrivacyBudgetKeyValidator>
       privacyBudgetKeyValidatorMap =
           ImmutableMap.of(
-              ATTRIBUTION_REPORTING_V01,
+              ATTRIBUTION_REPORTING_V0,
               new AttributionReportingPrivacyBudgetKeyFieldsValidator(),
-              PROTECTED_AUDIENCE_API_V01,
+              ATTRIBUTION_REPORTING_V1,
+              new AttributionReportingPrivacyBudgetKeyFieldsValidator(),
+              PROTECTED_AUDIENCE_API_V0,
               new ProtectedAudiencePrivacyBudgetKeyFieldsValidator(),
-              SHARED_STORAGE_API_V01,
+              PROTECTED_AUDIENCE_API_V1,
+              new ProtectedAudiencePrivacyBudgetKeyFieldsValidator(),
+              SHARED_STORAGE_API_V0,
+              new SharedStoragePrivacyBudgetKeyFieldsValidator(),
+              SHARED_STORAGE_API_V1,
               new SharedStoragePrivacyBudgetKeyFieldsValidator());
 
-  /** Returns PrivacyBudgetKeyValidator instance corresponding the SharedInfo API and version. */
+  /**
+   * Returns PrivacyBudgetKeyValidator instance corresponding the SharedInfo API and major version.
+   */
   public static Optional<PrivacyBudgetKeyValidator> getPrivacyBudgetKeyValidator(
       String api, String version) {
-    PrivacyBudgetKeyValidatorFactory.ApiAndVersion apiVersionKey =
-        PrivacyBudgetKeyValidatorFactory.ApiAndVersion.builder()
+    String majorVersion = Version.parse(version).getMajorVersion();
+    PrivacyBudgetKeyValidatorFactory.ApiAndMajorVersion apiVersionKey =
+        PrivacyBudgetKeyValidatorFactory.ApiAndMajorVersion.builder()
             .setApi(api)
-            .setVersion(version)
+            .setMajorVersion(majorVersion)
             .build();
     return Optional.ofNullable(privacyBudgetKeyValidatorMap.get(apiVersionKey));
   }
 
   @AutoValue
-  abstract static class ApiAndVersion {
+  abstract static class ApiAndMajorVersion {
     static Builder builder() {
-      return new AutoValue_PrivacyBudgetKeyValidatorFactory_ApiAndVersion.Builder();
+      return new AutoValue_PrivacyBudgetKeyValidatorFactory_ApiAndMajorVersion.Builder();
     }
 
     abstract String api();
 
-    abstract String version();
+    abstract String majorVersion();
 
     @AutoValue.Builder
     abstract static class Builder {
-      abstract ApiAndVersion build();
+      abstract ApiAndMajorVersion build();
 
-      abstract Builder setVersion(String value);
+      abstract Builder setMajorVersion(String value);
 
       abstract Builder setApi(String value);
     }

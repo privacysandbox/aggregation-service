@@ -20,6 +20,7 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )
 
@@ -34,6 +35,7 @@ java_test(
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:operator_protos",
         "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:model",
         "@shared_libraries//java/com/google/scp/operator/shared/model",
@@ -53,6 +55,7 @@ java_test(
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:operator_protos",
         "//java/external:scp_shared_proto",

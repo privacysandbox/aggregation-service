@@ -10,7 +10,8 @@ key-value pair in an aggregatable report's encrypted payload. A pre-declared agg
 an entry (also referred to as domain key in this document) in the pre-declared buckets file that is
 provided as an input in the aggregation job (see
 [createJob API documentation](https://github.com/privacysandbox/aggregation-service/blob/main/docs/api.md#payload)).
-Reports used in generating this guidance, each have a payload with 10 events.
+Reports used in generating this guidance, each have a payload with 10 events. Reports and domain are
+sharded into 1000 files individually when running the benchmark.
 
 ## Which Cloud compute instance type to use for aggregation? -
 

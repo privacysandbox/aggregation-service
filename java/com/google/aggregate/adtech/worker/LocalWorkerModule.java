@@ -24,8 +24,9 @@ import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
-import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
+import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
+import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
 import com.google.aggregate.adtech.worker.LibraryAnnotations.LocalOutputDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
@@ -42,6 +43,7 @@ import com.google.aggregate.adtech.worker.validation.SimulationValidationModule;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.aggregate.privacy.noise.DpNoisedAggregationModule;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule;
@@ -100,11 +102,14 @@ public final class LocalWorkerModule extends AbstractModule {
     install(new WorkerModule());
     install(new OtlpJsonLoggingOTelConfigurationModule());
     bind(PrivacyBudgetingServiceBridge.class).to(PrivacyBudgetingSelector.UNLIMITED.getBridge());
+    install(new PrivacyBudgetKeyGeneratorModule());
     bind(StopwatchExporter.class).to(NoOpStopwatchExporter.class);
     bind(PayloadSerdes.class).to(CborPayloadSerdes.class);
     bind(RecordDecrypter.class).to(DeserializingReportDecrypter.class);
     bind(ObjectMapper.class).to(TimeObjectMapper.class);
     bind(JobProcessor.class).to(ConcurrentAggregationProcessor.class);
+    bind(Boolean.class).annotatedWith(StreamingOutputDomainProcessing.class)
+        .toInstance(localWorkerArgs.isStreamingOutputDomainProcessing());
     bind(boolean.class).annotatedWith(BenchmarkMode.class).toInstance(false);
     bind(Path.class)
         .annotatedWith(LocalFileJobHandlerPath.class)
@@ -112,7 +117,8 @@ public final class LocalWorkerModule extends AbstractModule {
     bind(Path.class)
         .annotatedWith(LocalOutputDirectory.class)
         .toInstance(Path.of(localWorkerArgs.getOutputDirectory()).toAbsolutePath());
-    bind(new TypeLiteral<Optional<Path>>() {})
+    bind(new TypeLiteral<Optional<Path>>() {
+    })
         .annotatedWith(LocalFileJobHandlerResultPath.class)
         .toInstance(
             Optional.of(

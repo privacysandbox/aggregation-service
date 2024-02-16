@@ -233,7 +233,7 @@ public class CborPayloadSerdesTest {
                 Fact.builder()
                     .setBucket(BigInteger.valueOf(12345))
                     .setValue(12345)
-                    .setId(5)
+                    .setId(Integer.MIN_VALUE)
                     .build())
             .addFact(
                 Fact.builder()
@@ -247,6 +247,35 @@ public class CborPayloadSerdesTest {
     Optional<Payload> deserialized = cborPayloadSerdes.convert(serialized);
 
     assertThat(deserialized).hasValue(payload);
+  }
+
+  @Test
+  public void deserializeFromCborBytes_reportWithId() throws Exception {
+    Payload.Builder expectedPayload =
+            Payload.builder()
+                    .addFact(Fact.builder().setBucket(new BigInteger("1")).setValue(2).setId(0).build())
+                    .addFact(Fact.builder().setBucket(new BigInteger("3")).setValue(4).setId(1).build());
+    // null padding to 20 contributions.
+    for(int ind = 0; ind < 18; ind ++) {
+      expectedPayload.addFact(Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(0).build());
+    }
+
+    readCborBytesFromFileAndAssert(
+            Path.of(System.getenv("CBOR_REPORT_WITH_ID_1_LOCATION")), expectedPayload.build());
+  }
+
+  @Test
+  public void deserializeFromCborBytes_reportWith32BitId() throws Exception {
+    Payload.Builder expectedPayload =
+            Payload.builder()
+                    .addFact(Fact.builder().setBucket(new BigInteger("1")).setValue(2).setId(1).build());
+    // null padding to 20 contributions.
+    for(int ind = 0; ind < 19; ind ++) {
+      expectedPayload.addFact(Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(0).build());
+    }
+
+    readCborBytesFromFileAndAssert(
+            Path.of(System.getenv("CBOR_REPORT_WITH_ID_2_LOCATION")), expectedPayload.build());
   }
 
   /** No overrides or bindings needed */

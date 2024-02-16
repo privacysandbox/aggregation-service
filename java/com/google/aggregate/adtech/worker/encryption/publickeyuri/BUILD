@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,17 +17,15 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(default_visibility = ["//visibility:public"])
 
 java_library(
-    name = "privacy_budget_key_generator",
+    name = "encryption_key_config",
     srcs = [
-        "AttributionReportingPrivacyBudgetKeyGenerator.java",
-        "PrivacyBudgetKeyGenerator.java",
-        "PrivacyBudgetKeyGeneratorFactory.java",
-        "ProtectedAudiencePrivacyBudgetKeyGenerator.java",
-        "SharedStoragePrivacyBudgetKeyGenerator.java",
+        "CloudEncryptionKeyConfig.java",
+        "EncryptionKeyConfigFactory.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/external:guava",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//protocol/proto:encryption_key_config_java_proto",
     ],
 )

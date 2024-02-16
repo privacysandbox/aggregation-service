@@ -14,27 +14,28 @@
  * limitations under the License.
  */
 
-package com.google.aggregate.privacy.budgeting;
+package com.google.aggregate.privacy.budgeting.budgetkeygenerator.protectedaudience;
 
 import com.google.aggregate.adtech.worker.model.SharedInfo;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator;
 import com.google.common.hash.Hashing;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
 
-public class SharedStoragePrivacyBudgetKeyGenerator implements PrivacyBudgetKeyGenerator {
+/**
+ * Generates V1 PrivacyBudgetKey. This version of Budget Key is internal to the service. It is
+ * mapped to the report versions in {@Code
+ * com.google.aggregate.privacy.budgeting.budgetkeygenerator.sharedstorage.PrivacyBudgetKeyGeneratorModule}.
+ *
+ * <p>TODO(b/321719045): Deprecate V1 version of Privacy Budget Key when the corresponding report
+ * versions are phased out.
+ */
+public class V1PrivacyBudgetKeyGenerator implements PrivacyBudgetKeyGenerator {
 
   @Override
-  public Optional<String> generatePrivacyBudgetKey(SharedInfo sharedInfo) {
-    return Optional.of(createPrivacyBudgetKey(sharedInfo));
-  }
-
-  /**
-   * Returns privacy budget key for sharedInfo using hash of following shared Info fields- api,
-   * version and reporting_origin.
-   */
-  private String createPrivacyBudgetKey(SharedInfo sharedInfo) {
+  public String generatePrivacyBudgetKey(PrivacyBudgetKeyInput privacyBudgetKeyInput) {
+    SharedInfo sharedInfo = privacyBudgetKeyInput.sharedInfo();
     List<String> privacyBudgetKeyInputElements = new LinkedList<>();
     privacyBudgetKeyInputElements.add(sharedInfo.api().get());
     privacyBudgetKeyInputElements.add(sharedInfo.version());

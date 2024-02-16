@@ -33,7 +33,8 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class PrivacyBudgetKeyValidatorFactoryTest {
   private static final String INVALID_API = "invalid-api";
-  private static final String INVALID_VERSION = "invalid-version";
+  private static final String HIGHER_MAJOR_VERSION = "11.11";
+  private static final String HIGHER_MINOR_VERSION = "0.2";
 
   @Test
   public void attributionReportingV01_privacyBudgetValidator_returnsValidator() {
@@ -44,6 +45,25 @@ public class PrivacyBudgetKeyValidatorFactoryTest {
 
     assertThat(attributionReportingPrivacyBudgetKeyValidator)
         .isInstanceOf(AttributionReportingPrivacyBudgetKeyFieldsValidator.class);
+  }
+
+  @Test
+  public void attributionReporting_higherMinorVersion_privacyBudgetValidator_returnsValidator() {
+    PrivacyBudgetKeyValidator attributionReportingPrivacyBudgetKeyValidator =
+        PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
+                ATTRIBUTION_REPORTING_API, HIGHER_MINOR_VERSION)
+            .get();
+
+    assertThat(attributionReportingPrivacyBudgetKeyValidator)
+        .isInstanceOf(AttributionReportingPrivacyBudgetKeyFieldsValidator.class);
+  }
+
+  @Test
+  public void attributionReporting_higherMajorVersion_privacyBudgetValidator_returnsNoValidator() {
+    assertThat(
+            PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
+                ATTRIBUTION_REPORTING_API, HIGHER_MAJOR_VERSION))
+        .isEqualTo(Optional.empty());
   }
 
   @Test
@@ -58,6 +78,25 @@ public class PrivacyBudgetKeyValidatorFactoryTest {
   }
 
   @Test
+  public void protectedAudience_higherMinorVersion_privacyBudgetValidator_returnsValidator() {
+    PrivacyBudgetKeyValidator protectedAudiencePrivacyBudgetKeyValidator =
+        PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
+                PROTECTED_AUDIENCE_API, HIGHER_MINOR_VERSION)
+            .get();
+
+    assertThat(protectedAudiencePrivacyBudgetKeyValidator)
+        .isInstanceOf(ProtectedAudiencePrivacyBudgetKeyFieldsValidator.class);
+  }
+
+  @Test
+  public void protectedAudience_higherMajorVersion_privacyBudgetValidator_returnsNoValidator() {
+    assertThat(
+            PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
+                PROTECTED_AUDIENCE_API, HIGHER_MAJOR_VERSION))
+        .isEqualTo(Optional.empty());
+  }
+
+  @Test
   public void sharedStorageV01_privacyBudgetValidator_returnsValidator() {
     PrivacyBudgetKeyValidator sharedStoragePrivacyBudgetKeyValidator =
         PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
@@ -69,10 +108,36 @@ public class PrivacyBudgetKeyValidatorFactoryTest {
   }
 
   @Test
-  public void invalidApiVersion_privacyBudgetValidator_returnsNoValidator() {
+  public void sharedStorage_higherMinorVersion_privacyBudgetValidator_returnsValidator() {
+    PrivacyBudgetKeyValidator sharedStoragePrivacyBudgetKeyValidator =
+        PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
+                SHARED_STORAGE_API, HIGHER_MINOR_VERSION)
+            .get();
+
+    assertThat(sharedStoragePrivacyBudgetKeyValidator)
+        .isInstanceOf(SharedStoragePrivacyBudgetKeyFieldsValidator.class);
+  }
+
+  @Test
+  public void sharedStorage_higherMajorVersion_privacyBudgetValidator_returnsNoValidator() {
     assertThat(
             PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
-                INVALID_API, INVALID_VERSION))
+                SHARED_STORAGE_API, HIGHER_MAJOR_VERSION))
+        .isEqualTo(Optional.empty());
+  }
+
+  @Test
+  public void invalidApi_privacyBudgetValidator_returnsNoValidator() {
+    assertThat(
+            PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(INVALID_API, VERSION_0_1))
+        .isEqualTo(Optional.empty());
+  }
+
+  @Test
+  public void invalidApiHigherMajorVersion_privacyBudgetValidator_returnsNoValidator() {
+    assertThat(
+            PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
+                INVALID_API, HIGHER_MAJOR_VERSION))
         .isEqualTo(Optional.empty());
   }
 }

@@ -27,6 +27,8 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.common.base.Ticker;
@@ -39,12 +41,15 @@ import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.testing.FSBlobStorageClientModule;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigInteger;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -92,6 +97,33 @@ public class TextOutputDomainProcessorTest {
   }
 
   @Test
+  public void readDomainStream() throws Exception {
+    Path singleFilePath = outputDomainDirectory.resolve("domain.txt");
+    writeOutputDomain(singleFilePath, "11", "22", "33");
+
+    try (InputStream textInputStream = Files.newInputStream(singleFilePath)) {
+      List<BigInteger> keys =
+          outputDomainProcessor.readInputStream(textInputStream).collect(Collectors.toList());
+
+      assertThat(keys)
+          .containsExactly(
+              createBucketFromInt(11), createBucketFromInt(22), createBucketFromInt(33));
+    }
+  }
+
+  @Test
+  public void readDomainStream_emptyStream() throws Exception {
+    Path singleFilePath = outputDomainDirectory.resolve("domain.txt");
+    writeOutputDomain(singleFilePath);
+    try (InputStream textInputStream = Files.newInputStream(singleFilePath)) {
+      List<BigInteger> keys =
+          outputDomainProcessor.readInputStream(textInputStream).collect(Collectors.toList());
+
+      assertThat(keys).isEmpty();
+    }
+  }
+
+  @Test
   public void readStringDomain() throws Exception {
     writeOutputDomain(outputDomainDirectory.resolve("domain_1.txt"), "foo", "bar");
     writeOutputDomain(outputDomainDirectory.resolve("domain_2.txt"), "baz");
@@ -120,10 +152,9 @@ public class TextOutputDomainProcessorTest {
   @Test
   public void ioProblem() throws Exception {
     // No file written, path pointing to a non-existing file, this should be an IO exception.
+    ExecutionException error = assertThrows(ExecutionException.class, () -> readOutputDomain());
 
-    DomainReadException error = assertThrows(DomainReadException.class, () -> readOutputDomain());
-
-    assertThat(error).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+    assertThat(error).hasCauseThat().isInstanceOf(DomainReadException.class);
   }
 
   @Test
@@ -138,7 +169,10 @@ public class TextOutputDomainProcessorTest {
 
   private ImmutableSet<BigInteger> readOutputDomain()
       throws ExecutionException, InterruptedException {
-    return outputDomainProcessor.readAndDedupDomain(outputDomainLocation).get();
+    return outputDomainProcessor
+        .readAndDedupeDomain(
+            outputDomainLocation, outputDomainProcessor.listShards(outputDomainLocation))
+        .get();
   }
 
   private void writeOutputDomain(Path path, String... keys) throws IOException {
@@ -152,6 +186,8 @@ public class TextOutputDomainProcessorTest {
       install(new FSBlobStorageClientModule());
       bind(FileSystem.class).toInstance(FileSystems.getDefault());
       bind(OutputDomainProcessor.class).to(TextOutputDomainProcessor.class);
+      bind(Boolean.class).annotatedWith(DomainOptional.class).toInstance(true);
+      bind(Boolean.class).annotatedWith(EnableThresholding.class).toInstance(true);
     }
 
     @Provides

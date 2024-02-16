@@ -399,6 +399,12 @@ public final class AggregationWorkerArgs {
       description = "Flag to set the private key cache time to live. Used for testing only.")
   private long decrypterCacheEntryTtlSec = 3600;
 
+  @Parameter(
+      names = "--streaming-output-domain-processing",
+      description = "Flag to enable RxJava streaming based output domain processing."
+  )
+  private boolean streamingOutputDomainProcessing = false;
+
   ClientConfigSelector getClientConfigSelector() {
     return clientConfigSelector;
   }
@@ -683,5 +689,9 @@ public final class AggregationWorkerArgs {
 
   public long getDecrypterCacheEntryTtlSec() {
     return decrypterCacheEntryTtlSec;
+  }
+
+  public boolean isStreamingOutputDomainProcessing() {
+    return streamingOutputDomainProcessing;
   }
 }

@@ -21,6 +21,7 @@ java_test(
     srcs = glob(["OTelConfigurationImplTest.java"]),
     deps = [
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:opentelemetry_api",
         "//java/external:opentelemetry_sdk",
         "//java/external:opentelemetry_sdk_common",

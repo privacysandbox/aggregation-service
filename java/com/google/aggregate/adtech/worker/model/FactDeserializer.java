@@ -48,8 +48,7 @@ public final class FactDeserializer extends StdDeserializer<Fact> {
 
     Fact.Builder fact = Fact.builder().setBucket(bucket).setValue(value);
     if (node.has("id")) {
-      int id = Math.toIntExact(NumericConversions.uInt32FromBytes(node.get("id").binaryValue()));
-      fact.setId(id);
+      fact.setId(NumericConversions.getInt32FromBytes(node.get("id").binaryValue()));
     }
 
     return fact.build();

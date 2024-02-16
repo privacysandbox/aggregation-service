@@ -156,6 +156,7 @@ java_test(
         "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
         "//java/external:avro",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )
 
@@ -166,5 +167,6 @@ java_test(
         "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
         "//java/external:avro",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )

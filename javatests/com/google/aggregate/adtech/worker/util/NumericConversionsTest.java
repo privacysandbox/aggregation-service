@@ -303,6 +303,28 @@ public class NumericConversionsTest {
   }
 
   @Test
+  public void getIntegersFromString_withValidList() {
+    assertThat(NumericConversions.getIntegersFromString(",2,  3, , 99999, ", ","))
+        .containsExactly(3, 99999, 2);
+    assertThat(NumericConversions.getIntegersFromString("   5 ", "\\s*,\\s*")).containsExactly(5);
+  }
+
+  @Test
+  public void getIntegersFromString_emptyString_returnsEmptySet() {
+    assertThat(NumericConversions.getIntegersFromString("     ", ",")).isEmpty();
+    assertThat(NumericConversions.getIntegersFromString("   ,, , ,", ",")).isEmpty();
+  }
+
+  @Test
+  public void getIntegersFromString_withNonIntegers_throwsIllegalArgument() {
+    assertThrows(
+        IllegalArgumentException.class, () -> NumericConversions.getIntegersFromString("5.5", ","));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> NumericConversions.getIntegersFromString("5,6,null", ","));
+  }
+
+  @Test
   public void convertBigInteger_noDataLoss() {
     BigInteger bigInteger = new BigInteger("10000000");
 

@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.testing;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.truth.Truth.assertThat;
 import static java.time.temporal.ChronoUnit.SECONDS;
@@ -74,7 +75,7 @@ public class FakeReportGeneratorTest {
             FakeFactGenerator.generate(id1, val1), FakeFactGenerator.generate(id2, val2));
 
     // Invocation.
-    Report generatedReport = FakeReportGenerator.generateWithFactList(factList, LATEST_VERSION);
+    Report generatedReport = FakeReportGenerator.generateWithFactList(factList, VERSION_0_1);
 
     // Assert.
     assertThat(generatedReport)
@@ -102,7 +103,7 @@ public class FakeReportGeneratorTest {
   public void testGenerate_version_0_1() {
     int id = 2;
 
-    Report generatedReport = FakeReportGenerator.generateWithParam(id, LATEST_VERSION);
+    Report generatedReport = FakeReportGenerator.generateWithParam(id, VERSION_0_1);
 
     assertThat(generatedReport)
         .isEqualTo(

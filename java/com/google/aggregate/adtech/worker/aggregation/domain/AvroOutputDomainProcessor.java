@@ -19,6 +19,8 @@ package com.google.aggregate.adtech.worker.aggregation.domain;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.perf.StopwatchRegistry;
@@ -35,12 +37,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.UUID;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import org.apache.avro.AvroRuntimeException;
 
-/**
- * Reads output domain from an avro file with schema defined in protocol/avro/output_domain.avsc
- */
+/** Reads output domain from an avro file with schema defined in protocol/avro/output_domain.avsc */
 public final class AvroOutputDomainProcessor extends OutputDomainProcessor {
 
   private final BlobStorageClient blobStorageClient;
@@ -53,12 +54,16 @@ public final class AvroOutputDomainProcessor extends OutputDomainProcessor {
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       BlobStorageClient blobStorageClient,
       AvroOutputDomainReaderFactory avroReaderFactory,
-      StopwatchRegistry stopwatches) {
+      StopwatchRegistry stopwatches,
+      @DomainOptional Boolean domainOptional,
+      @EnableThresholding Boolean enableThresholding) {
     super(
-        /* blockingThreadPool= */ blockingThreadPool,
-        /* nonBlockingThreadPool= */ nonBlockingThreadPool,
-        /* blobStorageClient= */ blobStorageClient,
-        /* stopwatches= */ stopwatches);
+        blockingThreadPool,
+        nonBlockingThreadPool,
+        blobStorageClient,
+        stopwatches,
+        domainOptional,
+        enableThresholding);
     this.blobStorageClient = blobStorageClient;
     this.avroReaderFactory = avroReaderFactory;
     this.stopwatches = stopwatches;
@@ -80,6 +85,17 @@ public final class AvroOutputDomainProcessor extends OutputDomainProcessor {
       return shard;
     } catch (IOException | BlobStorageClientException | AvroRuntimeException e) {
       stopwatch.stop(); // stop the stopwatch if an exception occurs
+      throw new DomainReadException(e);
+    }
+  }
+
+  @Override
+  public Stream<BigInteger> readInputStream(InputStream shardInputStream) {
+    try {
+      return avroReaderFactory.create(shardInputStream)
+          .streamRecords()
+          .map(AvroOutputDomainRecord::bucket);
+    } catch (IOException | AvroRuntimeException e) {
       throw new DomainReadException(e);
     }
   }

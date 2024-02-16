@@ -38,7 +38,6 @@ java_library(
         "//java/external:clients_jobclient_model",
         "//java/external:clients_lifecycleclient_aws",
         "//java/external:clients_metricclient_aws",
-        "//java/external:clients_privacy_budgeting",
         "//java/external:dao_jobqueue_aws",
         "//java/external:dao_metadatadb_aws",
         "//java/external:guava",

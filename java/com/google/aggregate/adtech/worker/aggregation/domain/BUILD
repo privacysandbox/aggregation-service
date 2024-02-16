@@ -23,12 +23,17 @@ java_library(
     ],
     javacopts = ["-Xep:Var"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker/aggregation/engine",
         "//java/com/google/aggregate/adtech/worker/exceptions",
+        "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/perf",
+        "//java/com/google/aggregate/privacy/noise",
+        "//java/com/google/aggregate/privacy/noise/model",
         "//java/external:clients_blobstorageclient",
         "//java/external:clients_blobstorageclient_model",
         "//java/external:guava",
+        "//java/external:rxjava",
         "//java/external:slf4j",
     ],
 )

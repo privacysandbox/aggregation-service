@@ -17,17 +17,21 @@ http_archive(
 )
 
 # Declare explicit protobuf version, to override any implicit dependencies.
-PROTOBUF_CORE_VERSION = "3.19.4"
+PROTOBUF_CORE_VERSION = "3.25.2"
+
+PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
 
 COORDINATOR_VERSION = "v1.5.1"  # version updated on 2024-01-09
 
-JACKSON_VERSION = "2.15.3"
+JACKSON_VERSION = "2.16.1"
 
 AUTO_VALUE_VERSION = "1.7.4"
 
 AWS_SDK_VERSION = "2.21.16"
 
-GOOGLE_GAX_VERSION = "2.20.1"
+AWS_JAVA_SDK_VERSION = "1.12.641"
+
+GOOGLE_GAX_VERSION = "2.38.0"
 
 AUTO_SERVICE_VERSION = "1.1.1"
 
@@ -45,11 +49,17 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 http_archive(
     name = "com_google_protobuf",
-    sha256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d2568",
+    sha256 = PROTOBUF_SHA_256,
     strip_prefix = "protobuf-%s" % PROTOBUF_CORE_VERSION,
     urls = [
         "https://github.com/protocolbuffers/protobuf/archive/v%s.tar.gz" % PROTOBUF_CORE_VERSION,
     ],
+)
+
+http_file(
+    name = "shared_libraries_workspace",
+    downloaded_file_path = "file",
+    url = "https://raw.githubusercontent.com/privacysandbox/coordinator-services-and-shared-libraries/{}/WORKSPACE".format(COORDINATOR_VERSION),
 )
 
 # Use following instead of git_repository for local development
@@ -71,6 +81,7 @@ git_repository(
         "//build_defs/shared_libraries:key_cache_ttl.patch",
     ],
     tag = COORDINATOR_VERSION,
+    workspace_file = "@shared_libraries_workspace//file",
 )
 
 OTEL_ARTIFACTS = [
@@ -92,12 +103,12 @@ maven_install(
         "com.amazonaws:aws-lambda-java-core:1.2.3",
         "com.amazonaws:aws-lambda-java-events:3.11.3",
         "com.amazonaws:aws-lambda-java-events-sdk-transformer:3.1.0",
-        "com.amazonaws:aws-java-sdk-sqs:1.12.582",
-        "com.amazonaws:aws-java-sdk-s3:1.12.582",
-        "com.amazonaws:aws-java-sdk-kms:1.12.582",
-        "com.amazonaws:aws-java-sdk-core:1.12.582",
-        "com.amazonaws:aws-java-sdk-xray:1.12.582",
-        "com.amazonaws:aws-java-sdk-cloudwatch:1.12.582",
+        "com.amazonaws:aws-java-sdk-sqs:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-s3:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-kms:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-core:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-xray:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-cloudwatch:" + AWS_JAVA_SDK_VERSION,
         "com.beust:jcommander:1.82",
         "com.google.cloud.functions.invoker:java-function-invoker:1.1.0",
         "com.google.inject:guice:5.1.0",
@@ -116,30 +127,30 @@ maven_install(
         "com.google.auto.value:auto-value-annotations:" + AUTO_VALUE_VERSION,
         "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
         "com.google.code.findbugs:jsr305:3.0.2",
-        "com.google.cloud:google-cloud-kms:2.10.0",
-        "com.google.cloud:google-cloud-secretmanager:2.7.0",
-        "com.google.cloud:google-cloud-pubsub:1.122.2",
-        "com.google.cloud:google-cloud-storage:2.13.1",
-        "com.google.cloud:google-cloud-spanner:6.34.1",
-        "com.google.cloud:google-cloud-compute:1.17.0",
-        "com.google.api.grpc:proto-google-cloud-compute-v1:1.17.0",
+        "com.google.cloud:google-cloud-kms:2.37.0",
+        "com.google.cloud:google-cloud-secretmanager:2.34.0",
+        "com.google.cloud:google-cloud-pubsub:1.126.2",
+        "com.google.cloud:google-cloud-storage:2.32.1",
+        "com.google.cloud:google-cloud-spanner:6.56.0",
+        "com.google.cloud:google-cloud-compute:1.44.0",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.44.0",
         "com.google.cloud.functions:functions-framework-api:1.1.0",
-        "commons-logging:commons-logging:1.2",
+        "commons-logging:commons-logging:1.3.0",
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
         "com.google.http-client:google-http-client-jackson2:1.43.3",
         "io.reactivex.rxjava3:rxjava:3.1.8",
-        "com.google.cloud:google-cloud-monitoring:3.8.0",
-        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.8.0",
+        "com.google.cloud:google-cloud-monitoring:3.35.0",
+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.35.0",
         "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
-        "com.google.guava:guava:32.1.3-jre",
-        "com.google.guava:guava-testlib:32.1.3-jre",
+        "com.google.guava:guava:33.0.0-jre",
+        "com.google.guava:guava-testlib:33.0.0-jre",
         "com.google.jimfs:jimfs:1.3.0",
-        "com.google.testparameterinjector:test-parameter-injector:1.14",
-        "com.google.truth.extensions:truth-java8-extension:1.1.5",
-        "com.google.truth.extensions:truth-proto-extension:1.1.5",
-        "com.google.truth:truth:1.1.5",
-        "com.jayway.jsonpath:json-path:2.8.0",
+        "com.google.testparameterinjector:test-parameter-injector:1.15",
+        "com.google.truth.extensions:truth-java8-extension:1.3.0",
+        "com.google.truth.extensions:truth-proto-extension:1.3.0",
+        "com.google.truth:truth:1.3.0",
+        "com.jayway.jsonpath:json-path:2.9.0",
         "javax.inject:javax.inject:1",
         "io.github.resilience4j:resilience4j-core:1.7.1",
         "io.github.resilience4j:resilience4j-retry:1.7.1",
@@ -148,29 +159,29 @@ maven_install(
         "org.apache.commons:commons-math3:3.6.1",
         "org.apache.httpcomponents:httpcore:4.4.16",
         "org.apache.httpcomponents:httpclient:4.5.14",
-        "org.apache.httpcomponents.client5:httpclient5:5.2.1",
-        "org.apache.httpcomponents.core5:httpcore5:5.2.3",
-        "org.apache.httpcomponents.core5:httpcore5-h2:5.2.3",
-        "org.apache.logging.log4j:log4j-1.2-api:2.21.1",
-        "org.apache.logging.log4j:log4j-core:2.21.1",
+        "org.apache.httpcomponents.client5:httpclient5:5.3",
+        "org.apache.httpcomponents.core5:httpcore5:5.2.4",
+        "org.apache.httpcomponents.core5:httpcore5-h2:5.2.4",
+        "org.apache.logging.log4j:log4j-1.2-api:2.22.1",
+        "org.apache.logging.log4j:log4j-core:2.22.1",
         "org.awaitility:awaitility:3.1.6",
         "org.mock-server:mockserver-core:5.11.2",
         "org.mock-server:mockserver-junit-rule:5.11.2",
         "org.mock-server:mockserver-client-java:5.11.2",
-        "org.hamcrest:hamcrest-library:1.3",
-        "org.mockito:mockito-core:3.11.2",
-        "org.slf4j:slf4j-api:1.7.36",
-        "org.slf4j:slf4j-simple:1.7.36",
+        "org.hamcrest:hamcrest-library:2.2",
+        "org.mockito:mockito-core:4.11.0",
+        "org.slf4j:slf4j-api:2.0.11",
+        "org.slf4j:slf4j-simple:2.0.11",
         "org.slf4j:slf4j-log4j12:1.7.33",
-        "org.testcontainers:testcontainers:1.19.1",
-        "org.testcontainers:localstack:1.19.1",
+        "org.testcontainers:testcontainers:1.19.3",
+        "org.testcontainers:localstack:1.19.3",
         "software.amazon.awssdk:aws-sdk-java:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:dynamodb-enhanced:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:dynamodb:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:ec2:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:regions:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:s3:" + AWS_SDK_VERSION,
-        "software.amazon.awssdk:s3-transfer-manager:2.21.15",
+        "software.amazon.awssdk:s3-transfer-manager:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:aws-core:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:ssm:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:sts:" + AWS_SDK_VERSION,
@@ -179,9 +190,9 @@ maven_install(
         "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
-        "com.google.crypto.tink:tink:1.11.0",
+        "com.google.crypto.tink:tink:1.12.0",
         "com.google.crypto.tink:tink-gcpkms:1.9.0",
-        "com.google.oauth-client:google-oauth-client:1.34.1",
+        "com.google.oauth-client:google-oauth-client:1.35.0",
     ] + OTEL_ARTIFACTS,
     maven_install_json = "//:maven_install.json",
     repositories = [
@@ -197,8 +208,10 @@ pinned_maven_install()
 
 http_archive(
     name = "rules_java",
-    sha256 = "34b41ec683e67253043ab1a3d1e8b7c61e4e8edefbcad485381328c934d072fe",
-    url = "https://github.com/bazelbuild/rules_java/releases/download/4.0.0/rules_java-4.0.0.tar.gz",
+    sha256 = "3121a00588b1581bd7c1f9b550599629e5adcc11ba9c65f482bbd5cfe47fdf30",
+    urls = [
+        "https://github.com/bazelbuild/rules_java/releases/download/7.3.2/rules_java-7.3.2.tar.gz",
+    ],
 )
 
 load("@rules_java//java:repositories.bzl", "rules_java_dependencies", "rules_java_toolchains")
@@ -263,30 +276,37 @@ rules_pkg_dependencies()
 
 http_archive(
     name = "io_bazel_rules_go",
-    sha256 = "69de5c704a05ff37862f7e0f5534d4f479418afc21806c887db544a316f3cb6b",
+    sha256 = "6734a719993b1ba4ebe9806e853864395a8d3968ad27f9dd759c196b3eb3abe8",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.27.0/rules_go-v0.27.0.tar.gz",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.27.0/rules_go-v0.27.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.45.1/rules_go-v0.45.1.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.45.1/rules_go-v0.45.1.zip",
     ],
 )
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "62ca106be173579c0a167deb23358fdfe71ffa1e4cfdddf5582af26520f1c66f",
+    integrity = "sha256-MpOL2hbmcABjA1R5Bj2dJMYO2o15/Uc5Vj9Q0zHLMgk=",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.23.0/bazel-gazelle-v0.23.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.35.0/bazel-gazelle-v0.35.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.35.0/bazel-gazelle-v0.35.0.tar.gz",
     ],
 )
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
 
-go_register_toolchains(version = "1.17")
+go_register_toolchains(version = "1.20.5")
 
 gazelle_dependencies()
+
+go_repository(
+    name = "com_github_klauspost_compress",
+    importpath = "github.com/klauspost/compress",
+    sum = "h1:IFV2oUNUzZaz+XyusxpLzpzS8Pt5rh0Z16For/djlyI=",
+    version = "v1.16.5",
+)
 
 ###################
 # Container rules #
@@ -298,9 +318,8 @@ gazelle_dependencies()
 
 http_archive(
     name = "io_bazel_rules_docker",
-    sha256 = "59d5b42ac315e7eadffa944e86e90c2990110a1c8075f1cd145f487e999d22b3",
-    strip_prefix = "rules_docker-0.17.0",
-    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.17.0/rules_docker-v0.17.0.tar.gz"],
+    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
 )
 
 load(
@@ -475,9 +494,9 @@ http_archive(
 
 # Declare explicit protobuf version and hash, to override any implicit dependencies.
 # Please update both while upgrading to new versions.
-PROTOBUF_CORE_VERSION = "3.19.4"
+PROTOBUF_CORE_VERSION = "3.25.2"
 
-PROTOBUF_SHA_256 = "3bd7828aa5af4b13b99c191e8b1e884ebfa9ad371b0ce264605d347f135d2568"
+PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
 
 ##########################
 # SDK Dependencies Rules #

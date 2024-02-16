@@ -1,6 +1,16 @@
 # Changelog
 
-## [2.3.0](https://github.com/privacysandbox/aggregation-service/compare/v2.2.0...v2.3.0) (2024-01-012)
+## [2.4.0](https://github.com/privacysandbox/aggregation-service/compare/v2.3.0...v2.4.0) (2024-02-12)
+
+### Changes
+
+-   Added support for
+    [Labeled Privacy Budget keys](https://github.com/patcg-individual-drafts/private-aggregation-api/blob/main/flexible_filtering.md)
+    for default labels.
+-   Used RxJava for domain reading, reducing overall job execution time and memory consumption.
+-   Upgraded Bazel version to 6.5.0.
+
+## [2.3.0](https://github.com/privacysandbox/aggregation-service/compare/v2.2.0...v2.3.0) (2024-01-12)
 
 ### Changes
 

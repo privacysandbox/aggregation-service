@@ -26,6 +26,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/writer/json",
         "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_core",
         "//java/external:jackson_databind",

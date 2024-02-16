@@ -18,7 +18,10 @@ package(default_visibility = ["//visibility:public"])
 
 java_library(
     name = "testing",
-    srcs = ["FakeEncryptionKeyService.java"],
+    srcs = [
+        "FakeEncryptionKeyService.java",
+        "FakeReEncryptionKeyService.java",
+    ],
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/encryption/hybrid/key",

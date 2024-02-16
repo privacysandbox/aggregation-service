@@ -1,6 +1,7 @@
-test --test_output=all --java_runtime_version=remotejdk_11
+common --@io_bazel_rules_docker//transitions:enable=false
+build --sandbox_add_mount_pair=/tmp
 build --java_language_version=11
-build --java_toolchain=@bazel_tools//tools/jdk:toolchain_java11
+build --java_runtime_version=remotejdk_11
 # By default the JVM uses a memory-mapped file for the PerfData structure so that tools can easily access the data.
 # It will create issues when JVM unlinks the file at shutdown and may trigger a sandbox fault http://b/205838938.
 # -XX:+PerfDisableSharedMem to force JVM uses regular memory instead.

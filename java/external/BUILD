@@ -56,7 +56,7 @@ java_library(
     ],
     javacopts = ["-Xep:Var"],
     neverlink = True,
-    exports = [":autoservice_plugin"],
+    exports = [":autoservice_annotations"],
 )
 
 alias(
@@ -184,7 +184,7 @@ java_library(
     ],
     javacopts = ["-Xep:Var"],
     neverlink = True,
-    exports = [":autovalue_plugin"],
+    exports = [":autovalue_annotations"],
 )
 
 alias(
@@ -423,11 +423,6 @@ alias(
 alias(
     name = "clients_metricclient_aws",
     actual = "@shared_libraries//java/com/google/scp/operator/cpio/metricclient:aws",
-)
-
-alias(
-    name = "clients_privacy_budgeting",
-    actual = "@shared_libraries//java/com/google/scp/operator/cpio/privacybudgetclient",
 )
 
 alias(

@@ -21,30 +21,28 @@ RUN \
     apt-get update && \
     apt-get -y upgrade && \
     apt-get -y install \
+        2to3 \
+        curl \
+        git \
+        gnupg \
+        npm \
+        python-is-python3 \
         python3 \
         python3-pkg-resources \
-        python-is-python3 \
-        2to3 \
         software-properties-common \
-        unzip \
-        git \
-        curl \
-        gnupg \
-        tree
+        tree \
+        unzip
 
 RUN \
     # Install OpenJDK
     apt-get -y install openjdk-17-jdk
-RUN \
-    # Install bazel 4.2.2 (https://docs.bazel.build/versions/4.2.2/install-ubuntu.html)
-    echo "deb [arch=amd64] http://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
-    curl https://bazel.build/bazel-release.pub.gpg | apt-key add - && \
-    apt-get update && \
-    apt-get -y install bazel-4.2.2 && \
-    apt upgrade -y bazel-4.2.2
 
-# symlink bazel to bazel-4.2.2 binary
-RUN ln -s /usr/bin/bazel-4.2.2 /usr/bin/bazel
+RUN \
+    # Install bazel
+    npm install -g @bazel/bazelisk
+
+# symlink bazel to bazelisk binary
+RUN ln -s bazelisk /usr/bin/bazel
 
 # Unpack bazel for future use.
 RUN bazel version

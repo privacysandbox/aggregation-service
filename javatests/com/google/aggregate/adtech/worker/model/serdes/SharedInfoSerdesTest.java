@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.model.serdes;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertFalse;
@@ -69,7 +70,7 @@ public class SharedInfoSerdesTest {
   public void setUp() {
     sharedInfo =
         SharedInfo.builder()
-            .setVersion(LATEST_VERSION)
+            .setVersion(VERSION_ZERO_DOT_ONE)
             .setReportId(SAMPLE_REPORT_ID)
             .setScheduledReportTime(FIXED_TIME)
             .setDestination(DESTINATION)
@@ -87,7 +88,7 @@ public class SharedInfoSerdesTest {
 
     sharedInfoWithAllOptionals =
         SharedInfo.builder()
-            .setVersion(LATEST_VERSION)
+            .setVersion(VERSION_ZERO_DOT_ONE)
             .setApi(ATTRIBUTION_REPORTING_API)
             .setReportId(SAMPLE_REPORT_ID)
             .setScheduledReportTime(FIXED_TIME)
@@ -98,7 +99,7 @@ public class SharedInfoSerdesTest {
 
     sharedInfoWithoutDebugMode =
         SharedInfo.builder()
-            .setVersion(LATEST_VERSION)
+            .setVersion(VERSION_ZERO_DOT_ONE)
             .setApi(ATTRIBUTION_REPORTING_API)
             .setReportId(SAMPLE_REPORT_ID)
             .setScheduledReportTime(FIXED_TIME)
@@ -109,7 +110,7 @@ public class SharedInfoSerdesTest {
 
     sharedInfoWithChromeGoldenReport =
         SharedInfo.builder()
-            .setVersion(LATEST_VERSION)
+            .setVersion(VERSION_ZERO_DOT_ONE)
             .setApi(ATTRIBUTION_REPORTING_API)
             .setReportId("21abd97f-73e8-4b88-9389-a9fee6abda5e")
             .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
@@ -172,7 +173,7 @@ public class SharedInfoSerdesTest {
     assertThat(deserialized)
         .hasValue(
             SharedInfo.builder()
-                .setVersion(LATEST_VERSION)
+                .setVersion(VERSION_ZERO_DOT_ONE)
                 .setReportId("129470d5-3095-4385-81e2-08f5a9063549")
                 .setReportingOrigin("bar.com")
                 .setScheduledReportTime(Instant.ofEpochSecond(1609459200))
@@ -267,6 +268,25 @@ public class SharedInfoSerdesTest {
     assertThat(deserialized).hasValue(sharedInfoWithChromeGoldenReport);
   }
 
+  @Test
+  public void deserialize_withGoldenReportVersion1() {
+    String sharedInfoJsonString =
+        "{\"api\":\"shared-storage\",\"debug_mode\":\"enabled\",\"report_id\":\"21abd97f-73e8-4b88-9389-a9fee6abda5e\",\"reporting_origin\":\"https://report.test\",\"scheduled_report_time\":\"1234486400\",\"version\":\"1.0\"}";
+    SharedInfo expectedSharedInfo =
+            SharedInfo.builder()
+                .setVersion("1.0")
+                .setApi(SHARED_STORAGE_API)
+                .setReportId("21abd97f-73e8-4b88-9389-a9fee6abda5e")
+                .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
+                .setScheduledReportTime(Instant.ofEpochSecond(1234486400))
+                .setReportDebugMode(true)
+                .build();
+
+    Optional<SharedInfo> deserialized = sharedInfoSerdes.convert(sharedInfoJsonString);
+
+    assertThat(deserialized).hasValue(expectedSharedInfo);
+  }
+
   /** Chrome generated fledge and shared storage reports used from here - b/265960702 */
   @Test
   public void testDeserializeSharedInfoFromChrome_fledge1() {
@@ -285,7 +305,7 @@ public class SharedInfoSerdesTest {
                 .setReportId("90bcae5e-224d-47ae-bbd8-b4f2d634e6d1")
                 .setReportingOrigin("https://example.com")
                 .setScheduledReportTime(Instant.ofEpochSecond(1674078788))
-                .setVersion(LATEST_VERSION)
+                .setVersion(VERSION_ZERO_DOT_ONE)
                 .build());
   }
 
@@ -306,7 +326,7 @@ public class SharedInfoSerdesTest {
                 .setReportId("0222ce51-8596-4dec-9994-90df2508ae90")
                 .setReportingOrigin("https://example.com")
                 .setScheduledReportTime(Instant.ofEpochSecond(1674079133))
-                .setVersion(LATEST_VERSION)
+                .setVersion(VERSION_ZERO_DOT_ONE)
                 .build());
   }
 
@@ -324,7 +344,7 @@ public class SharedInfoSerdesTest {
         .hasValue(
             SharedInfo.builder()
                 .setSourceRegistrationTime(Instant.ofEpochSecond(0))
-                .setVersion(LATEST_VERSION)
+                .setVersion(VERSION_ZERO_DOT_ONE)
                 .setReportId("cbc6fb00-c946-4eb6-a401-aac133f7f0b8")
                 .setReportingOrigin("https://example.com")
                 .setScheduledReportTime(Instant.ofEpochSecond(1648673933))
@@ -345,7 +365,7 @@ public class SharedInfoSerdesTest {
         .hasValue(
             SharedInfo.builder()
                 .setSourceRegistrationTime(Instant.ofEpochSecond(-1))
-                .setVersion(LATEST_VERSION)
+                .setVersion(VERSION_ZERO_DOT_ONE)
                 .setReportId("cbc6fb00-c946-4eb6-a401-aac133f7f0b8")
                 .setReportingOrigin("https://example.com")
                 .setScheduledReportTime(Instant.ofEpochSecond(1648673933))
@@ -365,7 +385,7 @@ public class SharedInfoSerdesTest {
         .hasValue(
             SharedInfo.builder()
                 .setSourceRegistrationTime(Instant.ofEpochSecond(-31557014167219199L))
-                .setVersion(LATEST_VERSION)
+                .setVersion(VERSION_ZERO_DOT_ONE)
                 .setReportId("cbc6fb00-c946-4eb6-a401-aac133f7f0b8")
                 .setReportingOrigin("https://example.com")
                 .setScheduledReportTime(Instant.ofEpochSecond(1648673933))
@@ -396,7 +416,7 @@ public class SharedInfoSerdesTest {
     assertThat(deserialized)
         .hasValue(
             SharedInfo.builder()
-                .setVersion(LATEST_VERSION)
+                .setVersion(VERSION_ZERO_DOT_ONE)
                 .setReportId("cbc6fb00-c946-4eb6-a401-aac133f7f0b8")
                 .setReportingOrigin("https://example.com")
                 .setScheduledReportTime(Instant.ofEpochSecond(1648673933))

@@ -46,6 +46,7 @@ java_library(
         "//java/com/google/aggregate/privacy/budgeting/bridge:http_privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/privacy/budgeting/bridge:unlimited_privacy_budgeting_service_bridge",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
         "//java/com/google/aggregate/privacy/noise",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/com/google/aggregate/privacy/noise/testing",

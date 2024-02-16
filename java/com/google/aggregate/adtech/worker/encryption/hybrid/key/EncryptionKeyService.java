@@ -20,7 +20,7 @@ package com.google.aggregate.adtech.worker.encryption.hybrid.key;
 public interface EncryptionKeyService {
 
   /** Retrieve a key from the aggregate service KMS */
-  public EncryptionKey getKey() throws KeyFetchException;
+  EncryptionKey getKey() throws KeyFetchException;
 
   final class KeyFetchException extends Exception {
 

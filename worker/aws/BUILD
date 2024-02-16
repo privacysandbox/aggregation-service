@@ -13,7 +13,7 @@
 # limitations under the License.
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
-load("@bazel_tools//tools/build_defs/pkg:pkg.bzl", "pkg_tar")
+load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("@shared_libraries//operator/worker/aws/build_defs:deploy.bzl", "worker_aws_deployment")
 
 package(default_visibility = ["//visibility:public"])
@@ -121,6 +121,7 @@ PROD_ENCLAVE_ARGS = [
     "DP_NOISING",
     "--return_stack_trace",
     "--parallel-summary-upload",
+    "--streaming-output-domain-processing",
 ]
 # Check the documentation for the worker_aws_deployment macro for details on
 # what is available in this package.

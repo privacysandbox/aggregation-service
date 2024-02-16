@@ -39,7 +39,7 @@ import javax.inject.Inject;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 
-/** {@link EncryptionKeyService} implementation to get a random encryption key from DynamoDb. */
+/** {@link EncryptionKeyService} implementation to get an encryption key from cloud. */
 public final class CloudEncryptionKeyService implements EncryptionKeyService {
 
   private final HttpClientWrapper httpClient;

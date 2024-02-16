@@ -41,6 +41,14 @@ public class FakeReportGenerator {
     public static Fact generate(int bucket, int value) {
       return Fact.builder().setBucket(createBucketFromInt(bucket)).setValue(value).build();
     }
+
+    public static Fact generate(int bucket, int value, int id) {
+      return Fact.builder()
+          .setId(id)
+          .setBucket(createBucketFromInt(bucket))
+          .setValue(value)
+          .build();
+    }
   }
 
   /**

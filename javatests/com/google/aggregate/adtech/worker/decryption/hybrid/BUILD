@@ -28,6 +28,7 @@ java_test(
         "//java/external:acai",
         "//java/external:clients_cryptoclient",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
     ],
 )
@@ -40,6 +41,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/decryption/hybrid",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:tink",
     ],
 )

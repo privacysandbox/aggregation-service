@@ -25,7 +25,12 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
+        "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:javax_inject",
     ],
 )
 

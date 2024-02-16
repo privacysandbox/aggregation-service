@@ -33,11 +33,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Spliterator;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.apache.avro.Schema;
@@ -160,12 +156,12 @@ public abstract class AvroRecordWriter<Record> implements AutoCloseable {
           recordProcessorService);
 
     } finally {
-      writerService.shutdown();
-      recordProcessorService.shutdown();
+      recordProcessorFuture.get();
       for (ListenableFuture future : writerFutures) {
         future.get();
       }
-      recordProcessorFuture.get();
+      recordProcessorService.shutdown();
+      writerService.shutdown();
     }
   }
 

@@ -19,6 +19,8 @@ package com.google.aggregate.adtech.worker.aggregation.domain;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
@@ -37,7 +39,9 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 
-/** Reads output domain from a text file with each aggregation key on a separate line. */
+/**
+ * Reads output domain from a text file with each aggregation key on a separate line.
+ */
 public final class TextOutputDomainProcessor extends OutputDomainProcessor {
 
   private final BlobStorageClient blobStorageClient;
@@ -48,12 +52,16 @@ public final class TextOutputDomainProcessor extends OutputDomainProcessor {
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       BlobStorageClient blobStorageClient,
-      StopwatchRegistry stopwatches) {
+      StopwatchRegistry stopwatches,
+      @DomainOptional Boolean domainOptional,
+      @EnableThresholding Boolean enableThresholding) {
     super(
-        /* blockingThreadPool= */ blockingThreadPool,
-        /* nonBlockingThreadPool= */ nonBlockingThreadPool,
-        /* blobStorageClient= */ blobStorageClient,
-        /* stopwatches= */ stopwatches);
+        blockingThreadPool,
+        nonBlockingThreadPool,
+        blobStorageClient,
+        stopwatches,
+        domainOptional,
+        enableThresholding);
     this.blobStorageClient = blobStorageClient;
     this.stopwatches = stopwatches;
   }
@@ -73,6 +81,19 @@ public final class TextOutputDomainProcessor extends OutputDomainProcessor {
       throw new DomainReadException(e);
     } finally {
       stopwatch.stop();
+    }
+  }
+
+  public Stream<BigInteger> readInputStream(InputStream shardInputStream) {
+    try {
+      byte[] bytes = ByteStreams.toByteArray(shardInputStream);
+      try (Stream<String> fileLines = NumericConversions.createStringFromByteArray(bytes).lines()) {
+        ImmutableList<BigInteger> shard =
+            fileLines.map(NumericConversions::createBucketFromString).collect(toImmutableList());
+        return shard.stream();
+      }
+    } catch (IOException | IllegalArgumentException e) {
+      throw new DomainReadException(e);
     }
   }
 }

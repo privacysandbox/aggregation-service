@@ -43,7 +43,9 @@ java_library(
     deps = [
         ":encryption",
         "//java/com/google/aggregate/adtech/worker/encryption/hybrid/key",
+        "//java/com/google/aggregate/adtech/worker/encryption/hybrid/key/cloud",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
         "//java/external:guava",
         "//java/external:guice",
     ],

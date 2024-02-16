@@ -88,6 +88,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )
 
@@ -100,7 +101,9 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/testing:fake_validator",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
+        "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
     ],
 )
 
@@ -112,6 +115,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/testing:fake_decryption_key_service",
         "//java/external:clients_cryptoclient",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:tink",
     ],
 )
@@ -127,6 +131,7 @@ java_test(
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )
 
@@ -139,6 +144,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/writer/avro",
         "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:jimfs",
     ],
@@ -153,6 +159,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/writer/avro",
         "//java/external:acai",
         "//java/external:google_truth",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:jimfs",
     ],

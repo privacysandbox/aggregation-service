@@ -26,5 +26,9 @@ public final class JobUtils {
   public static final String JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE =
       "report_error_threshold_percentage";
 
+  public static final String JOB_PARAM_FILTERING_IDS = "filtering_ids";
+
+  public static final String JOB_PARAM_FILTERING_IDS_DELIMITER = ",";
+
   private JobUtils() {}
 }

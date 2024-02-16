@@ -16,6 +16,8 @@
 
 package com.google.aggregate.adtech.worker;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_1_0;
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.file.StandardOpenOption.CREATE;
@@ -810,13 +812,13 @@ public class AggregationWorkerHermeticTest {
     AggregatedFact expectedFact3 =
         AggregatedFact.create(
             /* key= */ createBucketFromInt(44), /* metric= */ 123, /* unnoisedMetric= */ 123L);
-
     /** Only reports from shard_1.avro are considered in aggregation. */
     assertThat(factList).containsExactly(expectedFact1, expectedFact2, expectedFact3);
   }
 
   @Test
-  public void localTestConstantNoNoising_shardedReport_InvalidVersion() throws Exception {
+  public void localTestConstantNoNoising_shardedReport_higherMajorVersion_jobFails()
+      throws Exception {
     AwsHermeticTestHelper.generateAvroReportsFromTextList(
         SimulationTestParams.builder()
             .setHybridKey(hybridKey)
@@ -824,20 +826,45 @@ public class AggregationWorkerHermeticTest {
             .setSimulationInputFileLines(simulationInputFileLines)
             .build());
     Files.copy(reportsAvro, reportShardsDir.resolve("shard_1.avro"));
-
-    /*
-     * Generate input for second shard with same input file lines but invalid Version in SharedInfo.
-     * The reports in this shard will be ignored in aggregation because of invalid Version.
-     */
+    // Generate input for second shard with same input file lines but higher major version in
+    // SharedInfo.
     AwsHermeticTestHelper.generateAvroReportsFromTextList(
         SimulationTestParams.builder()
             .setHybridKey(hybridKey)
             .setReportsAvro(reportsAvro)
             .setSimulationInputFileLines(simulationInputFileLines)
-            .setVersion("invalid-version")
+            .setVersion("2.0")
             .build());
     Files.copy(reportsAvro, reportShardsDir.resolve("shard_2.avro"));
+    setupLocalAggregationWorker(args);
 
+    runWorker();
+
+    String actualResultSerialized = Files.readString(resultFile);
+    ResultInfo.Builder builder = ResultInfo.newBuilder();
+    JSON_PARSER.merge(actualResultSerialized, builder);
+    ResultInfo actualResult = builder.build();
+
+    assertThat(actualResult.getReturnMessage()).contains("AggregationJobProcessException");
+    assertThat(actualResult.getReturnMessage())
+        .contains(
+            "Current Aggregation Service deployment does not support Aggregatable reports with"
+                + " shared_info.version");
+    assertThat(actualResult.getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.UNSUPPORTED_REPORT_VERSION.name());
+  }
+
+  @Test
+  public void localTestConstantNoNoising_shardedReport_higherMinorVersion_succeeds()
+      throws Exception {
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(simulationInputFileLines)
+            .setVersion("0.2")
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_1.avro"));
     setupLocalAggregationWorker(args);
 
     runWorker();
@@ -852,8 +879,7 @@ public class AggregationWorkerHermeticTest {
     AggregatedFact expectedFact3 =
         AggregatedFact.create(
             /* key= */ createBucketFromInt(44), /* metric= */ 123, /* unnoisedMetric= */ 123L);
-
-    /** Only reports from shard_1.avro are considered in aggregation. */
+    // Higher Minor version 0.2 reports are included in aggregation.
     assertThat(factList).containsExactly(expectedFact1, expectedFact2, expectedFact3);
   }
 
@@ -894,6 +920,48 @@ public class AggregationWorkerHermeticTest {
             /* key= */ createBucketFromInt(55), /* metric= */ 6, /* unnoisedMetric= */ 6L);
     assertThat(factList)
         .containsExactly(expectedFact1, expectedFact2, expectedFact3, expectedFact4);
+  }
+
+  @Test
+  public void aggregate_withNoQueriedFilteringId_aggregatesDefaultOrIdContributions()
+      throws Exception {
+    // Input facts with every entry in set corresponding to a report and facts are separated by
+    // comma.
+    // All facts without ids, so considered for aggregation.
+    ImmutableList<String> inputWithoutIds = ImmutableList.of("1:10,1:20,0:0", "5:50");
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(inputWithoutIds)
+            .setVersion(VERSION_0_1)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_1.avro"));
+    // In this input with ids, only facts corresponding to id = 0 will be considered for
+    // aggregation.
+    ImmutableList<String> inputWithIds = ImmutableList.of("1:10:0,1:2:10,0:0:0", "5:50:4");
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(inputWithIds)
+            .setSourceRegistrationTime(Instant.EPOCH.minusSeconds(600))
+            .setVersion(VERSION_1_0)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_2.avro"));
+    setupLocalAggregationWorker(args);
+
+    runWorker();
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    // Aggregates all the facts without id or has id = 0.
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(1), /* metric= */ 40, /* unnoisedMetric= */ 40L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(5), /* metric= */ 50, /* unnoisedMetric= */ 50L);
+    assertThat(factList).containsExactly(expectedFact1, expectedFact2);
   }
 
   @Test

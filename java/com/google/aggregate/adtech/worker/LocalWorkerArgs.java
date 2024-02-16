@@ -20,7 +20,9 @@ import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 
-/** Command line args for the standalone library */
+/**
+ * Command line args for the standalone library
+ */
 public class LocalWorkerArgs {
 
   @Parameter(
@@ -111,6 +113,12 @@ public class LocalWorkerArgs {
       "Size of one shard of the output file. The default value is 100,000,000. (100MB)")
   private long outputShardFileSizeBytes = 100_000_000L; // 100MB
 
+  @Parameter(
+      names = "--streaming-output-domain-processing",
+      description = "Flag to enable RxJava streaming based output domain processing."
+  )
+  private boolean streamingOutputDomainProcessing = false;
+
   public String getInputDataAvroFile() {
     return inputDataAvroFile;
   }
@@ -177,6 +185,10 @@ public class LocalWorkerArgs {
 
   double getReportErrorThresholdPercentage() {
     return reportErrorThresholdPercentage;
+  }
+
+  public boolean isStreamingOutputDomainProcessing() {
+    return streamingOutputDomainProcessing;
   }
 
   public void validate() {

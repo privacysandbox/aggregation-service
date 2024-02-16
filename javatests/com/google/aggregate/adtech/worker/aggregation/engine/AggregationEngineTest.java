@@ -18,7 +18,9 @@ package com.google.aggregate.adtech.worker.aggregation.engine;
 
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
+import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.Fact;
 import com.google.aggregate.adtech.worker.model.Report;
@@ -26,24 +28,32 @@ import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator;
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator.FakeFactGenerator;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.inject.AbstractModule;
 import java.math.BigInteger;
 import java.time.Instant;
+import javax.inject.Inject;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class AggregationEngineTest {
+  @Rule public final Acai acai = new Acai(TestEnv.class);
+
+  @Inject AggregationEngineFactory aggregationEngineFactory;
 
   // Under test.
   private AggregationEngine engine;
 
   @Before
   public void setUp() {
-    engine = AggregationEngine.create();
+    engine = aggregationEngineFactory.create();
   }
 
   @Test
@@ -208,16 +218,16 @@ public class AggregationEngineTest {
   public void privacyBudgetUnits() {
     Report report =
         FakeReportGenerator.generateWithParam(
-            /* bucket= */ 1, /* reportVersion */ SharedInfo.LATEST_VERSION);
+            /* bucket= */ 1, /* reportVersion */ SharedInfo.VERSION_0_1);
     Report reportDuplicate =
         FakeReportGenerator.generateWithParam(
-            /* bucket= */ 1, /* reportVersion */ SharedInfo.LATEST_VERSION);
+            /* bucket= */ 1, /* reportVersion */ SharedInfo.VERSION_0_1);
     Report secondReport =
         FakeReportGenerator.generateWithParam(
-            /* bucket= */ 4000, /* reportVersion */ SharedInfo.LATEST_VERSION);
+            /* bucket= */ 4000, /* reportVersion */ SharedInfo.VERSION_0_1);
     Report thirdReport =
         FakeReportGenerator.generateWithParam(
-            /* bucket= */ 100, /* reportVersion */ SharedInfo.LATEST_VERSION);
+            /* bucket= */ 100, /* reportVersion */ SharedInfo.VERSION_0_1);
 
     engine.accept(report);
     engine.accept(reportDuplicate);
@@ -237,7 +247,125 @@ public class AggregationEngineTest {
                 "43a9149aa0326808345d5f9b780c48f823d7aba37d72bf4decbba387bf3a283d", hourOne));
   }
 
+  @Test
+  public void makeAggregation_withOutFilteringId_forReportsWithoutLabelIds_aggregatesAllTheFacts() {
+    Fact factWithoutLabel1 = FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 2);
+    Fact factWithoutLabel2 = FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 3);
+    Report reportWithoutLabels =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithoutLabel1, factWithoutLabel2), SharedInfo.VERSION_0_1);
+
+    engine.accept(reportWithoutLabels);
+    ImmutableMap<BigInteger, AggregatedFact> aggregation = engine.makeAggregation();
+
+    assertThat(aggregation)
+        .containsExactly(createBucketFromInt(1), AggregatedFact.create(createBucketFromInt(1), 5));
+  }
+
+  @Test
+  public void makeAggregation_withFilteringId_forReportsWithoutLabelIds_aggregatesNone() {
+    Fact factWithoutLabel1 = FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 2);
+    Fact factWithoutLabel2 = FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 3);
+    Report reportWithoutLabels =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithoutLabel1, factWithoutLabel2), SharedInfo.VERSION_0_1);
+
+    AggregationEngine engine = aggregationEngineFactory.create(/** filteringIds = */ ImmutableSet.of(7));
+    engine.accept(reportWithoutLabels);
+    ImmutableMap<BigInteger, AggregatedFact> aggregation = engine.makeAggregation();
+
+    assertThat(aggregation).isEmpty();
+  }
+
+  @Test
+  public void makeAggregation_withoutFilteringId_forReportsWithLabelIds_aggregatesForLabelId0() {
+    Fact factWithLabel1 = FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 2, /* id= */ 0);
+    Fact factWithLabel2 = FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 3, /* id= */ 0);
+    Report reportWithLabels1 =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithLabel1, factWithLabel2), /* version= */ "1.0");
+    Fact factWithLabel3 = FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 2, /* id= */ 3);
+    Fact factWithLabel4 = FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 3, /* id= */ 2);
+    Report reportWithLabels2 =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithLabel3, factWithLabel4), /* version= */ "1.1");
+
+    AggregationEngine engine = aggregationEngineFactory.create();
+    engine.accept(reportWithLabels1);
+    engine.accept(reportWithLabels2);
+    ImmutableMap<BigInteger, AggregatedFact> aggregation = engine.makeAggregation();
+    ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits = engine.getPrivacyBudgetUnits();
+
+    assertThat(aggregation)
+        .containsExactly(createBucketFromInt(1), AggregatedFact.create(createBucketFromInt(1), 5));
+    // PBK is taken even for those reports without matching labels.
+    assertThat(privacyBudgetUnits).hasSize(2);
+  }
+
+  @Test
+  public void
+      makeAggregation_withFilteringIds_aggregatesForMatchingLabelId_PBKsGeneratedForEveryFilteringId() {
+    int matchingFilteringId1 = 12345;
+    int matchingFilteringId2 = 123;
+    int nonmatchingFilteringId1 = 0;
+    int nonmatchingFilteringId2 = 999;
+    Fact factWithMatchingLabel1 =
+        FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 2, /* id= */ matchingFilteringId1);
+    Fact factWithMatchingLabel2 =
+        FakeFactGenerator.generate(/* bucket= */ 1, /* value= */ 3, /* id= */ matchingFilteringId2);
+    Report reportsWithMatchingLabelIds =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithMatchingLabel1, factWithMatchingLabel2),
+            /* version= */ "1.00");
+    Fact factWithMatchingLabel3 =
+        FakeFactGenerator.generate(/* bucket= */ 2, /* value= */ 4, /* id= */ matchingFilteringId1);
+    Fact factWithNonMatchingLabel1 =
+        FakeFactGenerator.generate(
+            /* bucket= */ 2, /* value= */ 3, /* id= */ nonmatchingFilteringId1);
+    Report reportsWithSomeMatchingLabelIds =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithMatchingLabel3, factWithNonMatchingLabel1),
+            /* version= */ "1.01");
+    Fact factWithNonMatchingLabel2 =
+        FakeFactGenerator.generate(
+            /* bucket= */ 2, /* value= */ 3, /* id= */ nonmatchingFilteringId2);
+    Report reportsWithoutMatchingLabelIds =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithNonMatchingLabel2), /* version= */ "1.02");
+    Fact factWithoutLabelId = FakeFactGenerator.generate(/* bucket= */ 2, /* value= */ 3);
+    Report reportsWithoutLabelIds =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithoutLabelId), /* version= */ "1.03");
+
+    AggregationEngine engine =
+        aggregationEngineFactory.create(
+                /** filteringIds = */ ImmutableSet.of(matchingFilteringId1, matchingFilteringId2));
+    engine.accept(reportsWithMatchingLabelIds);
+    engine.accept(reportsWithSomeMatchingLabelIds);
+    engine.accept(reportsWithoutMatchingLabelIds);
+    engine.accept(reportsWithoutLabelIds);
+    ImmutableMap<BigInteger, AggregatedFact> aggregation = engine.makeAggregation();
+    ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits = engine.getPrivacyBudgetUnits();
+
+    assertThat(aggregation)
+        .containsExactly(
+            createBucketFromInt(1),
+            AggregatedFact.create(createBucketFromInt(1), 5),
+            createBucketFromInt(2),
+            AggregatedFact.create(createBucketFromInt(2), 4));
+    // PBK is calculated for every filteringId = 2 filteringId x 4 reports
+    assertThat(privacyBudgetUnits).hasSize(8);
+  }
+
   private static PrivacyBudgetUnit budgetUnit(String key, Instant scheduledTime) {
     return PrivacyBudgetUnit.create(key, scheduledTime);
+  }
+
+  static final class TestEnv extends AbstractModule {
+
+    @Override
+    protected void configure() {
+      install(new PrivacyBudgetKeyGeneratorModule());
+    }
   }
 }

@@ -18,7 +18,6 @@ package com.google.aggregate.adtech.worker;
 
 import com.google.aggregate.adtech.worker.Annotations.PullWorkService;
 import com.google.aggregate.adtech.worker.Annotations.WorkerServiceManager;
-import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
@@ -55,11 +54,6 @@ public final class WorkerModule extends AbstractModule {
   @Provides
   Ticker provideTimingTicker() {
     return Ticker.systemTicker();
-  }
-
-  @Provides
-  AggregationEngine provideAggregationEngine() {
-    return AggregationEngine.create();
   }
 
   @Override

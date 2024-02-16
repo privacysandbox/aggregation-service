@@ -27,6 +27,7 @@ import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
+import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
 import com.google.aggregate.adtech.worker.JobProcessor;
 import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWorkingDirectory;
 import com.google.aggregate.adtech.worker.PrivacyBudgetingSelector;
@@ -47,6 +48,7 @@ import com.google.aggregate.adtech.worker.validation.ValidationModule;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -65,9 +67,9 @@ import com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobNumAtte
 import com.google.scp.operator.cpio.configclient.local.Annotations.MaxJobProcessingTimeSecondsParameter;
 import com.google.scp.operator.cpio.configclient.local.Annotations.ScaleInHookParameter;
 import com.google.scp.operator.cpio.configclient.local.Annotations.SqsJobQueueUrlParameter;
-import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBEncryptionKeyServiceBaseUrl;
+import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.gcp.GcpKmsDecryptionKeyServiceConfig;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceAuthEndpoint;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceBaseUrl;
@@ -120,8 +122,7 @@ public final class AggregationWorkerModule extends AbstractModule {
 
     switch (args.getBlobStorageClientSelector()) {
       case GCP_CS_CLIENT:
-        bind(new TypeLiteral<Optional<String>>() {
-        })
+        bind(new TypeLiteral<Optional<String>>() {})
             .annotatedWith(GcsEndpointUrl.class)
             .toInstance(args.getGcsEndpoint());
         break;
@@ -139,12 +140,10 @@ public final class AggregationWorkerModule extends AbstractModule {
         if (!args.getLocalFileJobInfoPath().isEmpty()) {
           localJobInfoPath = Optional.of(Paths.get(args.getLocalFileJobInfoPath()));
         }
-        bind(new TypeLiteral<Optional<Path>>() {
-        })
+        bind(new TypeLiteral<Optional<Path>>() {})
             .annotatedWith(LocalFileJobHandlerResultPath.class)
             .toInstance(localJobInfoPath);
-        bind(new TypeLiteral<Supplier<ImmutableMap<String, String>>>() {
-        })
+        bind(new TypeLiteral<Supplier<ImmutableMap<String, String>>>() {})
             .annotatedWith(LocalFileJobParameters.class)
             .toInstance(Suppliers.ofInstance(ImmutableMap.of()));
         break;
@@ -270,6 +269,7 @@ public final class AggregationWorkerModule extends AbstractModule {
           .toInstance(args.getCoordinatorBPrivacyBudgetingServiceAuthEndpoint());
       install(args.getPbsclientSelector().getDistributedPrivacyBudgetClientModule());
     }
+    install(new PrivacyBudgetKeyGeneratorModule());
 
     // decryption key service.
     install(args.getDecryptionModuleSelector().getDecryptionModule());
@@ -303,6 +303,10 @@ public final class AggregationWorkerModule extends AbstractModule {
     // processor
     bind(JobProcessor.class).to(ConcurrentAggregationProcessor.class);
 
+    bind(boolean.class)
+        .annotatedWith(StreamingOutputDomainProcessing.class)
+        .toInstance(args.isStreamingOutputDomainProcessing());
+
     // noising
     install(args.getNoisingSelector().getNoisingModule());
 
@@ -314,11 +318,14 @@ public final class AggregationWorkerModule extends AbstractModule {
           .toInstance(Paths.get(args.getResultWorkingDirectoryPathString()));
     }
 
-    bind(boolean.class).annotatedWith(EnableParallelSummaryUpload.class)
+    bind(boolean.class)
+        .annotatedWith(EnableParallelSummaryUpload.class)
         .toInstance(args.isEnableParallelSummaryUpload());
 
     // Parameter to set key cache. This is a test only flag.
-    bind(Long.class).annotatedWith(DecrypterCacheEntryTtlSec.class).toInstance(args.getDecrypterCacheEntryTtlSec());
+    bind(Long.class)
+        .annotatedWith(DecrypterCacheEntryTtlSec.class)
+        .toInstance(args.getDecrypterCacheEntryTtlSec());
 
     // Response related flags
     bind(boolean.class)

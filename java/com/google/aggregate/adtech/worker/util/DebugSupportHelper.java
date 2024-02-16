@@ -44,8 +44,8 @@ public final class DebugSupportHelper {
 
   /** Retrieve JOB_PARAM_DEBUG_RUN in JOB PARAM and return whether this is a debug job */
   public static Boolean isDebugRun(Job job) {
-    if (job.requestInfo().getJobParameters().containsKey(JOB_PARAM_DEBUG_RUN)) {
-      return Boolean.parseBoolean(job.requestInfo().getJobParameters().get(JOB_PARAM_DEBUG_RUN));
+    if (job.requestInfo().getJobParametersMap().containsKey(JOB_PARAM_DEBUG_RUN)) {
+      return Boolean.parseBoolean(job.requestInfo().getJobParametersMap().get(JOB_PARAM_DEBUG_RUN));
     } else {
       return false;
     }

@@ -153,7 +153,8 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
     [sizing guidance](/docs/sizing-guidance.md) for instance type recommendations. For AWS instance
     specific questions, please contact AWS support.
 
-1.  **Skip this step if you use our prebuilt AMI and Lambda jars**
+1.  **Follow this step if you self-build your AMI and jars or copy the AMI (self-build or prebuilt
+    AMI) to your account**
 
     If you [self-build your AMI and jars](/build-scripts/aws/README.md) or copied the AMI to your
     account, you need to copy the contents of the `release_params.auto.tfvars` file into a new file

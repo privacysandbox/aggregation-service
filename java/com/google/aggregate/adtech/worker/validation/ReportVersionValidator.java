@@ -23,12 +23,9 @@ import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.crea
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
-import com.google.auto.value.AutoValue;
-import com.google.common.base.Joiner;
-import com.google.common.base.Preconditions;
+import com.google.aggregate.adtech.worker.model.Version;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 /**
  * Validates that the report Version is supported by this version of Aggregation service. Valid
@@ -73,36 +70,5 @@ public final class ReportVersionValidator implements ReportValidator {
 
   private boolean isReportVersionHigherThanLatestVersion(Version version) {
     return (version.major() > latestVersion.major());
-  }
-
-  @AutoValue
-  abstract static class Version {
-
-    private static final Pattern VERSION_PATTERN = Pattern.compile("^\\d+\\.\\d+$");
-
-    static Version create(int major, int minor) {
-      return new AutoValue_ReportVersionValidator_Version(major, minor);
-    }
-
-    static Version parse(String version) throws IllegalArgumentException {
-      Preconditions.checkArgument(VERSION_PATTERN.matcher(version).matches());
-      String[] parts = version.split("\\.", 2);
-      return Version.create(Integer.valueOf(parts[0]), Integer.valueOf(parts[1]));
-    }
-
-    // TODO(b/303480127): Remove isZero() from Version class in ReportVersionValidator when
-    // MAJOR_VERSION_ZERO is removed from SUPPORTED_MAJOR_VERSIONS.
-    boolean isZero() {
-      return (major() == 0 && minor() == 0);
-    }
-
-    @Override
-    public String toString() {
-      return Joiner.on(".").join(major(), minor());
-    }
-
-    abstract int major();
-
-    abstract int minor();
   }
 }

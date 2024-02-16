@@ -1,60 +1,3 @@
-diff --git a/WORKSPACE b/WORKSPACE
-index a6dfbfbb8..2f144b02e 100644
---- a/WORKSPACE
-+++ b/WORKSPACE
-@@ -87,7 +87,7 @@ AUTO_VALUE_VERSION = "1.7.4"
- 
- AWS_SDK_VERSION = "2.17.239"
- 
--GOOGLE_GAX_VERSION = "2.4.0"
-+GOOGLE_GAX_VERSION = "2.20.1"
- 
- AUTO_SERVICE_VERSION = "1.0"
- 
-@@ -116,13 +116,13 @@ maven_install(
-         "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
-         "com.google.code.findbugs:jsr305:3.0.2",
-         "com.google.code.gson:gson:2.8.9",
--        "com.google.cloud:google-cloud-kms:2.1.2",
--        "com.google.cloud:google-cloud-pubsub:1.114.4",
--        "com.google.cloud:google-cloud-storage:1.118.0",
--        "com.google.cloud:google-cloud-spanner:6.12.2",
--        "com.google.cloud:google-cloud-secretmanager:2.2.0",
--        "com.google.cloud:google-cloud-compute:1.12.1",
--        "com.google.api.grpc:proto-google-cloud-compute-v1:1.12.1",
-+        "com.google.cloud:google-cloud-kms:2.10.0",
-+        "com.google.cloud:google-cloud-pubsub:1.122.2",
-+        "com.google.cloud:google-cloud-storage:2.13.1",
-+        "com.google.cloud:google-cloud-spanner:6.34.1",
-+        "com.google.cloud:google-cloud-secretmanager:2.7.0",
-+        "com.google.cloud:google-cloud-compute:1.17.0",
-+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.17.0",
-         "com.google.cloud.functions.invoker:java-function-invoker:1.1.0",
-         "com.google.auth:google-auth-library-oauth2-http:1.11.0",
-         "com.google.cloud.functions:functions-framework-api:1.0.4",
-@@ -131,8 +131,8 @@ maven_install(
-         "com.google.http-client:google-http-client-jackson2:1.40.0",
-         "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
-         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
--        "com.google.cloud:google-cloud-monitoring:3.4.1",
--        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.4.1",
-+        "com.google.cloud:google-cloud-monitoring:3.8.0",
-+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.8.0",
-         "com.google.api.grpc:proto-google-common-protos:2.9.2",
-         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
-         "com.google.guava:guava:32.0.1-jre",
-@@ -195,7 +195,10 @@ maven_install(
-         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
-         "com.google.api:gapic-generator-java:" + GAPIC_GENERATOR_JAVA_VERSION,  # To use generated gRpc Java interface
-         "io.grpc:grpc-netty:1.54.0",
--    ] + TINK_MAVEN_ARTIFACTS,
-+        "com.google.crypto.tink:tink:1.11.0",
-+        "com.google.crypto.tink:tink-gcpkms:1.9.0",
-+        "com.google.oauth-client:google-oauth-client:1.34.1",
-+    ],
-     repositories = [
-         "https://repo1.maven.org/maven2",
-     ],
 diff --git a/java/com/google/scp/operator/cpio/cryptoclient/BUILD b/java/com/google/scp/operator/cpio/cryptoclient/BUILD
 index c4a8c5ad4..169b610e9 100644
 --- a/java/com/google/scp/operator/cpio/cryptoclient/BUILD
@@ -79,6 +22,18 @@ index e9ba9df40..ae3d96cc2 100644
          "//java/external:guava",
          "//java/external:guice",
          "//java/external:jackson_core",
+diff --git a/java/com/google/scp/shared/gcp/util/BUILD b/java/com/google/scp/shared/gcp/util/BUILD
+index 6fd4c40ea..2a731fad4 100644
+--- a/java/com/google/scp/shared/gcp/util/BUILD
++++ b/java/com/google/scp/shared/gcp/util/BUILD
+@@ -29,6 +29,7 @@ java_library(
+         "//java/external:apache_httpcore5",
+         "//java/external:gcp_cloud_function",
+         "//java/external:google_auth_library_oauth2_http",
++        "//java/external:google_oauth_client",
+         "//java/external:guava",
+         "//java/external:jackson_core",
+         "//java/external:jackson_databind",
 diff --git a/java/external/BUILD b/java/external/BUILD
 index b77e89996..a03059f43 100644
 --- a/java/external/BUILD

@@ -153,6 +153,14 @@ public final class Annotations {
 
   }
 
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface StreamingOutputDomainProcessing {
+
+  }
+
+
   private Annotations() {
   }
 }
