@@ -21,6 +21,7 @@ phases:
   install:
     commands:
       - mkdir $HOME/.docker
+      - sed -i 's/ulimit -Hn/# ulimit -Hn/g' /etc/init.d/docker
       - nohup service docker start &
       - timeout 15 sh -c "until docker info; do echo .; sleep 1; done"
   pre_build:
