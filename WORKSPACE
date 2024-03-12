@@ -68,6 +68,7 @@ git_repository(
     patches = [
         "//build_defs/scp:coordinator.patch",
         "//build_defs/scp:shared_libraries_v1.2.0.patch",
+        "//build_defs/scp:pin_pkr_docker.patch",
     ],
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     tag = COORDINATOR_VERSION,
