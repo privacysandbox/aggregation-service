@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.1](https://github.com/privacysandbox/aggregation-service/compare/v2.2.0...v2.2.1) (2024-03-11)
+
+### Changes
+
+#### [AWS only]
+
+-   Fixed enclave worker AMI
+    [build issue](https://github.com/privacysandbox/aggregation-service/issues/40) by pinning Docker
+    version to 24.0.5.
+
 ## [2.2.0](https://github.com/privacysandbox/aggregation-service/compare/v2.1.0...v2.2.0)
 
 ### Changes
