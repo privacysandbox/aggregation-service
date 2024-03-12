@@ -579,7 +579,7 @@ java_library(
 
 java_test(
     name = "GcpWorkerContinuousSmokeTest",
-    timeout = "long",
+    timeout = "eternal",
     srcs = ["GcpWorkerContinuousSmokeTest.java"],
     tags = ["manual"],
     runtime_deps = [

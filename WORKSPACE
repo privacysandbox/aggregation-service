@@ -69,6 +69,7 @@ git_repository(
         "//build_defs/shared_libraries:gcs_storage_client.patch",
         "//build_defs/shared_libraries:dependency_update.patch",
         "//build_defs/shared_libraries:key_cache_ttl.patch",
+        "//build_defs/shared_libraries:pin_pkr_docker.patch",
     ],
     tag = COORDINATOR_VERSION,
 )

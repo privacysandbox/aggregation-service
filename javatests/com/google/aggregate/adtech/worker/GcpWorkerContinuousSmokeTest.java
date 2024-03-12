@@ -74,7 +74,7 @@ public final class GcpWorkerContinuousSmokeTest {
   private AvroDebugResultsReaderFactory readerFactory;
   public static final String OUTPUT_DATA_PREFIX_NAME = "-1-of-1";
   private static final Integer DEBUG_DOMAIN_KEY_SIZE = 10000;
-  private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
+  private static final Duration COMPLETION_TIMEOUT = Duration.of(30, ChronoUnit.MINUTES);
 
   @Before
   public void checkBuildEnv() {
