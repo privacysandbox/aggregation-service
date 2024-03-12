@@ -69,6 +69,7 @@ git_repository(
     patches = [
         "//build_defs/scp:coordinator.patch",
         "//build_defs/scp:gcs_storage_client.patch",
+        "//build_defs/scp:pin_pkr_docker.patch",
     ],
     tag = COORDINATOR_VERSION,
 )
