@@ -24,11 +24,11 @@
 #  - java_base: Distroless image for running Java.
 ################################################################################
 
-# Updated as of: 2024-03-12
+# Updated as of: 2024-04-11
 
 CONTAINER_DEPS = {
     "amazonlinux_2": {
-        "digest": "sha256:f2d708f061f95658d3d6606dc26018437cdbebe176123380054e13f4397de7cc",
+        "digest": "sha256:0752515c545922fa6f1fff89d8ca181e8f4071aa9b4b0551243b50e987e0f60e",
         "registry": "index.docker.io",
         "repository": "amazonlinux",
     },
@@ -38,7 +38,7 @@ CONTAINER_DEPS = {
         "repository": "aws-observability/aws-otel-collector",
     },
     "java_base": {
-        "digest": "sha256:97db68bd6f5401aefafc3423e2a375636ab18bc472dc244804f57849c93b6b3f",
+        "digest": "sha256:64967fe3051702640c68bd434813b91a3fc9182f8894962f7638f79a5986c31d",
         "registry": "gcr.io",
         "repository": "distroless/java17-debian11",
     },

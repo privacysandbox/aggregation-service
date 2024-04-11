@@ -56,7 +56,7 @@ public final class CborPayloadSerdes extends PayloadSerdes {
         return Optional.empty();
       }
       return Optional.of(cborMapper.readValue(byteSource.read(), Payload.class));
-    } catch (IOException e) {
+    } catch (IOException | ClassCastException e) {
       // Exception is not included because stack trace includes the decrypted payload which is
       // private information
       logger.warn("Failed to deserialize from CBOR bytes to Payload");
