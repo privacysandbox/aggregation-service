@@ -24,12 +24,21 @@ import java.util.Optional;
 public interface NoisedAggregationRunner {
 
   /**
-   * Applies noise and optional threshold to values on a list of {@code AggregatedFact}.
+   * Applies noise to values in a list of {@code AggregatedFact}.
    *
-   * @return list of new {@code AggregationFact} with noising applied.
+   * @return new {@code NoisedAggregationResult} and {@code AggregatedFact} with noising applied.
    */
   NoisedAggregationResult noise(
-      Iterable<AggregatedFact> aggregatedFact,
-      boolean doThreshold,
-      Optional<Double> debugPrivacyEpsilon);
+      Iterable<AggregatedFact> aggregatedFact, Optional<Double> debugPrivacyEpsilon);
+
+  /**
+   * Thresholds aggregated facts, only returning AggregatedFact with noised values greater than the
+   * threshold. The Threshold value is determined by the privacy parameters.
+   *
+   * @param aggregatedFacts
+   * @param debugPrivacyEpsilon
+   * @return new {@code NoisedAggregationResult} and {@code AggregatedFact} thresholded.
+   */
+  NoisedAggregationResult threshold(
+      Iterable<AggregatedFact> aggregatedFacts, Optional<Double> debugPrivacyEpsilon);
 }
