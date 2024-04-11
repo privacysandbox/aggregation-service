@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2](https://github.com/privacysandbox/aggregation-service/compare/v2.2.1...v2.2.2) (2024-04-09)
+
+### Changes
+
+-   Fixed job failure with `ClassCastException` error.
+-   Updated dependencies to address security vulnerabilities.
+
 ## [2.2.1](https://github.com/privacysandbox/aggregation-service/compare/v2.2.0...v2.2.1) (2024-03-11)
 
 ### Changes
