@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.2](https://github.com/privacysandbox/aggregation-service/compare/v2.4.1...v2.4.2) (2024-04-09)
+
+### Changes
+
+-   Fixed job failure with `ClassCastException` error.
+-   Fixed noised facts mismatch when DebugRun and DomainOptional are both set.
+-   Updated dependencies to address security vulnerabilities.
+
 ## [2.4.1](https://github.com/privacysandbox/aggregation-service/compare/v2.4.0...v2.4.1) (2024-03-11)
 
 ### Changes

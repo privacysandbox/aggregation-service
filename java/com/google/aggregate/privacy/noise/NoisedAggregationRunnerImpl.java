@@ -52,28 +52,37 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
   }
 
   @Override
+  public NoisedAggregationResult threshold(
+      Iterable<AggregatedFact> aggregatedFacts, Optional<Double> debugPrivacyEpsilon) {
+    final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
+        getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
+    final Supplier<Double> requestScopedThresholdSupplier =
+        getScopedThreshold(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
+    double threshold = requestScopedThresholdSupplier.get();
+
+    ImmutableList<AggregatedFact> thresholdedFacts =
+        Streams.stream(aggregatedFacts)
+            .filter(
+                aggregatedFactItem ->
+                    (DoubleMath.fuzzyCompare(aggregatedFactItem.metric(), threshold, TOLERANCE)
+                        >= 0))
+            .collect(toImmutableList());
+
+    return NoisedAggregationResult.create(
+        requestScopedPrivacyParamsSupplier.get(), thresholdedFacts);
+  }
+
+  @Override
   public NoisedAggregationResult noise(
-      Iterable<AggregatedFact> aggregatedFact,
-      boolean doThreshold,
-      Optional<Double> debugPrivacyEpsilon) {
+      Iterable<AggregatedFact> aggregatedFact, Optional<Double> debugPrivacyEpsilon) {
     final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
         getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
     final Supplier<NoiseApplier> requestScopedNoiseApplier =
         getScopedNoiseApplier(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
-    final Supplier<Double> requestScopedThresholdSupplier =
-        getScopedThreshold(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
 
     Stream<AggregatedFact> noisedFacts =
         Streams.stream(aggregatedFact)
             .map((fact -> noiseSingleFact(fact, requestScopedNoiseApplier)));
-    if (doThreshold) {
-      Double threshold = requestScopedThresholdSupplier.get();
-      noisedFacts =
-          noisedFacts.filter(
-              aggregatedFactItem ->
-                  (DoubleMath.fuzzyCompare(aggregatedFactItem.metric(), threshold, TOLERANCE)
-                      >= 0));
-    }
 
     ImmutableList<AggregatedFact> noisedAndThresholdedFacts =
         noisedFacts.collect(toImmutableList());

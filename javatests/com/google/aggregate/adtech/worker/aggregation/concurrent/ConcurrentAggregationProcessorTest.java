@@ -41,12 +41,12 @@ import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_
 import static com.google.aggregate.adtech.worker.util.NumericConversions.createBucketFromInt;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 
@@ -115,6 +115,7 @@ import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribut
 import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule.ConstantNoiseApplier;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier;
+import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier.FakeNoiseApplier;
 import com.google.aggregate.protocol.avro.AvroOutputDomainReaderFactory;
 import com.google.aggregate.protocol.avro.AvroOutputDomainRecord;
 import com.google.aggregate.protocol.avro.AvroOutputDomainWriter;
@@ -168,7 +169,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -539,6 +542,120 @@ public class ConcurrentAggregationProcessorTest {
     assertThat(exception)
         .hasMessageThat()
         .contains("MaterializedAggregations is null. Maybe results did not get logged.");
+  }
+
+  @Test
+  public void aggregate_debugRunDomainOptional_resultsInSameDebugFacts() throws Exception {
+    outputDomainProcessorHelper.setDomainOptional(true);
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(
+        FakeNoiseApplier.builder()
+            .setNextValueNoiseToAdd(List.of(1L, 2L, 3L, 4L, 5L, 6L).iterator())
+            .build());
+
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "2", "3");
+
+    DataLocation outputDomainLocation = getOutputDomainLocation();
+    ImmutableMap<String, String> jobParams =
+        ImmutableMap.of(
+            JOB_PARAM_DEBUG_RUN,
+            "true",
+            JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME,
+            outputDomainLocation.blobStoreDataLocation().bucket(),
+            JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
+            outputDomainLocation.blobStoreDataLocation().key());
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+
+    JobResult jobResultProcessor = processor.get().process(ctx);
+
+    assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
+    Map<BigInteger, AggregatedFact> resultFacts =
+        resultLogger.getMaterializedAggregationResults().getMaterializedAggregations().stream()
+            .collect(Collectors.toMap(AggregatedFact::bucket, Function.identity()));
+    assertThat(resultFacts).hasSize(3);
+
+    assertThat(resultLogger.getMaterializedDebugAggregationResults().getMaterializedAggregations())
+        .hasSize(3);
+    Map<BigInteger, AggregatedFact> debugFacts =
+        resultLogger.getMaterializedDebugAggregationResults().getMaterializedAggregations().stream()
+            .collect(Collectors.toMap(AggregatedFact::bucket, Function.identity()));
+    assertThat(debugFacts).hasSize(3);
+
+    // Key 1 is in the report only, key 2 overlaps both sets, and key 3 is in the domain only.
+    compareDebugFactByKey(
+        resultFacts, debugFacts, createBucketFromInt(1), List.of(DebugBucketAnnotation.IN_REPORTS));
+    compareDebugFactByKey(
+        resultFacts,
+        debugFacts,
+        createBucketFromInt(2),
+        List.of(DebugBucketAnnotation.IN_REPORTS, DebugBucketAnnotation.IN_DOMAIN));
+    compareDebugFactByKey(
+        resultFacts, debugFacts, createBucketFromInt(3), List.of(DebugBucketAnnotation.IN_DOMAIN));
+  }
+
+  @Test
+  public void aggregate_debugRunWithOutputDomain_resultsInSameDebugFacts() throws Exception {
+    outputDomainProcessorHelper.setDomainOptional(false);
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(
+        FakeNoiseApplier.builder()
+            .setNextValueNoiseToAdd(List.of(1L, 2L, 3L, 4L, 5L, 6L).iterator())
+            .build());
+
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "2", "3");
+
+    DataLocation outputDomainLocation = getOutputDomainLocation();
+    ImmutableMap<String, String> jobParams =
+        ImmutableMap.of(
+            JOB_PARAM_DEBUG_RUN,
+            "true",
+            JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME,
+            outputDomainLocation.blobStoreDataLocation().bucket(),
+            JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
+            outputDomainLocation.blobStoreDataLocation().key());
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+
+    JobResult jobResultProcessor = processor.get().process(ctx);
+
+    assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
+
+    Map<BigInteger, AggregatedFact> resultFacts =
+        resultLogger.getMaterializedAggregationResults().getMaterializedAggregations().stream()
+            .collect(Collectors.toMap(AggregatedFact::bucket, Function.identity()));
+    assertThat(resultFacts).hasSize(2);
+
+    Map<BigInteger, AggregatedFact> debugFacts =
+        resultLogger.getMaterializedDebugAggregationResults().getMaterializedAggregations().stream()
+            .collect(Collectors.toMap(AggregatedFact::bucket, Function.identity()));
+    assertThat(debugFacts).hasSize(3);
+
+    // Key 2 is in both domain and reports; key 3 is in the domain only.
+    compareDebugFactByKey(
+        resultFacts,
+        debugFacts,
+        createBucketFromInt(2),
+        List.of(DebugBucketAnnotation.IN_REPORTS, DebugBucketAnnotation.IN_DOMAIN));
+    compareDebugFactByKey(
+        resultFacts, debugFacts, createBucketFromInt(3), List.of(DebugBucketAnnotation.IN_DOMAIN));
+
+    // Key 1 is in the report only but should be present in the debug facts.
+    assertThat(resultFacts).doesNotContainKey(createBucketFromInt(1));
+    assertThat(debugFacts).containsKey(createBucketFromInt(1));
+    assertThat(debugFacts.get(createBucketFromInt(1)).debugAnnotations()).isPresent();
+    assertThat(debugFacts.get(createBucketFromInt(1)).debugAnnotations().get())
+        .containsExactly(DebugBucketAnnotation.IN_REPORTS);
   }
 
   @Test
@@ -1369,6 +1486,28 @@ public class ConcurrentAggregationProcessorTest {
     // Return code should be SUCCESS, return message should match the would-be error
     assertThat(result.resultInfo().getReturnCode())
         .isEqualTo(AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
+  }
+
+  private void compareDebugFactByKey(
+      Map<BigInteger, AggregatedFact> resultFacts,
+      Map<BigInteger, AggregatedFact> debugFacts,
+      BigInteger key,
+      List<DebugBucketAnnotation> expectedAnnotation) {
+    assertThat(resultFacts).containsKey(key);
+    assertThat(debugFacts).containsKey(key);
+    compareDebugFact(resultFacts.get(key), debugFacts.get(key));
+    assertThat(debugFacts.get(key).debugAnnotations()).isPresent();
+    assertThat(debugFacts.get(key).debugAnnotations().get())
+        .containsExactlyElementsIn(expectedAnnotation);
+  }
+
+  private void compareDebugFact(AggregatedFact resultFact, AggregatedFact debugFact) {
+    assertEquals(resultFact.bucket(), debugFact.bucket());
+    assertEquals(resultFact.metric(), debugFact.metric());
+
+    assertThat(resultFact.unnoisedMetric()).isPresent();
+    assertThat(debugFact.unnoisedMetric()).isPresent();
+    assertEquals(resultFact.unnoisedMetric().get(), debugFact.unnoisedMetric().get());
   }
 
   private void writeOutputDomainTextFile(Path outputDomainPath, String... keys) throws IOException {

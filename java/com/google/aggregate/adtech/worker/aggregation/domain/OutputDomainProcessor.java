@@ -47,6 +47,7 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.InputStream;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -56,6 +57,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -234,89 +236,81 @@ public abstract class OutputDomainProcessor {
     Map<BigInteger, AggregatedFact> aggregatedResults =
         new HashMap<>(aggregationEngine.makeAggregation());
 
-    NoisedAggregatedResultSet.Builder noisedResultSetBuilder = NoisedAggregatedResultSet.builder();
-    if (debugRun) {
-      noisedResultSetBuilder.setNoisedDebugResult(
-          getNoisedDebugResults(
-              noisedAggregationRunner,
-              aggregatedResults,
-              reportsOnlyKeys,
-              domainOnlyKeys,
-              debugPrivacyEpsilon));
+    List<AggregatedFact> reportOnlyFacts =
+        reportsOnlyKeys.stream().map(aggregatedResults::remove).collect(Collectors.toList());
+
+    NoisedAggregationResult noisedOverlappingAndDomainResults =
+        noisedAggregationRunner.noise(aggregatedResults.values(), debugPrivacyEpsilon);
+
+    NoisedAggregatedResultSet.Builder noisedResultSetBuilder =
+        NoisedAggregatedResultSet.builder().setNoisedResult(noisedOverlappingAndDomainResults);
+
+    if (!(debugRun || domainOptional)) {
+      return noisedResultSetBuilder.build();
     }
 
+    // ReportOnly facts are included only if debug run or domain optional are set.
+    NoisedAggregationResult noisedReportOnlyResults =
+        noisedAggregationRunner.noise(reportOnlyFacts, debugPrivacyEpsilon);
+
     if (domainOptional) {
-      Map<BigInteger, AggregatedFact> reportOnlyFacts = new HashMap<>();
-      Map<BigInteger, AggregatedFact> overlappingAndDomainFacts = new HashMap<>();
-      aggregatedResults.forEach(
-          (key, value) -> {
-            if (reportsOnlyKeys.contains(key)) {
-              reportOnlyFacts.put(key, value);
-            } else {
-              overlappingAndDomainFacts.put(key, value);
-            }
-          });
-
-      NoisedAggregationResult noisedReportsOnlyResultsThresholded =
-          noisedAggregationRunner.noise(
-              reportOnlyFacts.values(), enableThresholding, debugPrivacyEpsilon);
-      NoisedAggregationResult noisedOverlapAndDomainResultsNotThresholded =
-          noisedAggregationRunner.noise(
-              overlappingAndDomainFacts.values(), /* doThreshold= */ false, debugPrivacyEpsilon);
-
+      NoisedAggregationResult noisedReportsDomainOptional =
+          enableThresholding
+              ? noisedAggregationRunner.threshold(
+                  noisedReportOnlyResults.noisedAggregatedFacts(), debugPrivacyEpsilon)
+              : noisedReportOnlyResults;
       noisedResultSetBuilder.setNoisedResult(
           NoisedAggregationResult.merge(
-              noisedReportsOnlyResultsThresholded, noisedOverlapAndDomainResultsNotThresholded));
-    } else {
-      reportsOnlyKeys.forEach(aggregatedResults::remove);
-      noisedResultSetBuilder.setNoisedResult(
-          noisedAggregationRunner.noise(
-              aggregatedResults.values(), /* doThreshold= */ false, debugPrivacyEpsilon));
+              noisedOverlappingAndDomainResults, noisedReportsDomainOptional));
+    }
+
+    if (debugRun) {
+      List<AggregatedFact> domainOnlyFacts = new ArrayList<>();
+      List<AggregatedFact> overlappingFacts = new ArrayList<>();
+      noisedOverlappingAndDomainResults
+          .noisedAggregatedFacts()
+          .forEach(
+              (f) -> {
+                if (domainOnlyKeys.contains(f.bucket())) {
+                  domainOnlyFacts.add(f);
+                } else {
+                  overlappingFacts.add(f);
+                }
+              });
+
+      NoisedAggregationResult noisedDomainOnlyFacts =
+          NoisedAggregationResult.create(
+              noisedOverlappingAndDomainResults.privacyParameters(),
+              ImmutableList.copyOf(domainOnlyFacts));
+
+      NoisedAggregationResult noisedOverlappingFacts =
+          NoisedAggregationResult.create(
+              noisedOverlappingAndDomainResults.privacyParameters(),
+              ImmutableList.copyOf(overlappingFacts));
+
+      noisedResultSetBuilder.setNoisedDebugResult(
+          getAnnotatedDebugResults(
+              noisedReportOnlyResults, noisedDomainOnlyFacts, noisedOverlappingFacts));
     }
 
     return noisedResultSetBuilder.build();
   }
 
-  private NoisedAggregationResult getNoisedDebugResults(
-      NoisedAggregationRunner noisedAggregationRunner,
-      Map<BigInteger, AggregatedFact> aggregatedResults,
-      Set<BigInteger> reportsOnlyKeys,
-      Set<BigInteger> domainOnlyKeys,
-      Optional<Double> debugPrivacyEpsilon) {
-    Map<BigInteger, AggregatedFact> reportOnlyFacts = new HashMap<>();
-    Map<BigInteger, AggregatedFact> domainOnlyFacts = new HashMap<>();
-    Map<BigInteger, AggregatedFact> overlappingFacts = new HashMap<>();
-    aggregatedResults.forEach(
-        (key, value) -> {
-          if (reportsOnlyKeys.contains(key)) {
-            reportOnlyFacts.put(key, value);
-          } else if (domainOnlyKeys.contains(key)) {
-            domainOnlyFacts.put(key, value);
-          } else {
-            overlappingFacts.put(key, value);
-          }
-        });
-
-    NoisedAggregationResult noisedReportsOnlyDebugResults =
-        noisedAggregationRunner.noise(
-            reportOnlyFacts.values(), /* doThreshold= */ false, debugPrivacyEpsilon);
+  private NoisedAggregationResult getAnnotatedDebugResults(
+      NoisedAggregationResult noisedReportsOnlyResults,
+      NoisedAggregationResult noisedDomainOnlyResults,
+      NoisedAggregationResult noisedOverlappingResults) {
     NoisedAggregationResult noisedReportsOnlyWithAnno =
         NoisedAggregationResult.addDebugAnnotations(
-            noisedReportsOnlyDebugResults, List.of(DebugBucketAnnotation.IN_REPORTS));
+            noisedReportsOnlyResults, List.of(DebugBucketAnnotation.IN_REPORTS));
 
-    NoisedAggregationResult noisedDomainOnlyDebugResults =
-        noisedAggregationRunner.noise(
-            domainOnlyFacts.values(), /* doThreshold= */ false, debugPrivacyEpsilon);
     NoisedAggregationResult noisedDomainOnlyWithAnno =
         NoisedAggregationResult.addDebugAnnotations(
-            noisedDomainOnlyDebugResults, List.of(DebugBucketAnnotation.IN_DOMAIN));
+            noisedDomainOnlyResults, List.of(DebugBucketAnnotation.IN_DOMAIN));
 
-    NoisedAggregationResult noisedOverlappingDebugResults =
-        noisedAggregationRunner.noise(
-            overlappingFacts.values(), /* doThreshold= */ false, debugPrivacyEpsilon);
     NoisedAggregationResult NoisedOverlappingWithAnno =
         NoisedAggregationResult.addDebugAnnotations(
-            noisedOverlappingDebugResults,
+            noisedOverlappingResults,
             List.of(DebugBucketAnnotation.IN_REPORTS, DebugBucketAnnotation.IN_DOMAIN));
 
     return NoisedAggregationResult.merge(
@@ -381,49 +375,37 @@ public abstract class OutputDomainProcessor {
 
     NoisedAggregationResult noisedOverlappingNoThreshold =
         noisedAggregationRunner.noise(
-            Iterables.concat(overlappingZeroes, overlappingNonZeroes),
-            /* doThreshold= */ false,
-            debugPrivacyEpsilon);
+            Iterables.concat(overlappingZeroes, overlappingNonZeroes), debugPrivacyEpsilon);
 
     NoisedAggregationResult noisedDomainOnlyNoThreshold =
-        noisedAggregationRunner.noise(
-            domainOutputOnlyZeroes, /* doThreshold= */ false, debugPrivacyEpsilon);
+        noisedAggregationRunner.noise(domainOutputOnlyZeroes, debugPrivacyEpsilon);
 
     NoisedAggregationResult noisedDomainNoThreshold =
         NoisedAggregationResult.merge(noisedOverlappingNoThreshold, noisedDomainOnlyNoThreshold);
 
+    NoisedAggregationResult noisedReportsOnlyNoThreshold = null;
+    if (debugRun || domainOptional) {
+      noisedReportsOnlyNoThreshold =
+          noisedAggregationRunner.noise(
+              pseudoDiff.entriesOnlyOnLeft().values(), debugPrivacyEpsilon);
+    }
+
     NoisedAggregatedResultSet.Builder noisedResultSetBuilder = NoisedAggregatedResultSet.builder();
 
     if (debugRun) {
-      // Noise values for keys that are only in reports (not in domain) without thresholding
-      NoisedAggregationResult noisedReportsOnlyNoThreshold =
-          noisedAggregationRunner.noise(
-              pseudoDiff.entriesOnlyOnLeft().values(),
-              /* doThreshold= */ false,
-              debugPrivacyEpsilon);
-
-      NoisedAggregationResult noisedReportsOnlyNoThresholdWithAnno =
-          NoisedAggregationResult.addDebugAnnotations(
-              noisedReportsOnlyNoThreshold, List.of(DebugBucketAnnotation.IN_REPORTS));
-      NoisedAggregationResult noisedDomainOnlyNoThresholdWithAnno =
-          NoisedAggregationResult.addDebugAnnotations(
-              noisedDomainOnlyNoThreshold, List.of(DebugBucketAnnotation.IN_DOMAIN));
-      NoisedAggregationResult noisedOverlappingNoThresholdWithAnno =
-          NoisedAggregationResult.addDebugAnnotations(
-              noisedOverlappingNoThreshold,
-              List.of(DebugBucketAnnotation.IN_REPORTS, DebugBucketAnnotation.IN_DOMAIN));
-
       noisedResultSetBuilder.setNoisedDebugResult(
-          NoisedAggregationResult.merge(
-              noisedOverlappingNoThresholdWithAnno,
-              NoisedAggregationResult.merge(
-                  noisedReportsOnlyNoThresholdWithAnno, noisedDomainOnlyNoThresholdWithAnno)));
+          getAnnotatedDebugResults(
+              noisedReportsOnlyNoThreshold,
+              noisedDomainOnlyNoThreshold,
+              noisedOverlappingNoThreshold));
     }
 
     if (domainOptional) {
       NoisedAggregationResult noisedReportsDomainOptional =
-          noisedAggregationRunner.noise(
-              pseudoDiff.entriesOnlyOnLeft().values(), enableThresholding, debugPrivacyEpsilon);
+          enableThresholding
+              ? noisedAggregationRunner.threshold(
+                  noisedReportsOnlyNoThreshold.noisedAggregatedFacts(), debugPrivacyEpsilon)
+              : noisedReportsOnlyNoThreshold;
 
       return noisedResultSetBuilder
           .setNoisedResult(
