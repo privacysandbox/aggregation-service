@@ -80,6 +80,7 @@ git_repository(
         "//build_defs/shared_libraries:dependency_update.patch",
         "//build_defs/shared_libraries:key_cache_ttl.patch",
         "//build_defs/shared_libraries:pin_pkr_docker.patch",
+        "//build_defs/shared_libraries:coordinator_imdsv2.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",
