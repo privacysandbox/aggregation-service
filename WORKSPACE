@@ -69,8 +69,9 @@ git_repository(
         "//build_defs/scp:coordinator.patch",
         "//build_defs/scp:shared_libraries_v1.2.0.patch",
         "//build_defs/scp:pin_pkr_docker.patch",
+        "//build_defs/scp:coordinator_imdsv2.patch",
     ],
-    remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
+    remote = "sso://team/rb-msmt-eng/ps-coordinator-all-staging",
     tag = COORDINATOR_VERSION,
 )
 
