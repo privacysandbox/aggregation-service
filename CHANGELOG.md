@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.4](https://github.com/privacysandbox/aggregation-service/compare/v2.1.3...v2.1.4) (2024-05-20)
+
+### Changes
+
+-   Fixed GCP cloud build by adding -y option to the install commands with Docker.
+-   Updated dependencies to address security vulnerabilities.
+
 ## [2.1.3](https://github.com/privacysandbox/aggregation-service/compare/v2.1.2...v2.1.3) (2024-04-09)
 
 ### Changes
