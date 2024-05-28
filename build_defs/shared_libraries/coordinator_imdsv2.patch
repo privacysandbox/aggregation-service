@@ -1,0 +1,36 @@
+diff --git a/build_defs/aws/enclave/generic_enclave_ami.pkr.hcl b/build_defs/aws/enclave/generic_enclave_ami.pkr.hcl
+index 80fdd89..c64c60c 100644
+--- a/build_defs/aws/enclave/generic_enclave_ami.pkr.hcl
++++ b/build_defs/aws/enclave/generic_enclave_ami.pkr.hcl
+@@ -51,6 +51,13 @@
+   }
+   ssh_username = "ec2-user"
+   ssh_timeout = "15m"
++  # enforces imdsv2 support on the running instance being provisioned by Packer
++  metadata_options {
++    http_endpoint = "enabled"
++    http_tokens = "required"
++    http_put_response_hop_limit = 1
++  }
++  imds_support  = "v2.0" # enforces imdsv2 support on the resulting AMI
+ }
+
+ build {
+diff --git a/operator/worker/aws/aggregation_worker_ami.pkr.hcl b/operator/worker/aws/aggregation_worker_ami.pkr.hcl
+index 3f058fd..90b4993 100644
+--- a/operator/worker/aws/aggregation_worker_ami.pkr.hcl
++++ b/operator/worker/aws/aggregation_worker_ami.pkr.hcl
+@@ -54,6 +54,13 @@
+   ssh_username = "ec2-user"
+   ssh_timeout = "15m"
+   temporary_key_pair_type = "ed25519"
++  # enforces imdsv2 support on the running instance being provisioned by Packer
++  metadata_options {
++    http_endpoint = "enabled"
++    http_tokens = "required"
++    http_put_response_hop_limit = 1
++  }
++  imds_support  = "v2.0" # enforces imdsv2 support on the resulting AMI
+ }
+
+ build {
