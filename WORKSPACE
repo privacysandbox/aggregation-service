@@ -69,6 +69,7 @@ git_repository(
         "//build_defs/scp:gcs_storage_client.patch",
         "//build_defs/scp:dependency_update.patch",
         "//build_defs/scp:pin_pkr_docker.patch",
+        "//build_defs/scp:coordinator_imdsv2.patch",
     ],
     tag = COORDINATOR_VERSION,
 )
