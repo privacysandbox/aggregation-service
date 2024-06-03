@@ -21,9 +21,33 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 
 /**
- * Command line args for the standalone library
+ * Command line args for the standalone library.
+ *
+ * <p>To add a new worker arg: declare a new parameter in this class and its getter function, update
+ * the {@link LocalWorkerModule} to inject it to the appropriate location, and set the param in the
+ * BUILD rules.
+ *
+ * <p>
+ *
+ * <p>
+ *
+ * <p>Use the following convention for naming the new param:
+ *
+ * <ul>
+ *   <li>Use "lower_underscore" style for the 'names' attribute.
+ *   <li>Prefer "long_descriptive_names" over "short_names" and noun phrases.
+ *   <li>For Boolean flags:
+ *       <ul>
+ *         <li>Use positive or neutral terms (--foo_enabled rather than --foo_disabled).
+ *         <li>Param name should be "feature_name_enabled"
+ *         <li>Variable name should be "featureNameEnabled"
+ *         <li>Getter name should be "isFeatureNameEnabled(...)"
+ *       </ul>
+ * </ul>
  */
 public class LocalWorkerArgs {
+
+  private static final int NUM_CPUS = Runtime.getRuntime().availableProcessors();
 
   @Parameter(
       names = "--input_data_avro_file",
@@ -109,15 +133,51 @@ public class LocalWorkerArgs {
               + " error, will fail the job. This can be overridden in job request.")
   private double reportErrorThresholdPercentage = 10.0;
 
-  @Parameter(names = "--output_shard_file_size_bytes", description =
-      "Size of one shard of the output file. The default value is 100,000,000. (100MB)")
+  @Parameter(
+      names = "--output_shard_file_size_bytes",
+      description =
+          "Size of one shard of the output file. The default value is 100,000,000. (100MB)")
   private long outputShardFileSizeBytes = 100_000_000L; // 100MB
 
   @Parameter(
-      names = "--streaming-output-domain-processing",
-      description = "Flag to enable RxJava streaming based output domain processing."
-  )
-  private boolean streamingOutputDomainProcessing = false;
+      names = "--streaming_output_domain_processing_enabled",
+      description = "Flag to enable RxJava streaming based output domain processing.")
+  private boolean streamingOutputDomainProcessingEnabled = false;
+
+  @Parameter(
+      names = "--local_job_params_input_filtering_ids",
+      description =
+          "Filtering Id to be added in Job Params to filter the labeled payload contributions.")
+  private String filteringIds = null;
+
+  @Parameter(
+      names = "--labeled_privacy_budget_keys_enabled",
+      description =
+          "Flag to allow filtering of labeled payload contributions. If enabled, only contributions"
+              + " corresponding to queried labels/ids are included in aggregation.")
+  private boolean labeledPrivacyBudgetKeysEnabled = false;
+
+  @Parameter(
+      names = "--attribution_reporting_debug_api_enabled",
+      description = "Flag to enable support for Attribution Reporting Debug API.")
+  private boolean attributionReportingDebugApiEnabled = true;
+
+  @Parameter(
+      names = "--nonblocking_thread_pool_size",
+      description = "Size of the non-blocking thread pool")
+  private int nonBlockingThreadPoolSize = Math.max(1, NUM_CPUS);
+
+  @Parameter(
+      names = "--blocking_thread_pool_size",
+      description = "Size of the blocking thread pool")
+  // Blocking thread is for I/O which is faster than non-IO operation in aggregation service.
+  // Therefore, the thread pool size default is set to be smaller than nonBlockingThreadPool size.
+  private int blockingThreadPoolSize = Math.max(1, NUM_CPUS / 2);
+
+  @Parameter(
+      names = "--parallel_fact_noising_enabled",
+      description = "Flag to enable parallel aggregated fact noising.")
+  private boolean parallelAggregatedFactNoisingEnabled = false;
 
   public String getInputDataAvroFile() {
     return inputDataAvroFile;
@@ -187,8 +247,32 @@ public class LocalWorkerArgs {
     return reportErrorThresholdPercentage;
   }
 
-  public boolean isStreamingOutputDomainProcessing() {
-    return streamingOutputDomainProcessing;
+  public boolean isStreamingOutputDomainProcessingEnabled() {
+    return streamingOutputDomainProcessingEnabled;
+  }
+
+  String getFilteringIds() {
+    return filteringIds;
+  }
+
+  boolean isLabeledPrivacyBudgetKeysEnabled() {
+    return labeledPrivacyBudgetKeysEnabled;
+  }
+
+  boolean isAttributionReportingDebugApiEnabled() {
+    return attributionReportingDebugApiEnabled;
+  }
+
+  int getNonBlockingThreadPoolSize() {
+    return nonBlockingThreadPoolSize;
+  }
+
+  int getBlockingThreadPoolSize() {
+    return blockingThreadPoolSize;
+  }
+
+  public boolean isParallelAggregatedFactNoisingEnabled() {
+    return parallelAggregatedFactNoisingEnabled;
   }
 
   public void validate() {
@@ -211,6 +295,17 @@ public class LocalWorkerArgs {
           String.format(
               "Required Parameter %s missing, should be a writeable directory for writing results.",
               "--output_directory"));
+    }
+
+    if (getNonBlockingThreadPoolSize() < 1) {
+      throw new ParameterException(
+          "NonBlockingThreadPoolSize must be >= 1. Provided value: "
+              + getNonBlockingThreadPoolSize());
+    }
+
+    if (getBlockingThreadPoolSize() < 1) {
+      throw new ParameterException(
+          "BlockingThreadPoolSize must be >= 1. Provided value: " + getBlockingThreadPoolSize());
     }
   }
 

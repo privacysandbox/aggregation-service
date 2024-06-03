@@ -74,15 +74,21 @@ public final class AvroOutputDomainProcessor extends OutputDomainProcessor {
     Stopwatch stopwatch =
         stopwatches.createStopwatch(String.format("domain-shard-read-%s", UUID.randomUUID()));
     stopwatch.start();
-    try (InputStream domainStream = blobStorageClient.getBlob(outputDomainLocation)) {
-      AvroOutputDomainReader outputDomainReader = avroReaderFactory.create(domainStream);
-      ImmutableList<BigInteger> shard =
-          outputDomainReader
-              .streamRecords()
-              .map(AvroOutputDomainRecord::bucket)
-              .collect(toImmutableList());
-      stopwatch.stop();
-      return shard;
+    try {
+      if (blobStorageClient.getBlobSize(outputDomainLocation) <= 0) {
+        stopwatch.stop();
+        return ImmutableList.of();
+      }
+      try (InputStream domainStream = blobStorageClient.getBlob(outputDomainLocation)) {
+        AvroOutputDomainReader outputDomainReader = avroReaderFactory.create(domainStream);
+        ImmutableList<BigInteger> shard =
+            outputDomainReader
+                .streamRecords()
+                .map(AvroOutputDomainRecord::bucket)
+                .collect(toImmutableList());
+        stopwatch.stop();
+        return shard;
+      }
     } catch (IOException | BlobStorageClientException | AvroRuntimeException e) {
       stopwatch.stop(); // stop the stopwatch if an exception occurs
       throw new DomainReadException(e);
@@ -92,7 +98,8 @@ public final class AvroOutputDomainProcessor extends OutputDomainProcessor {
   @Override
   public Stream<BigInteger> readInputStream(InputStream shardInputStream) {
     try {
-      return avroReaderFactory.create(shardInputStream)
+      return avroReaderFactory
+          .create(shardInputStream)
           .streamRecords()
           .map(AvroOutputDomainRecord::bucket);
     } catch (IOException | AvroRuntimeException e) {

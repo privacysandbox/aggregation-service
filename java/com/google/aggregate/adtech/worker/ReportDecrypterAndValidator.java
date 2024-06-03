@@ -95,7 +95,6 @@ public final class ReportDecrypterAndValidator {
         errorMessageBuilder.setCategory(ErrorCounter.DECRYPTION_ERROR);
       }
 
-      errorMessageBuilder.setDetailedErrorMessage(detailedErrorMessage);
       return DecryptionValidationResult.builder()
           .addErrorMessage(errorMessageBuilder.build())
           .build();

@@ -150,6 +150,18 @@ public class TextOutputDomainProcessorTest {
   }
 
   @Test
+  public void skipZeroByteDomains() throws Exception {
+    writeOutputDomain(outputDomainDirectory.resolve("domain_1.txt"));
+    writeOutputDomain(
+            outputDomainDirectory.resolve("domain_2.txt"), "11", "22", "11", "11", "22", "33");
+
+    ImmutableSet<BigInteger> keys = readOutputDomain();
+
+    assertThat(keys)
+            .containsExactly(createBucketFromInt(11), createBucketFromInt(22), createBucketFromInt(33));
+  }
+
+  @Test
   public void ioProblem() throws Exception {
     // No file written, path pointing to a non-existing file, this should be an IO exception.
     ExecutionException error = assertThrows(ExecutionException.class, () -> readOutputDomain());

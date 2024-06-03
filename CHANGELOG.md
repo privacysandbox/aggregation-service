@@ -1,5 +1,37 @@
 # Changelog
 
+## [2.5.0](https://github.com/privacysandbox/aggregation-service/compare/v2.4.2...v2.5.0) (2024-05-22)
+
+### Changes
+
+-   Deprecated single party key support.
+-   Enabled exception caching on private key service and set TTL for exception cache to reduce the
+    load and make aggregation jobs run/fail faster.
+-   Enabled non-zero filtering of labeled contributions.
+-   Enabled OpenTelemetry for metric and trace collection.
+-   Fixed enclave worker AMI
+    [build issue](https://github.com/privacysandbox/aggregation-service/issues/40) by pinning Docker
+    version to 24.0.5.
+-   Fixed GCP cloud build by adding -y option to the install commands with Docker.
+-   Fixed job failure with `ClassCastException` error.
+-   Fixed noised facts mismatch when DebugRun and DomainOptional are both set.
+-   Limited Otel memory reporting max to 90%.
+-   Made aggregate fact noising parallel.
+-   Made the job fail early on reaching a report error threshold.
+-   Refactored blob reading logic to handle zero-sized blobs gracefully.
+-   Removed redundant SingleFactAggregation class to reduce memory consumption.
+-   Updated dependencies to address security vulnerabilities.
+-   Updated documentation for batching strategies, aggregatable reports and OpenTelemetry usage.
+-   Upgraded control plane shared library dependency to
+    [v1.8.0-rc01](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.8.0-rc01)
+
+## [2.4.3](https://github.com/privacysandbox/aggregation-service/compare/v2.4.2...v2.4.3) (2024-05-20)
+
+### Changes
+
+-   Fixed GCP cloud build by adding -y option to the install commands with Docker.
+-   Updated dependencies to address security vulnerabilities.
+
 ## [2.4.2](https://github.com/privacysandbox/aggregation-service/compare/v2.4.1...v2.4.2) (2024-04-09)
 
 ### Changes
@@ -28,6 +60,30 @@
 -   Used RxJava for domain reading, reducing overall job execution time and memory consumption.
 -   Upgraded Bazel version to 6.5.0.
 
+## [2.3.3](https://github.com/privacysandbox/aggregation-service/compare/v2.3.2...v2.3.3) (2024-05-20)
+
+### Changes
+
+-   Fixed GCP cloud build by adding -y option to the install commands with Docker.
+-   Updated dependencies to address security vulnerabilities.
+
+## [2.3.2](https://github.com/privacysandbox/aggregation-service/compare/v2.3.1...v2.3.2) (2024-04-09)
+
+### Changes
+
+-   Fixed job failure with `ClassCastException` error.
+-   Updated dependencies to address security vulnerabilities.
+
+## [2.3.1](https://github.com/privacysandbox/aggregation-service/compare/v2.3.0...v2.3.1) (2024-03-11)
+
+### Changes
+
+#### [AWS only]
+
+-   Fixed enclave worker AMI
+    [build issue](https://github.com/privacysandbox/aggregation-service/issues/40) by pinning Docker
+    version to 24.0.5.
+
 ## [2.3.0](https://github.com/privacysandbox/aggregation-service/compare/v2.2.0...v2.3.0) (2024-01-12)
 
 ### Changes
@@ -35,6 +91,30 @@
 -   Upgraded control plane shared library dependency to
     [v1.5.1](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.5.1)
 -   Updated dependencies to address security vulnerabilities.
+
+## [2.2.3](https://github.com/privacysandbox/aggregation-service/compare/v2.2.2...v2.2.3) (2024-05-20)
+
+### Changes
+
+-   Fixed GCP cloud build by adding -y option to the install commands with Docker.
+-   Updated dependencies to address security vulnerabilities.
+
+## [2.2.2](https://github.com/privacysandbox/aggregation-service/compare/v2.2.1...v2.2.2) (2024-04-09)
+
+### Changes
+
+-   Fixed job failure with `ClassCastException` error.
+-   Updated dependencies to address security vulnerabilities.
+
+## [2.2.1](https://github.com/privacysandbox/aggregation-service/compare/v2.2.0...v2.2.1) (2024-03-11)
+
+### Changes
+
+#### [AWS only]
+
+-   Fixed enclave worker AMI
+    [build issue](https://github.com/privacysandbox/aggregation-service/issues/40) by pinning Docker
+    version to 24.0.5.
 
 ## [2.2.0](https://github.com/privacysandbox/aggregation-service/compare/v2.1.0...v2.2.0) (2023-12-07)
 
@@ -50,6 +130,30 @@
 #### [GCP Only]
 
 -   Enabled parallel upload to cloud storage of the sharded summary reports.
+
+## [2.1.4](https://github.com/privacysandbox/aggregation-service/compare/v2.1.3...v2.1.4) (2024-05-20)
+
+### Changes
+
+-   Fixed GCP cloud build by adding -y option to the install commands with Docker.
+-   Updated dependencies to address security vulnerabilities.
+
+## [2.1.3](https://github.com/privacysandbox/aggregation-service/compare/v2.1.2...v2.1.3) (2024-04-09)
+
+### Changes
+
+-   Fixed job failure with `ClassCastException` error.
+-   Updated dependencies to address security vulnerabilities.
+
+## [2.1.2](https://github.com/privacysandbox/aggregation-service/compare/v2.1.1...v2.1.2) (2024-03-11)
+
+### Changes
+
+#### [AWS only]
+
+-   Fixed enclave worker AMI
+    [build issue](https://github.com/privacysandbox/aggregation-service/issues/40) by pinning Docker
+    version to 24.0.5.
 
 ## [2.1.1](https://github.com/privacysandbox/aggregation-service/compare/v2.1.0...v2.1.1) (2023-12-05)
 
@@ -77,6 +181,29 @@
 
 -   Enable uploading sharded summary report to cloud storage in parallel.
 -   Stabilized script fetch_terraform.sh by cleaning up existing files.
+
+## [2.0.4](https://github.com/privacysandbox/aggregation-service/compare/v2.0.3...v2.0.4) (2024-05-20)
+
+### Changes
+
+-   Updated dependencies to address security vulnerabilities.
+
+## [2.0.3](https://github.com/privacysandbox/aggregation-service/compare/v2.0.2...v2.0.3) (2024-04-09)
+
+### Changes
+
+-   Fixed job failure with `ClassCastException` error.
+-   Updated dependencies to address security vulnerabilities.
+
+## [2.0.2](https://github.com/privacysandbox/aggregation-service/compare/v2.0.1...v2.0.2) (2024-03-11)
+
+### Changes
+
+#### [AWS only]
+
+-   Fixed enclave worker AMI
+    [build issue](https://github.com/privacysandbox/aggregation-service/issues/40) by pinning Docker
+    version to 24.0.5.
 
 ## [2.0.1](https://github.com/privacysandbox/aggregation-service/compare/v2.0.0...v2.0.1) (2023-12-05)
 

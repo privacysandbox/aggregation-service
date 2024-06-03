@@ -17,24 +17,15 @@
 package com.google.aggregate.adtech.worker.selector;
 
 import com.google.inject.Module;
-import com.google.scp.operator.cpio.cryptoclient.aws.AwsEnclaveDecryptionKeyServiceModule;
 import com.google.scp.operator.cpio.cryptoclient.aws.AwsEnclaveMultiPartyDecryptionKeyServiceModule;
-import com.google.scp.operator.cpio.cryptoclient.aws.AwsKmsDecryptionKeyServiceModule;
 import com.google.scp.operator.cpio.cryptoclient.aws.AwsKmsMultiPartyDecryptionKeyServiceModule;
-import com.google.scp.operator.cpio.cryptoclient.gcp.GcpKmsDecryptionKeyServiceModule;
 import com.google.scp.operator.cpio.cryptoclient.gcp.GcpKmsMultiPartyDecryptionKeyServiceModule;
 import com.google.scp.operator.cpio.cryptoclient.local.LocalFileDecryptionKeyServiceModule;
 
 public enum DecryptionKeyClientSelector {
   LOCAL_FILE_DECRYPTION_KEY_SERVICE(new LocalFileDecryptionKeyServiceModule()),
-  // GCP single party implementation
-  GCP_KMS_DECRYPTION_KEY_SERVICE(new GcpKmsDecryptionKeyServiceModule()),
   // GCP multiparty implementation
   GCP_KMS_MULTI_PARTY_DECRYPTION_KEY_SERVICE(new GcpKmsMultiPartyDecryptionKeyServiceModule()),
-  // Non-enclave implementation.
-  AWS_KMS_DECRYPTION_KEY_SERVICE(new AwsKmsDecryptionKeyServiceModule()),
-  // Enclave implmentation.
-  AWS_ENCLAVE_CLI_DECRYPTION_KEY_SERVICE(new AwsEnclaveDecryptionKeyServiceModule()),
   // Multi-party Non-enclave implementation.
   AWS_KMS_MULTI_PARTY_DECRYPTION_KEY_SERVICE(new AwsKmsMultiPartyDecryptionKeyServiceModule()),
   // Multi-party enclave implementation.

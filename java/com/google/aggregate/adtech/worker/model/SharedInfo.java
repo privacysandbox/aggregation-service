@@ -55,10 +55,18 @@ public abstract class SharedInfo {
       ImmutableSet.of(MAJOR_VERSION_ZERO, MAJOR_VERSION_ONE);
   public static final boolean DEFAULT_DEBUG_MODE = false;
   public static final String ATTRIBUTION_REPORTING_API = "attribution-reporting";
+  public static final String ATTRIBUTION_REPORTING_DEBUG_API = "attribution-reporting-debug";
   public static final String PROTECTED_AUDIENCE_API = "protected-audience";
   public static final String SHARED_STORAGE_API = "shared-storage";
+  // Used by {@link ErrorCounter} to form error messages. @SupportedApis is the list used for
+  // validation at runtime. The two lists would differ temporarily when support for a new API is
+  // under development.
   public static final ImmutableSet<String> SUPPORTED_APIS =
-      ImmutableSet.of(ATTRIBUTION_REPORTING_API, PROTECTED_AUDIENCE_API, SHARED_STORAGE_API);
+      ImmutableSet.of(
+          ATTRIBUTION_REPORTING_API,
+          ATTRIBUTION_REPORTING_DEBUG_API,
+          PROTECTED_AUDIENCE_API,
+          SHARED_STORAGE_API);
   // Max age of reports accepted for aggregation.
   public static final Duration MAX_REPORT_AGE = Duration.of(90, DAYS);
   public static final ImmutableSet<String> SUPPORTED_OPERATIONS =
@@ -67,6 +75,8 @@ public abstract class SharedInfo {
   public static Builder builder() {
     return new AutoValue_SharedInfo.Builder().setReportDebugMode(DEFAULT_DEBUG_MODE);
   }
+
+  public abstract Builder toBuilder();
 
   // TODO(b/263901045) : consider moving version to api specific code.
   // Version of the report

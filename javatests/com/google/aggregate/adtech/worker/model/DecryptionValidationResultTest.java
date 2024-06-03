@@ -33,7 +33,8 @@ public class DecryptionValidationResultTest {
     DecryptionValidationResult.Builder resultBuilder =
         DecryptionValidationResult.builder()
             .setReport(
-                FakeReportGenerator.generateWithParam(1, /* reportVersion */ LATEST_VERSION));
+                FakeReportGenerator.generateWithParam(
+                    1, /* reportVersion */ LATEST_VERSION, "https://foo.com"));
 
     resultBuilder.build();
 
@@ -46,10 +47,7 @@ public class DecryptionValidationResultTest {
     DecryptionValidationResult.Builder resultBuilder =
         DecryptionValidationResult.builder()
             .addErrorMessage(
-                ErrorMessage.builder()
-                    .setCategory(ErrorCounter.DECRYPTION_ERROR)
-                    .setDetailedErrorMessage("")
-                    .build());
+                ErrorMessage.builder().setCategory(ErrorCounter.DECRYPTION_ERROR).build());
 
     resultBuilder.build();
 
@@ -63,12 +61,11 @@ public class DecryptionValidationResultTest {
   public void testValidationErrorThrownIfBothSet() {
     DecryptionValidationResult.Builder resultBuilder =
         DecryptionValidationResult.builder()
-            .setReport(FakeReportGenerator.generateWithParam(1, /* reportVersion */ LATEST_VERSION))
+            .setReport(
+                FakeReportGenerator.generateWithParam(
+                    1, /* reportVersion */ LATEST_VERSION, "https://foo.com"))
             .addErrorMessage(
-                ErrorMessage.builder()
-                    .setCategory(ErrorCounter.DECRYPTION_ERROR)
-                    .setDetailedErrorMessage("")
-                    .build());
+                ErrorMessage.builder().setCategory(ErrorCounter.DECRYPTION_ERROR).build());
 
     // An exception should be thrown as the DecryptionValidationResult is not valid, it contains
     // both a record and error messages.

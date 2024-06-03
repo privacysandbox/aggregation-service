@@ -18,31 +18,41 @@ package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_REPORT_API_TYPE;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 
+import com.google.acai.Acai;
+import com.google.aggregate.adtech.worker.Annotations.SupportedApis;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Payload;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
+import com.google.common.collect.ImmutableSet;
+import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
+import com.google.inject.TypeLiteral;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class SupportedReportApiTypeValidatorTest {
+  @Rule
+  public final Acai acai = new Acai(TestEnv.class);
 
   // Under test
-  private SupportedReportApiTypeValidator validator;
+  @Inject private SupportedReportApiTypeValidator validator;
 
   private Report.Builder reportBuilder;
 
@@ -59,13 +69,12 @@ public class SupportedReportApiTypeValidatorTest {
 
   @Before
   public void setUp() {
-    validator = new SupportedReportApiTypeValidator();
     reportBuilder = Report.builder().setPayload(Payload.builder().build());
     ctx = FakeJobGenerator.generate("");
   }
 
   @Test
-  public void attributionReportingReports_validationSucceed() {
+  public void attributionReportingReports_validationSucceeds() {
     SharedInfo.Builder sharedInfoVersion01Builder =
         SharedInfo.builder()
             .setApi(ATTRIBUTION_REPORTING_API)
@@ -77,6 +86,25 @@ public class SupportedReportApiTypeValidatorTest {
             .setDestination(DESTINATION);
     Report reportVersion01 =
         reportBuilder.setSharedInfo(sharedInfoVersion01Builder.build()).build();
+
+    Optional<ErrorMessage> validationErrorVersion01 = validator.validate(reportVersion01, ctx);
+
+    assertThat(validationErrorVersion01).isEmpty();
+  }
+
+  @Test
+  public void attributionReportingDebugReports_validationSucceeds() {
+    SharedInfo sharedInfoVersion01 =
+        SharedInfo.builder()
+            .setApi(ATTRIBUTION_REPORTING_DEBUG_API)
+            .setVersion(VERSION_0_1)
+            .setReportId(RANDOM_UUID)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setScheduledReportTime(FIXED_TIME)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setDestination(DESTINATION)
+            .build();
+    Report reportVersion01 = reportBuilder.setSharedInfo(sharedInfoVersion01).build();
 
     Optional<ErrorMessage> validationErrorVersion01 = validator.validate(reportVersion01, ctx);
 
@@ -130,5 +158,20 @@ public class SupportedReportApiTypeValidatorTest {
 
     assertThat(validationError).isPresent();
     assertThat(validationError.get().category()).isEqualTo(UNSUPPORTED_REPORT_API_TYPE);
+  }
+
+  public static final class TestEnv extends AbstractModule {
+
+    @Override
+    protected void configure() {
+      bind(new TypeLiteral<ImmutableSet<String>>() {})
+          .annotatedWith(SupportedApis.class)
+          .toInstance(
+              ImmutableSet.of(
+                  ATTRIBUTION_REPORTING_API,
+                  ATTRIBUTION_REPORTING_DEBUG_API,
+                  PROTECTED_AUDIENCE_API,
+                  SHARED_STORAGE_API));
+    }
   }
 }

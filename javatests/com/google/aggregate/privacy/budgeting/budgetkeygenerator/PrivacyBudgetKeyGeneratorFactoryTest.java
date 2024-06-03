@@ -16,15 +16,16 @@
 package com.google.aggregate.privacy.budgeting.budgetkeygenerator;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
+import com.google.common.primitives.UnsignedLong;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import java.time.Instant;
@@ -51,66 +52,23 @@ public class PrivacyBudgetKeyGeneratorFactoryTest {
   @Inject private PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory;
 
   @Test
-  public void testGetAttributionReportingPbkGenerator_withStaticFactory() {
-    Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator =
-        PrivacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(
-            Optional.of(ATTRIBUTION_REPORTING_API));
-
-    assertThat(privacyBudgetKeyGenerator).isPresent();
-    assertTrue(
-        privacyBudgetKeyGenerator.get()
-            instanceof
-            com.google.aggregate.privacy.budgeting.budgetkeygenerator.attributionreporting
-                .V1PrivacyBudgetKeyGenerator);
-  }
-
-  @Test
-  public void testGetProtectedAudiencePbkGenerator_withStaticFactory() {
-    Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator =
-        PrivacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(
-            Optional.of(PROTECTED_AUDIENCE_API));
-
-    assertThat(privacyBudgetKeyGenerator).isPresent();
-    assertTrue(
-        privacyBudgetKeyGenerator.get()
-            instanceof
-            com.google.aggregate.privacy.budgeting.budgetkeygenerator.protectedaudience
-                .V1PrivacyBudgetKeyGenerator);
-  }
-
-  @Test
-  public void testGetSharedStoragePbkGenerator_withStaticFactory() {
-    Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator =
-        PrivacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(
-            Optional.of(SHARED_STORAGE_API));
-
-    assertThat(privacyBudgetKeyGenerator).isPresent();
-    assertTrue(
-        privacyBudgetKeyGenerator.get()
-            instanceof
-            com.google.aggregate.privacy.budgeting.budgetkeygenerator.sharedstorage
-                .V1PrivacyBudgetKeyGenerator);
-  }
-
-  @Test
-  public void testGetInvalidApiPbkGenerator_withStaticFactory() {
-    assertThat(
-            PrivacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(
-                Optional.of("invalid-api")))
-        .isEqualTo(Optional.empty());
-  }
-
-  @Test
   public void getSharedStoragePbkGenerator() {
     SharedInfo sharedInfoV1 = buildSharedInfo(/* api= */ SHARED_STORAGE_API, /* version= */ "0.9");
     validatePrivacyGeneratorClass(
         sharedInfoV1,
+            /* filteringId */UnsignedLong.ZERO,
         com.google.aggregate.privacy.budgeting.budgetkeygenerator.sharedstorage
             .V1PrivacyBudgetKeyGenerator.class);
+    validatePrivacyGeneratorClass(
+        sharedInfoV1,
+        /* filteringId */UnsignedLong.ONE,
+        com.google.aggregate.privacy.budgeting.budgetkeygenerator.sharedstorage
+            .V2PrivacyBudgetKeyGenerator.class);
 
     SharedInfo sharedInfoV2 = buildSharedInfo(/* api= */ SHARED_STORAGE_API, /* version= */ "1.0");
     validatePrivacyGeneratorClass(
         sharedInfoV2,
+        /* filteringId */ UnsignedLong.ZERO,
         com.google.aggregate.privacy.budgeting.budgetkeygenerator.sharedstorage
             .V2PrivacyBudgetKeyGenerator.class);
   }
@@ -121,13 +79,20 @@ public class PrivacyBudgetKeyGeneratorFactoryTest {
         buildSharedInfo(/* api= */ PROTECTED_AUDIENCE_API, /* version= */ "0.1");
     validatePrivacyGeneratorClass(
         sharedInfoV1,
+        /* filteringId */ UnsignedLong.ZERO,
         /* expectedGeneratorClass= */ com.google.aggregate.privacy.budgeting.budgetkeygenerator
             .protectedaudience.V1PrivacyBudgetKeyGenerator.class);
+    validatePrivacyGeneratorClass(
+        sharedInfoV1,
+        /* filteringId = */ UnsignedLong.ONE,
+        /* expectedGeneratorClass= */ com.google.aggregate.privacy.budgeting.budgetkeygenerator
+            .protectedaudience.V2PrivacyBudgetKeyGenerator.class);
 
     SharedInfo sharedInfoV2 =
         buildSharedInfo(/* api= */ PROTECTED_AUDIENCE_API, /* version= */ "1.0");
     validatePrivacyGeneratorClass(
-        sharedInfoV2,
+        sharedInfoV2, /* filteringId */
+        UnsignedLong.ZERO,
         /* expectedGeneratorClass= */ com.google.aggregate.privacy.budgeting.budgetkeygenerator
             .protectedaudience.V2PrivacyBudgetKeyGenerator.class);
   }
@@ -138,15 +103,46 @@ public class PrivacyBudgetKeyGeneratorFactoryTest {
         buildSharedInfo(/* api= */ ATTRIBUTION_REPORTING_API, /* version= */ "0.1");
     validatePrivacyGeneratorClass(
         sharedInfoV1,
+        /* filteringId= */ UnsignedLong.ZERO,
         /* expectedGeneratorClass= */ com.google.aggregate.privacy.budgeting.budgetkeygenerator
             .attributionreporting.V1PrivacyBudgetKeyGenerator.class);
+    validatePrivacyGeneratorClass(
+        sharedInfoV1,
+        /* filteringId= */ UnsignedLong.ONE,
+        /* expectedGeneratorClass= */ com.google.aggregate.privacy.budgeting.budgetkeygenerator
+            .attributionreporting.V2PrivacyBudgetKeyGenerator.class);
 
     SharedInfo sharedInfoV2 =
         buildSharedInfo(/* api= */ ATTRIBUTION_REPORTING_API, /* version= */ "1.0");
     validatePrivacyGeneratorClass(
         sharedInfoV2,
+        /* filteringId= */ UnsignedLong.ONE,
         /* expectedGeneratorClass= */ com.google.aggregate.privacy.budgeting.budgetkeygenerator
             .attributionreporting.V2PrivacyBudgetKeyGenerator.class);
+  }
+
+  @Test
+  public void attributionReportingDebugGenerator_generatesValidGenerator() {
+    SharedInfo sharedInfoV1 =
+        buildSharedInfo(/* api= */ ATTRIBUTION_REPORTING_DEBUG_API, /* version= */ "0.1");
+    validatePrivacyGeneratorClass(
+        sharedInfoV1,
+        /* filteringId= */ UnsignedLong.ZERO,
+        /* expectedGeneratorClass= */ com.google.aggregate.privacy.budgeting.budgetkeygenerator
+            .attributionreportingdebug.V1PrivacyBudgetKeyGenerator.class);
+    validatePrivacyGeneratorClass(
+        sharedInfoV1,
+        /* filteringId= */ UnsignedLong.ONE,
+        /* expectedGeneratorClass= */ com.google.aggregate.privacy.budgeting.budgetkeygenerator
+            .attributionreportingdebug.V2PrivacyBudgetKeyGenerator.class);
+
+    SharedInfo sharedInfoV2 =
+        buildSharedInfo(/* api= */ ATTRIBUTION_REPORTING_DEBUG_API, /* version= */ "1.0");
+    validatePrivacyGeneratorClass(
+        sharedInfoV2,
+        /* filteringId= */ UnsignedLong.ONE,
+        /* expectedGeneratorClass= */ com.google.aggregate.privacy.budgeting.budgetkeygenerator
+            .attributionreportingdebug.V2PrivacyBudgetKeyGenerator.class);
   }
 
   @Test
@@ -155,7 +151,11 @@ public class PrivacyBudgetKeyGeneratorFactoryTest {
 
     assertThrows(
         IllegalArgumentException.class,
-        () -> privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo));
+        () ->
+            privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(
+                PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
+                    .setSharedInfo(sharedInfo)
+                    .build()));
   }
 
   @Test
@@ -163,28 +163,35 @@ public class PrivacyBudgetKeyGeneratorFactoryTest {
     SharedInfo sharedInfo = buildSharedInfo(/* api= */ SHARED_STORAGE_API, /* version= */ "-2.0");
 
     assertThrows(
-        AssertionError.class,
-        () -> privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo));
+        IllegalArgumentException.class,
+        () ->
+            privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(
+                PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
+                    .setSharedInfo(sharedInfo)
+                    .build()));
   }
 
   private static SharedInfo buildSharedInfo(String api, String version) {
-    SharedInfo sharedInfo =
-        SharedInfo.builder()
-            .setScheduledReportTime(FIXED_TIME)
-            .setReportingOrigin(REPORTING_ORIGIN)
-            .setDestination(DESTINATION)
-            .setSourceRegistrationTime(FIXED_TIME)
-            .setReportId(RANDOM_UUID)
-            .setReportDebugMode(true)
-            .setApi(api)
-            .setVersion(version)
-            .build();
-    return sharedInfo;
+    return SharedInfo.builder()
+        .setScheduledReportTime(FIXED_TIME)
+        .setReportingOrigin(REPORTING_ORIGIN)
+        .setDestination(DESTINATION)
+        .setSourceRegistrationTime(FIXED_TIME)
+        .setReportId(RANDOM_UUID)
+        .setApi(api)
+        .setVersion(version)
+        .build();
   }
 
-  private void validatePrivacyGeneratorClass(SharedInfo sharedInfo, Class expectedGeneratorClass) {
+  private void validatePrivacyGeneratorClass(
+      SharedInfo sharedInfo, UnsignedLong filteringId, Class expectedGeneratorClass) {
+    PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput privacyBudgetKeyInput =
+        PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
+            .setSharedInfo(sharedInfo)
+            .setFilteringId(filteringId)
+            .build();
     Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator =
-        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo);
+        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput);
 
     assertThat(privacyBudgetKeyGenerator).isPresent();
     assertThat(privacyBudgetKeyGenerator.get()).isInstanceOf(expectedGeneratorClass);

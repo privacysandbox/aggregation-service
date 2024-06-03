@@ -28,10 +28,6 @@ import java.util.Optional;
 /** Validates that the Report's SharedInfo can generate valid Privacy Budget Key. */
 public final class ReportPrivacyBudgetKeyValidator implements ReportValidator {
 
-  static String MISSING_API_ERROR_STRING = "Empty API in Report's SharedInfo is not supported.";
-  static String INVALID_API_VERSION_ERROR_STRING =
-      "Invalid SharedInfo API and Version combination.";
-
   @Override
   public Optional<ErrorMessage> validate(Report report, Job unused) {
     if (isFieldNonEmpty(report.sharedInfo().api())) {
@@ -39,11 +35,10 @@ public final class ReportPrivacyBudgetKeyValidator implements ReportValidator {
           PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
               report.sharedInfo().api().get(), report.sharedInfo().version());
       if (validator.isEmpty()) {
-        return createErrorMessage(
-            REQUIRED_SHAREDINFO_FIELD_INVALID, INVALID_API_VERSION_ERROR_STRING);
+        return createErrorMessage(REQUIRED_SHAREDINFO_FIELD_INVALID);
       }
       return validator.get().validatePrivacyBudgetKey(report.sharedInfo());
     }
-    return createErrorMessage(REQUIRED_SHAREDINFO_FIELD_INVALID, MISSING_API_ERROR_STRING);
+    return createErrorMessage(REQUIRED_SHAREDINFO_FIELD_INVALID);
   }
 }

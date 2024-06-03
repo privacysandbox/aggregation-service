@@ -43,6 +43,6 @@ public final class ReportForDebugValidator implements ReportValidator {
       return Optional.empty();
     }
 
-    return createErrorMessage(DEBUG_NOT_ENABLED, "the mode is not enabled");
+    return createErrorMessage(DEBUG_NOT_ENABLED);
   }
 }

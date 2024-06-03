@@ -17,9 +17,11 @@
 package com.google.aggregate.privacy.budgeting.budgetkeygenerator;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.aggregate.privacy.budgeting.budgetkeygenerator.attributionreporting.PrivacyBudgetKeyGeneratorModule.AttributionReportingPrivacyBudgetKeyGenerators;
+import static com.google.aggregate.privacy.budgeting.budgetkeygenerator.attributionreportingdebug.PrivacyBudgetKeyGeneratorModule.AttributionReportingDebugPrivacyBudgetKeyGenerators;
 import static com.google.aggregate.privacy.budgeting.budgetkeygenerator.protectedaudience.PrivacyBudgetKeyGeneratorModule.ProtectedAudiencePrivacyBudgetKeyGenerators;
 import static com.google.aggregate.privacy.budgeting.budgetkeygenerator.sharedstorage.PrivacyBudgetKeyGeneratorModule.SharedStoragePrivacyBudgetKeyGenerators;
 
@@ -36,6 +38,9 @@ public class PrivacyBudgetKeyGeneratorModule extends AbstractModule {
         new com.google.aggregate.privacy.budgeting.budgetkeygenerator.attributionreporting
             .PrivacyBudgetKeyGeneratorModule());
     install(
+        new com.google.aggregate.privacy.budgeting.budgetkeygenerator.attributionreportingdebug
+            .PrivacyBudgetKeyGeneratorModule());
+    install(
         new com.google.aggregate.privacy.budgeting.budgetkeygenerator.protectedaudience
             .PrivacyBudgetKeyGeneratorModule());
     install(
@@ -49,6 +54,9 @@ public class PrivacyBudgetKeyGeneratorModule extends AbstractModule {
           @AttributionReportingPrivacyBudgetKeyGenerators
               VersionedPrivacyBudgetKeyGeneratorProvider
                   attributionReportingPrivacyBudgetKeyGenerators,
+          @AttributionReportingDebugPrivacyBudgetKeyGenerators
+              VersionedPrivacyBudgetKeyGeneratorProvider
+                  attributionReportingDebugPrivacyBudgetKeyGenerators,
           @ProtectedAudiencePrivacyBudgetKeyGenerators
               VersionedPrivacyBudgetKeyGeneratorProvider
                   protectedAudiencePrivacyBudgetKeyGenerators,
@@ -57,6 +65,8 @@ public class PrivacyBudgetKeyGeneratorModule extends AbstractModule {
     return ImmutableMap.of(
         ATTRIBUTION_REPORTING_API,
         attributionReportingPrivacyBudgetKeyGenerators,
+        ATTRIBUTION_REPORTING_DEBUG_API,
+        attributionReportingDebugPrivacyBudgetKeyGenerators,
         PROTECTED_AUDIENCE_API,
         protectedAudiencePrivacyBudgetKeyGenerators,
         SHARED_STORAGE_API,

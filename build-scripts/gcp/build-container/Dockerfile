@@ -54,13 +54,13 @@ RUN \
     echo \
     "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
     $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null && \
-    apt-get -y update && \
+    apt-get update && \
     apt-get install -y docker-ce docker-ce-cli
 
 RUN \
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.asc] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list && \
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | tee /usr/share/keyrings/cloud.google.asc && \
-    apt-get update && apt-get install google-cloud-cli && \
+    apt-get update && apt-get -y install google-cloud-cli && \
     apt-get -y autoclean && apt-get -y autoremove
 
 # Store the Bazel outputs under /workspace so that the symlinks under bazel-bin (et al) are accessible

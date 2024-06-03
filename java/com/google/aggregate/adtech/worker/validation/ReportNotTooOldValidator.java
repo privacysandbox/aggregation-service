@@ -47,13 +47,6 @@ public final class ReportNotTooOldValidator implements ReportValidator {
       return Optional.empty();
     }
 
-    return createErrorMessage(
-        ORIGINAL_REPORT_TIME_TOO_OLD,
-        String.format(
-            "Report's originalReportTime is too old, reports cannot be older than %s, must be more"
-                + " recent than %s but was %s",
-            SharedInfo.MAX_REPORT_AGE,
-            oldestAllowedTime,
-            report.sharedInfo().scheduledReportTime()));
+    return createErrorMessage(ORIGINAL_REPORT_TIME_TOO_OLD);
   }
 }

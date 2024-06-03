@@ -16,12 +16,15 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
 )
 
+# IMPORTANT: If you added dependencies and/or updated dependency versions below, run
+# `$ bazel run @unpinned_maven//:pin` and include `maven_install.json` in your change.
+
 # Declare explicit protobuf version, to override any implicit dependencies.
 PROTOBUF_CORE_VERSION = "3.25.2"
 
 PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
 
-COORDINATOR_VERSION = "v1.5.1"  # version updated on 2024-01-09
+COORDINATOR_VERSION = "v1.8.0-rc01"  # version updated on 2024-05-20
 
 JACKSON_VERSION = "2.16.1"
 
@@ -76,15 +79,13 @@ git_repository(
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/shared_libraries:coordinator.patch",
-        "//build_defs/shared_libraries:gcs_storage_client.patch",
-        "//build_defs/shared_libraries:dependency_update.patch",
-        "//build_defs/shared_libraries:key_cache_ttl.patch",
-        "//build_defs/shared_libraries:pin_pkr_docker.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",
 )
 
+# IMPORTANT: If you added dependencies and/or updated dependency versions below, run
+# `$ bazel run @unpinned_maven//:pin` and include `maven_install.json` in your change.
 OTEL_ARTIFACTS = [
     "com.google.errorprone:error_prone_annotations:2.+",
     "io.opentelemetry:opentelemetry-api:" + OTEL_VERSION,
@@ -99,6 +100,8 @@ OTEL_ARTIFACTS = [
     "io.opentelemetry.contrib:opentelemetry-aws-xray:" + OTEL_VERSION,
 ]
 
+# IMPORTANT: If you added dependencies and/or updated dependency versions below, run
+# `$ bazel run @unpinned_maven//:pin` and include `maven_install.json` in your change.
 maven_install(
     artifacts = [
         "com.amazonaws:aws-lambda-java-core:1.2.3",
@@ -137,6 +140,9 @@ maven_install(
         "com.google.api.grpc:proto-google-cloud-compute-v1:1.44.0",
         "com.google.cloud.functions:functions-framework-api:1.1.0",
         "commons-logging:commons-logging:1.3.0",
+        "com.google.api.grpc:proto-google-common-protos:2.34.0",
+        "com.google.cloud:google-cloud-trace:2.35.0",
+        "com.google.api.grpc:proto-google-cloud-trace-v1:2.35.0",
         "com.google.api:gax:" + GOOGLE_GAX_VERSION,
         "com.google.http-client:google-http-client-jackson2:1.43.3",
         "io.reactivex.rxjava3:rxjava:3.1.8",
@@ -191,7 +197,7 @@ maven_install(
         "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
-        "com.google.crypto.tink:tink:1.12.0",
+        "com.google.crypto.tink:tink:1.13.0",
         "com.google.crypto.tink:tink-gcpkms:1.9.0",
         "com.google.oauth-client:google-oauth-client:1.35.0",
     ] + OTEL_ARTIFACTS,

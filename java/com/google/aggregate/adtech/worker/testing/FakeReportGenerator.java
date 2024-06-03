@@ -27,6 +27,7 @@ import com.google.aggregate.adtech.worker.model.Payload;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.common.collect.ImmutableList;
+import com.google.common.primitives.UnsignedLong;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Optional;
@@ -42,7 +43,7 @@ public class FakeReportGenerator {
       return Fact.builder().setBucket(createBucketFromInt(bucket)).setValue(value).build();
     }
 
-    public static Fact generate(int bucket, int value, int id) {
+    public static Fact generate(int bucket, int value, UnsignedLong id) {
       return Fact.builder()
           .setId(id)
           .setBucket(createBucketFromInt(bucket))
@@ -67,7 +68,8 @@ public class FakeReportGenerator {
         Optional.of(facts),
         /* dummyValue */ Optional.empty(),
         /* reportId */ Optional.empty(),
-        reportVersion);
+        reportVersion,
+        "https://foo.com");
   }
 
   /**
@@ -84,12 +86,14 @@ public class FakeReportGenerator {
    * @param reportVersion Version of the report to generate.
    * @return
    */
-  public static Report generateWithParam(int dummyValue, String reportVersion) {
+  public static Report generateWithParam(
+      int dummyValue, String reportVersion, String reportingOrigin) {
     return generate(
         /* facts */ Optional.empty(),
         Optional.of(dummyValue),
         /* reportId */ Optional.empty(),
-        reportVersion);
+        reportVersion,
+        reportingOrigin);
   }
 
   /**
@@ -113,7 +117,8 @@ public class FakeReportGenerator {
         /* facts */ Optional.empty(),
         Optional.of(dummyValue),
         Optional.of(reportId),
-        reportVersion);
+        reportVersion,
+        "https://foo.com");
   }
 
   /**
@@ -127,7 +132,8 @@ public class FakeReportGenerator {
         Optional.of(ImmutableList.of(nullFact)),
         Optional.empty(),
         Optional.empty(),
-        LATEST_VERSION);
+        LATEST_VERSION,
+        "https://foo.com");
   }
 
   /**
@@ -148,7 +154,8 @@ public class FakeReportGenerator {
       Optional<ImmutableList<Fact>> facts,
       Optional<Integer> dummyValue,
       Optional<String> reportId,
-      String reportVersion) {
+      String reportVersion,
+      String reportingOrigin) {
     // Sanity check. Evaluates as XNOR to confirm only one of facts or dummyValue is present
     if (!(facts.isPresent() ^ dummyValue.isPresent())) {
       throw new IllegalStateException(
@@ -181,7 +188,7 @@ public class FakeReportGenerator {
             .setDestination(dummyStringActual)
             .setScheduledReportTime(dummyTime)
             .setSourceRegistrationTime(dummyTime)
-            .setReportingOrigin(dummyStringActual)
+            .setReportingOrigin(reportingOrigin)
             .setApi(ATTRIBUTION_REPORTING_API)
             .setReportId(reportId.orElse(String.valueOf(UUID.randomUUID())))
             .setVersion(reportVersion)

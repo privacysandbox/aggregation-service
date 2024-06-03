@@ -22,6 +22,7 @@ java_test(
     deps = [
         "//java/external:google_truth",
         "//java/external:guava",
+        "//java/external:mockito",
         "//java/external:opentelemetry_api",
         "//java/external:opentelemetry_sdk",
         "//java/external:opentelemetry_sdk_common",

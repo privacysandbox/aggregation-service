@@ -17,9 +17,12 @@
 package com.google.aggregate.privacy.noise;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 
 import com.google.acai.Acai;
 import com.google.acai.TestScoped;
+import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.ParallelAggregatedFactNoising;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
@@ -33,9 +36,12 @@ import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier.FakeNoiseApplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import java.math.BigInteger;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -67,12 +73,14 @@ public class NoisedAggregationRunnerImplTest {
   @Inject private FakeThresholdSupplier thresholdSupplier;
 
   // Under test.
-  @Inject private NoisedAggregationRunner noisedAggregationRunner;
+  @Inject private Provider<NoisedAggregationRunner> noisedAggregationRunner;
+  @Inject private NoisedAggregationRunnerFlagsHelper aggregationRunnerFlagsHelper;
 
   @Before
   public void setUp() {
     fakeNoiseApplierSupplier.setFakeNoiseApplier(
         FakeNoiseApplier.builder().setNextValueNoiseToAdd(VALUE_NOISE_LIST.iterator()).build());
+    aggregationRunnerFlagsHelper.setParallelAggregatedFactNoisingEnabled(false);
   }
 
   @Test
@@ -87,6 +95,30 @@ public class NoisedAggregationRunnerImplTest {
 
     assertThat(result.privacyParameters()).isEqualTo(customDeltaPrivacyParamsSupplier.get());
     assertThat(result.noisedAggregatedFacts()).containsExactly(NOISED_FACT1, NOISED_FACT2);
+  }
+
+  @Test
+  public void noise_parallelNoisingEnabled() {
+    thresholdSupplier.setThreshold(0);
+    aggregationRunnerFlagsHelper.setParallelAggregatedFactNoisingEnabled(true);
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(
+        FakeNoiseApplier.builder()
+            .setNextValueNoiseToAdd(ImmutableList.of(10L, 10L).iterator())
+            .build());
+
+    AggregatedFact noisedFact1 =
+        AggregatedFact.create(BigInteger.valueOf(1), /* metric= */ 15, /* unnoisedMetric= */ 5L);
+    AggregatedFact noisedFact2 =
+        AggregatedFact.create(BigInteger.valueOf(2), /* metric= */ 510, /* unnoisedMetric= */ 500L);
+
+    NoisedAggregationResult result =
+        noiseAndThreshold(
+            ImmutableList.of(FACT1, FACT2),
+            /* doThreshold= */ true,
+            /* debugPrivacyEpsilon= */ Optional.empty());
+
+    assertThat(result.privacyParameters()).isEqualTo(customDeltaPrivacyParamsSupplier.get());
+    assertThat(result.noisedAggregatedFacts()).containsExactly(noisedFact1, noisedFact2);
   }
 
   @Test
@@ -179,11 +211,12 @@ public class NoisedAggregationRunnerImplTest {
       boolean doThreshold,
       Optional<Double> debugPrivacyEpsilon) {
     NoisedAggregationResult noisedAggregationResult =
-        noisedAggregationRunner.noise(input, debugPrivacyEpsilon);
+        noisedAggregationRunner.get().noise(input, debugPrivacyEpsilon);
 
     return doThreshold
-        ? noisedAggregationRunner.threshold(
-            noisedAggregationResult.noisedAggregatedFacts(), debugPrivacyEpsilon)
+        ? noisedAggregationRunner
+            .get()
+            .threshold(noisedAggregationResult.noisedAggregatedFacts(), debugPrivacyEpsilon)
         : noisedAggregationResult;
   }
 
@@ -230,7 +263,21 @@ public class NoisedAggregationRunnerImplTest {
     }
   }
 
+  private static final class NoisedAggregationRunnerFlagsHelper {
+    private boolean parallelAggregatedFactNoisingEnabled = false;
+
+    public void setParallelAggregatedFactNoisingEnabled(boolean parallelEnabled) {
+      this.parallelAggregatedFactNoisingEnabled = parallelEnabled;
+    }
+
+    public boolean isParallelAggregatedFactNoisingEnabled() {
+      return parallelAggregatedFactNoisingEnabled;
+    }
+  }
+
   private static final class TestEnv extends AbstractModule {
+    private final NoisedAggregationRunnerFlagsHelper flagsHelper =
+        new NoisedAggregationRunnerFlagsHelper();
 
     @Override
     protected void configure() {
@@ -246,6 +293,13 @@ public class NoisedAggregationRunnerImplTest {
       bind(double.class).annotatedWith(NoisingEpsilon.class).toInstance(0.1);
       bind(long.class).annotatedWith(NoisingL1Sensitivity.class).toInstance(4L);
       bind(double.class).annotatedWith(NoisingDelta.class).toInstance(5.00);
+      bind(NoisedAggregationRunnerFlagsHelper.class).toInstance(flagsHelper);
+    }
+
+    @Provides
+    @ParallelAggregatedFactNoising
+    boolean provideParallelAggregatedFactNoising() {
+      return flagsHelper.isParallelAggregatedFactNoisingEnabled();
     }
 
     @Provides
@@ -264,6 +318,13 @@ public class NoisedAggregationRunnerImplTest {
     @Threshold
     Supplier<Double> provideThreshold(FakeThresholdSupplier thresholdSupplier) {
       return thresholdSupplier;
+    }
+
+    @Provides
+    @Singleton
+    @CustomForkJoinThreadPool
+    ListeningExecutorService provideCustomForkJoinThreadPool() {
+      return newDirectExecutorService();
     }
   }
 }

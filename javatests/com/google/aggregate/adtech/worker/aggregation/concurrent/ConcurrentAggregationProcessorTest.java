@@ -35,6 +35,8 @@ import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_1_0;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_WITH_ERRORS_MESSAGE;
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_FILTERING_IDS;
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_INPUT_REPORT_COUNT;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
@@ -55,11 +57,14 @@ import com.google.acai.Acai;
 import com.google.acai.TestScoped;
 import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.ParallelAggregatedFactNoising;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
 import com.google.aggregate.adtech.worker.ResultLogger;
@@ -105,6 +110,7 @@ import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBrid
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetingServiceBridgeException;
 import com.google.aggregate.privacy.budgeting.bridge.UnlimitedPrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorFactory;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.aggregate.privacy.noise.Annotations.Threshold;
@@ -129,11 +135,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
+import com.google.common.primitives.UnsignedLong;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
@@ -172,6 +180,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -197,6 +206,8 @@ public class ConcurrentAggregationProcessorTest {
   @Inject SharedInfoSerdes sharedInfoSerdes;
   @Inject AvroOutputDomainWriterFactory domainWriterFactory;
   @Inject OutputDomainProcessorHelper outputDomainProcessorHelper;
+  @Inject private PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory;
+  @Inject private FeatureFlagHelper featureFlagHelper;
   private Path outputDomainDirectory;
   private Path reportsDirectory;
   private Path invalidReportsDirectory;
@@ -217,8 +228,6 @@ public class ConcurrentAggregationProcessorTest {
 
   // Under test.
   @Inject private Provider<ConcurrentAggregationProcessor> processor;
-
-  @Inject private PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory;
 
   @Before
   public void setUpFlags() {
@@ -324,18 +333,6 @@ public class ConcurrentAggregationProcessorTest {
         ImmutableList.of(invalidEncryptedReport));
   }
 
-  private RequestInfo getRequestInfoWithInputDataBucketName(
-      RequestInfo requestInfo, Path inputReportDirectory) {
-    Map<String, String> jobParameters = new HashMap<>(requestInfo.getJobParametersMap());
-    jobParameters.put("report_error_threshold_percentage", "100");
-    return requestInfo.toBuilder()
-        .putAllJobParameters(jobParameters)
-        // Simulating shards of input.
-        .setInputDataBucketName(inputReportDirectory.toAbsolutePath().toString())
-        .setInputDataBlobPrefix("")
-        .build();
-  }
-
   @Test
   public void aggregate_domainOptionalAndNoOutputDomain() throws Exception {
     JobResult jobResultProcessor = processor.get().process(ctx);
@@ -345,6 +342,27 @@ public class ConcurrentAggregationProcessorTest {
         .containsExactly(
             AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 2, 2L),
             AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 8, 8L));
+  }
+
+  @Test
+  public void aggregate_skipZeroSizedBlobs() throws Exception {
+    // Write an empty report.
+    writeReports(reportsDirectory.resolve("reports_6.avro"), ImmutableList.of());
+    // Followed by two additional non-empty reports.
+    EncryptedReport testReport1 = generateEncryptedReport(3, String.valueOf(UUID.randomUUID()));
+    EncryptedReport testReport2 = generateEncryptedReport(4, String.valueOf(UUID.randomUUID()));
+    writeReports(
+        reportsDirectory.resolve("reports_7.avro"), ImmutableList.of(testReport1, testReport2));
+    JobResult jobResultProcessor = processor.get().process(ctx);
+
+    // Check if empty report is skipped and output is processed without errors.
+    assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 2, 2L),
+            AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 8, 8L),
+            AggregatedFact.create(/* bucket= */ createBucketFromInt(3), /* metric= */ 9, 9L),
+            AggregatedFact.create(/* bucket= */ createBucketFromInt(4), /* metric= */ 16, 16L));
   }
 
   @Test
@@ -1012,6 +1030,53 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
+  public void process_withEmptyReportsAndDomainOptional_returnsSuccess() throws Exception {
+    outputDomainProcessorHelper.setDomainOptional(true);
+    Path pathToEmptyReports = testWorkingDir.getRoot().toPath().resolve("empty_reports_dir");
+    Files.createDirectory(pathToEmptyReports);
+    writeReports(pathToEmptyReports.resolve("reports_1.avro"), ImmutableList.of());
+
+    Job emptyReportsCtx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                getRequestInfoWithInputDataBucketName(ctx.requestInfo(), pathToEmptyReports))
+            .build();
+
+    JobResult result = processor.get().process(emptyReportsCtx);
+    assertThat(result.resultInfo().getReturnCode()).contains("SUCCESS");
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .isEmpty();
+  }
+
+  @Test
+  public void process_withEmptyReportsWithDomain_returnsNoisedDomain() throws Exception {
+    outputDomainProcessorHelper.setDomainOptional(false);
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(10));
+
+    Path dirToEmptyReports = testWorkingDir.getRoot().toPath().resolve("empty_reports_dir");
+    Files.createDirectory(dirToEmptyReports);
+
+    writeReports(dirToEmptyReports.resolve("reports_1.avro"), ImmutableList.of());
+    writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "3");
+
+    ctx = addOutputDomainToJob();
+    Job emptyReportsCtx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                getRequestInfoWithInputDataBucketName(ctx.requestInfo(), dirToEmptyReports))
+            .build();
+
+    JobResult result = processor.get().process(emptyReportsCtx);
+    assertThat(result.resultInfo().getReturnCode()).contains("SUCCESS");
+
+    // No reports and one key specified in the domain so a single aggregated fact is expected.
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(3), /* metric= */ 10, /* unnoisedMetric= */ 0L));
+  }
+
+  @Test
   public void process_outputWriteFailedCodeWhenResultLoggerThrows() {
     resultLogger.setShouldThrow(true);
 
@@ -1142,6 +1207,76 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
+  public void process_withInputReportCountInRequest_errorCountExceedsThreshold_quitsEarly()
+      throws Exception {
+    ImmutableList<EncryptedReport> encryptedReports1 =
+        ImmutableList.of(
+            generateEncryptedReport(1, reportId1),
+            generateEncryptedReport(2, reportId2),
+            generateEncryptedReport(3, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(4, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(5, reportId3));
+    ImmutableList<EncryptedReport> encryptedReports2 =
+        ImmutableList.of(
+            generateEncryptedReport(6, reportId4),
+            generateEncryptedReport(7, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(8, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(9, String.valueOf(UUID.randomUUID())),
+            generateEncryptedReport(10, String.valueOf(UUID.randomUUID())));
+    writeReports(reportsDirectory.resolve("reports_1.avro"), encryptedReports1);
+    writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports2);
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    fakeValidator.setReportIdShouldReturnError(
+        ImmutableSet.of(reportId1, reportId2, reportId3, reportId4));
+    ImmutableMap<String, String> jobParams =
+        ImmutableMap.of(
+            JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE, "20", JOB_PARAM_INPUT_REPORT_COUNT, "10");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+
+    JobResult actualJobResult = processor.get().process(ctx);
+
+    // Job quits on error count 4 > threshold 2 (20% threshold of 10 reports)
+    JobResult expectedJobResult =
+        this.expectedJobResult.toBuilder()
+            .setResultInfo(
+                resultInfoBuilder
+                    .setReturnCode(
+                        AggregationWorkerReturnCode.REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD.name())
+                    .setReturnMessage(RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE)
+                    .setErrorSummary(
+                        ErrorSummary.newBuilder()
+                            .addAllErrorCounts(
+                                ImmutableList.of(
+                                    ErrorCount.newBuilder()
+                                        .setCategory(ErrorCounter.DECRYPTION_ERROR.name())
+                                        .setDescription(
+                                            ErrorCounter.DECRYPTION_ERROR.getDescription())
+                                        .setCount(4L)
+                                        .build(),
+                                    ErrorCount.newBuilder()
+                                        .setCategory(ErrorCounter.NUM_REPORTS_WITH_ERRORS.name())
+                                        .setDescription(NUM_REPORTS_WITH_ERRORS.getDescription())
+                                        .setCount(4L)
+                                        .build()))
+                            .build())
+                    .build())
+            .build();
+    assertThat(actualJobResult).isEqualTo(expectedJobResult);
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isEmpty();
+    assertFalse(resultLogger.hasLogged());
+  }
+
+  @Test
   public void process_errorCountWithinThreshold_succeedsWithErrors() throws Exception {
     ImmutableList<EncryptedReport> encryptedReports1 =
         ImmutableList.of(
@@ -1163,7 +1298,8 @@ public class ConcurrentAggregationProcessorTest {
     fakeValidator.setReportIdShouldReturnError(
         ImmutableSet.of(reportId1, reportId2, reportId3, reportId4));
     ImmutableMap<String, String> jobParams =
-        ImmutableMap.of(JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE, "50.0");
+        ImmutableMap.of(
+            JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE, "50.0", JOB_PARAM_INPUT_REPORT_COUNT, "");
     ctx =
         ctx.toBuilder()
             .setRequestInfo(
@@ -1220,7 +1356,9 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void process_withNoQueriedFilteringId() throws Exception {
+  public void process_withNoQueriedFilteringId_filteringNotEnabled_queries0OrNullIds()
+      throws Exception {
+    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(false);
     Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
     Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
     EncryptedReport reportWithoutId =
@@ -1229,10 +1367,19 @@ public class ConcurrentAggregationProcessorTest {
                 ImmutableList.of(factWithoutId, nullFact1), VERSION_0_1));
 
     Fact factWithDefaultId =
-        Fact.builder().setBucket(new BigInteger("11111")).setValue(11).setId(0).build();
+        Fact.builder()
+            .setBucket(new BigInteger("11111"))
+            .setValue(11)
+            .setId(UnsignedLong.ZERO)
+            .build();
     Fact factWithId =
-        Fact.builder().setBucket(new BigInteger("33333")).setValue(33).setId(12).build();
-    Fact nullFact2 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(0).build();
+        Fact.builder()
+            .setBucket(new BigInteger("33333"))
+            .setValue(33)
+            .setId(UnsignedLong.valueOf(12))
+            .build();
+    Fact nullFact2 =
+        Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(UnsignedLong.ZERO).build();
     EncryptedReport reportWithIds =
         getEncryptedReport(
             FakeReportGenerator.generateWithFactList(
@@ -1252,9 +1399,248 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
+  public void process_withQueriedFilteringId_filteringNotEnabled_queries0OrNullIds()
+      throws Exception {
+    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(false);
+    Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
+    Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
+    EncryptedReport reportWithoutId =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithoutId, nullFact1), VERSION_0_1));
+
+    Fact factWithDefaultId =
+        Fact.builder()
+            .setBucket(new BigInteger("11111"))
+            .setValue(11)
+            .setId(UnsignedLong.ZERO)
+            .build();
+    Fact factWithId =
+        Fact.builder()
+            .setBucket(new BigInteger("33333"))
+            .setValue(33)
+            .setId(UnsignedLong.valueOf(12))
+            .build();
+    Fact nullFact2 =
+        Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(UnsignedLong.ZERO).build();
+    EncryptedReport reportWithIds =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithDefaultId, factWithId, nullFact2), "1.0"));
+
+    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JOB_PARAM_FILTERING_IDS, "12");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+    processor.get().process(ctx);
+
+    // Even though the job queries for the id = 12, the aggregation is done for id = 0 or null since
+    // the feature flag is not enabled.
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(
+                /* bucket= */ new BigInteger("11111"),
+                /* metric= */ 22,
+                /* unnoisedMetric= */ 22L));
+  }
+
+  @Test
+  public void process_withQueriedFilteringId_filteringEnabled_filtersForTheGivenIds()
+      throws Exception {
+    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(true);
+    Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
+    Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
+    EncryptedReport reportWithoutId =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithoutId, nullFact1), VERSION_0_1));
+    // Aggregation is done only for contributions corresponding to ids = 12, 13.
+    Fact factWithDefaultId =
+        Fact.builder()
+            .setBucket(new BigInteger("11111"))
+            .setValue(11)
+            .setId(UnsignedLong.ZERO)
+            .build();
+    Fact factWithId =
+        Fact.builder()
+            .setBucket(new BigInteger("33333"))
+            .setValue(33)
+            .setId(UnsignedLong.valueOf(12))
+            .build();
+    Fact nullFact2 =
+        Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(UnsignedLong.ZERO).build();
+    EncryptedReport reportWithIds =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithDefaultId, factWithId, nullFact2), "1.0"));
+
+    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+    // Privacy budget is consumed for 13 as well even though there are no contributions with this
+    // id.
+    ImmutableSet<PrivacyBudgetUnit> expectedPrivacyBudgetUnits =
+        ImmutableSet.of(
+            getPrivacyBudgetUnit(reportWithoutId, /* filteringIds= */ UnsignedLong.valueOf(12)),
+            getPrivacyBudgetUnit(reportWithIds, /* filteringIds= */ UnsignedLong.valueOf(12)),
+            getPrivacyBudgetUnit(reportWithoutId, /* filteringIds= */ UnsignedLong.valueOf(13)),
+            getPrivacyBudgetUnit(reportWithIds, /* filteringIds= */ UnsignedLong.valueOf(13)));
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    expectedPrivacyBudgetUnits.forEach(
+        pbu -> fakePrivacyBudgetingServiceBridge.setPrivacyBudget(pbu, /* budget= */ 1));
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JOB_PARAM_FILTERING_IDS, "12,13");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+    processor.get().process(ctx);
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(
+                /* bucket= */ new BigInteger("33333"),
+                /* metric= */ 33,
+                /* unnoisedMetric= */ 33L));
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isPresent();
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent().get())
+        .containsExactlyElementsIn(expectedPrivacyBudgetUnits);
+  }
+
+  @Test
+  public void process_withConsecutiveJobsAndSameFilteringIds_throwsPrivacyExhausted()
+      throws Exception {
+    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(true);
+    Fact factWithoutId1 = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
+    EncryptedReport reportWithoutId =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithoutId1), VERSION_0_1));
+
+    Fact factWithId =
+        Fact.builder()
+            .setBucket(new BigInteger("22222"))
+            .setValue(11)
+            .setId(UnsignedLong.valueOf(12))
+            .build();
+    EncryptedReport reportWithIds =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(ImmutableList.of(factWithId), "1.0"));
+    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+
+    UnsignedLong filteringIdJob = UnsignedLong.valueOf(1963698);
+
+    ImmutableSet<PrivacyBudgetUnit> expectedPrivacyBudgetUnitsJobs =
+        ImmutableSet.of(
+            getPrivacyBudgetUnit(reportWithoutId, filteringIdJob),
+            getPrivacyBudgetUnit(reportWithIds, filteringIdJob));
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    expectedPrivacyBudgetUnitsJobs.stream()
+        .forEach(pbu -> fakePrivacyBudgetingServiceBridge.setPrivacyBudget(pbu, /* budget= */ 1));
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+
+    Job job =
+        getJobWithGivenJobParams(
+            /* jobParams= */ ImmutableMap.of(JOB_PARAM_FILTERING_IDS, filteringIdJob.toString()));
+    processor.get().process(job);
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isPresent();
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent().get())
+        .containsExactlyElementsIn(expectedPrivacyBudgetUnitsJobs);
+
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.get().process(job));
+    assertThat(ex.getCode()).isEqualTo(PRIVACY_BUDGET_EXHAUSTED);
+  }
+
+  @Test
+  public void process_withConsecutiveJobsAndDifferentFilteringIds_budgetingSucceeds()
+      throws Exception {
+    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(true);
+    Fact factWithoutId1 = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
+    Fact factWithoutId2 = Fact.builder().setBucket(new BigInteger("11111")).setValue(22).build();
+    Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
+    EncryptedReport reportWithoutId =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithoutId1, factWithoutId2, nullFact1), VERSION_0_1));
+
+    Fact factWithDefaultId =
+        Fact.builder()
+            .setBucket(new BigInteger("22222"))
+            .setValue(11)
+            .setId(UnsignedLong.ZERO)
+            .build();
+    Fact factWithId =
+        Fact.builder()
+            .setBucket(new BigInteger("22222"))
+            .setValue(11)
+            .setId(UnsignedLong.valueOf(12))
+            .build();
+    EncryptedReport reportWithIds =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithDefaultId, factWithId), "1.0"));
+    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+
+    UnsignedLong filteringIdJob1 = UnsignedLong.ZERO;
+    UnsignedLong filteringIdJob2 = UnsignedLong.valueOf(12);
+
+    ImmutableSet<PrivacyBudgetUnit> expectedPrivacyBudgetUnitsJob1 =
+        ImmutableSet.of(
+            getPrivacyBudgetUnit(reportWithoutId, filteringIdJob1),
+            getPrivacyBudgetUnit(reportWithIds, filteringIdJob1));
+    ImmutableSet<PrivacyBudgetUnit> expectedPrivacyBudgetUnitsJob2 =
+        ImmutableSet.of(
+            getPrivacyBudgetUnit(reportWithoutId, filteringIdJob2),
+            getPrivacyBudgetUnit(reportWithIds, filteringIdJob2));
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    Stream.concat(expectedPrivacyBudgetUnitsJob1.stream(), expectedPrivacyBudgetUnitsJob2.stream())
+        .forEach(pbu -> fakePrivacyBudgetingServiceBridge.setPrivacyBudget(pbu, /* budget= */ 1));
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+
+    Job job1 =
+        getJobWithGivenJobParams(
+            /* jobParams= */ ImmutableMap.of(JOB_PARAM_FILTERING_IDS, filteringIdJob1.toString()));
+    processor.get().process(job1);
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isPresent();
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent().get())
+        .containsExactlyElementsIn(expectedPrivacyBudgetUnitsJob1);
+
+    Job job2 =
+        getJobWithGivenJobParams(
+            /* jobParams= */ ImmutableMap.of(JOB_PARAM_FILTERING_IDS, filteringIdJob2.toString()));
+    processor.get().process(job2);
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isPresent();
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent().get())
+        .containsExactlyElementsIn(expectedPrivacyBudgetUnitsJob2);
+  }
+
+  @Test
   public void processingWithWrongSharedInfo() throws Exception {
     String keyId = UUID.randomUUID().toString();
-    Report report = FakeReportGenerator.generateWithParam(1, /* reportVersion */ LATEST_VERSION);
+    Report report =
+        FakeReportGenerator.generateWithParam(
+            1, /* reportVersion */ LATEST_VERSION, "https://foo.com");
     // Encrypt with a different sharedInfo than what is provided with the report so that decryption
     // fails
     String sharedInfoForEncryption = "foobarbaz";
@@ -1374,7 +1760,7 @@ public class ConcurrentAggregationProcessorTest {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0)), 1);
+        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "foo.com"), 1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -1445,7 +1831,7 @@ public class ConcurrentAggregationProcessorTest {
     // Privacy Budget failure via thrown exception
     fakePrivacyBudgetingServiceBridge.setShouldThrow();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0)), 1);
+        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "foo.com"), 1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -1475,7 +1861,7 @@ public class ConcurrentAggregationProcessorTest {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0)), 1);
+        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "foo.com"), 1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -1486,6 +1872,18 @@ public class ConcurrentAggregationProcessorTest {
     // Return code should be SUCCESS, return message should match the would-be error
     assertThat(result.resultInfo().getReturnCode())
         .isEqualTo(AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
+  }
+
+  private RequestInfo getRequestInfoWithInputDataBucketName(
+      RequestInfo requestInfo, Path inputReportDirectory) {
+    Map<String, String> jobParameters = new HashMap<>(requestInfo.getJobParametersMap());
+    jobParameters.put("report_error_threshold_percentage", "100");
+    return requestInfo.toBuilder()
+        .putAllJobParameters(jobParameters)
+        // Simulating shards of input.
+        .setInputDataBucketName(inputReportDirectory.toAbsolutePath().toString())
+        .setInputDataBlobPrefix("")
+        .build();
   }
 
   private void compareDebugFactByKey(
@@ -1535,17 +1933,27 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   private PrivacyBudgetUnit getPrivacyBudgetUnit(EncryptedReport encryptedReport) {
+    return getPrivacyBudgetUnit(
+        encryptedReport,
+        /** filteringId = */
+        UnsignedLong.ZERO);
+  }
+
+  private PrivacyBudgetUnit getPrivacyBudgetUnit(
+      EncryptedReport encryptedReport, UnsignedLong filteringId) {
     SharedInfo sharedInfo = sharedInfoSerdes.convert(encryptedReport.sharedInfo()).get();
+    PrivacyBudgetKeyInput privacyBudgetKeyInput =
+        PrivacyBudgetKeyInput.builder()
+            .setFilteringId(filteringId)
+            .setSharedInfo(sharedInfo)
+            .build();
     PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator =
-        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo).get();
+        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput).get();
     PrivacyBudgetUnit privacyBudgetUnit =
         PrivacyBudgetUnit.create(
-            privacyBudgetKeyGenerator.generatePrivacyBudgetKey(
-                PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
-                    .setFilteringId(0)
-                    .setSharedInfo(sharedInfo)
-                    .build()),
-            Instant.ofEpochMilli(0));
+            privacyBudgetKeyGenerator.generatePrivacyBudgetKey(privacyBudgetKeyInput),
+            Instant.ofEpochMilli(0),
+            sharedInfo.reportingOrigin());
     return privacyBudgetUnit;
   }
 
@@ -1573,6 +1981,16 @@ public class ConcurrentAggregationProcessorTest {
             outputDomainLocation.blobStoreDataLocation().bucket(),
             JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX,
             outputDomainLocation.blobStoreDataLocation().key());
+    return ctx.toBuilder()
+        .setRequestInfo(
+            ctx.requestInfo().toBuilder()
+                .putAllJobParameters(
+                    combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                .build())
+        .build();
+  }
+
+  private Job getJobWithGivenJobParams(ImmutableMap<String, String> jobParams) {
     return ctx.toBuilder()
         .setRequestInfo(
             ctx.requestInfo().toBuilder()
@@ -1642,7 +2060,15 @@ public class ConcurrentAggregationProcessorTest {
     }
   }
 
-  // TODO: these setup steps could be consolidated with the SimpleAggregationProcessorTest TestEnv.
+  private static class FeatureFlagHelper {
+
+    boolean enablePrivacyBudgetKeyFiltering = true;
+
+    void setEnablePrivacyBudgetKeyFiltering(boolean enablePrivacyBudgetKeyFiltering) {
+      this.enablePrivacyBudgetKeyFiltering = enablePrivacyBudgetKeyFiltering;
+    }
+  }
+
   private static final class TestEnv extends AbstractModule {
 
     OutputDomainProcessorHelper helper = new OutputDomainProcessorHelper();
@@ -1672,6 +2098,7 @@ public class ConcurrentAggregationProcessorTest {
       // noising
       bind(FakeNoiseApplierSupplier.class).in(TestScoped.class);
       bind(NoisedAggregationRunner.class).to(NoisedAggregationRunnerImpl.class);
+      bind(boolean.class).annotatedWith(ParallelAggregatedFactNoising.class).toInstance(true);
 
       // loggers.
       bind(InMemoryResultLogger.class).in(TestScoped.class);
@@ -1699,6 +2126,8 @@ public class ConcurrentAggregationProcessorTest {
       bind(Integer.class).annotatedWith(MaxDepthOfStackTrace.class).toInstance(3);
       bind(double.class).annotatedWith(ReportErrorThresholdPercentage.class).toInstance(10.0);
       bind(OutputDomainProcessorHelper.class).toInstance(helper);
+
+      bind(FeatureFlagHelper.class).toInstance(new FeatureFlagHelper());
     }
 
     @Provides
@@ -1774,20 +2203,35 @@ public class ConcurrentAggregationProcessorTest {
     }
 
     @Provides
+    @Singleton
     @NonBlockingThreadPool
     ListeningExecutorService provideNonBlockingThreadPool() {
       return newDirectExecutorService();
     }
 
     @Provides
+    @Singleton
     @BlockingThreadPool
     ListeningExecutorService provideBlockingThreadPool() {
       return newDirectExecutorService();
     }
 
     @Provides
+    @Singleton
+    @CustomForkJoinThreadPool
+    ListeningExecutorService provideCustomForkJoinThreadPool() {
+      return newDirectExecutorService();
+    }
+
+    @Provides
     AggregationEngine provideAggregationEngine(AggregationEngineFactory aggregationEngineFactory) {
       return aggregationEngineFactory.create();
+    }
+
+    @Provides
+    @EnablePrivacyBudgetKeyFiltering
+    Boolean provideEnableBudgetKeyFiltering(FeatureFlagHelper featureFlagHelper) {
+      return featureFlagHelper.enablePrivacyBudgetKeyFiltering;
     }
   }
 }

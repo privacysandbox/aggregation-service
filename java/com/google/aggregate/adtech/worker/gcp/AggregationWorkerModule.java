@@ -16,18 +16,27 @@
 
 package com.google.aggregate.adtech.worker.gcp;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUpload;
+import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
+import com.google.aggregate.adtech.worker.Annotations.ParallelAggregatedFactNoising;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
+import com.google.aggregate.adtech.worker.Annotations.SupportedApis;
 import com.google.aggregate.adtech.worker.JobProcessor;
 import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWorkingDirectory;
 import com.google.aggregate.adtech.worker.PrivacyBudgetingSelector;
@@ -52,6 +61,7 @@ import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKe
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.AbstractModule;
@@ -70,6 +80,7 @@ import com.google.scp.operator.cpio.configclient.local.Annotations.SqsJobQueueUr
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
+import com.google.scp.operator.cpio.cryptoclient.Annotations.ExceptionCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.gcp.GcpKmsDecryptionKeyServiceConfig;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceAuthEndpoint;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceBaseUrl;
@@ -100,6 +111,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 import javax.inject.Singleton;
 
@@ -303,12 +315,11 @@ public final class AggregationWorkerModule extends AbstractModule {
     // processor
     bind(JobProcessor.class).to(ConcurrentAggregationProcessor.class);
 
-    bind(boolean.class)
-        .annotatedWith(StreamingOutputDomainProcessing.class)
-        .toInstance(args.isStreamingOutputDomainProcessing());
-
     // noising
     install(args.getNoisingSelector().getNoisingModule());
+    bind(boolean.class)
+        .annotatedWith(ParallelAggregatedFactNoising.class)
+        .toInstance(args.isParallelAggregatedFactNoisingEnabled());
 
     // result logger
     install(args.resultLoggerModuleSelector().getResultLoggerModule());
@@ -318,14 +329,26 @@ public final class AggregationWorkerModule extends AbstractModule {
           .toInstance(Paths.get(args.getResultWorkingDirectoryPathString()));
     }
 
+    // Feature flags.
     bind(boolean.class)
         .annotatedWith(EnableParallelSummaryUpload.class)
-        .toInstance(args.isEnableParallelSummaryUpload());
+        .toInstance(args.isParallelSummaryUploadEnabled());
+    bind(boolean.class)
+        .annotatedWith(EnablePrivacyBudgetKeyFiltering.class)
+        .toInstance(args.isLabeledPrivacyBudgetKeysEnabled());
+    bind(boolean.class)
+        .annotatedWith(StreamingOutputDomainProcessing.class)
+        .toInstance(args.isStreamingOutputDomainProcessingEnabled());
 
     // Parameter to set key cache. This is a test only flag.
     bind(Long.class)
         .annotatedWith(DecrypterCacheEntryTtlSec.class)
         .toInstance(args.getDecrypterCacheEntryTtlSec());
+
+    // Parameter to set exception cache. This is a test only flag.
+    bind(Long.class)
+            .annotatedWith(ExceptionCacheEntryTtlSec.class)
+            .toInstance(args.getExceptionCacheEntryTtlSec());
 
     // Response related flags
     bind(boolean.class)
@@ -343,6 +366,20 @@ public final class AggregationWorkerModule extends AbstractModule {
 
     // Otel exporter
     install(args.getOTelExporterSelector().getOTelConfigurationModule());
+  }
+
+  @Provides
+  @SupportedApis
+  ImmutableSet<String> providesSupportedApis() {
+    if (args.isAttributionReportingDebugApiEnabled()) {
+      return ImmutableSet.of(
+          ATTRIBUTION_REPORTING_API,
+          ATTRIBUTION_REPORTING_DEBUG_API,
+          PROTECTED_AUDIENCE_API,
+          SHARED_STORAGE_API);
+    } else {
+      return ImmutableSet.of(ATTRIBUTION_REPORTING_API, PROTECTED_AUDIENCE_API, SHARED_STORAGE_API);
+    }
   }
 
   @Provides
@@ -377,5 +414,12 @@ public final class AggregationWorkerModule extends AbstractModule {
     } else {
       return args.getGrpcCollectorEndpoint();
     }
+  }
+
+  @Provides
+  @Singleton
+  @CustomForkJoinThreadPool
+  ListeningExecutorService provideCustomForkJoinThreadPool() {
+    return MoreExecutors.listeningDecorator(new ForkJoinPool(args.getNonBlockingThreadPoolSize()));
   }
 }

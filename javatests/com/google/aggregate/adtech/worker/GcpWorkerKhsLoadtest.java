@@ -39,6 +39,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -92,11 +93,7 @@ public final class GcpWorkerKhsLoadtest {
               getTestDataBucket(KHS_LOADTEST_DATA_BUCKET),
               outputKey,
               /* debugRun= */ true,
-              /* jobId= */ getClass().getSimpleName()
-                  + "::"
-                  + name.getMethodName()
-                  + "-"
-                  + i,
+              /* jobId= */ UUID.randomUUID().toString(),
               /* outputDomainBucketName= */
               Optional.of(getTestDataBucket(KHS_LOADTEST_DATA_BUCKET)),
               /* outputDomainPrefix= */ Optional.of(domainKey));

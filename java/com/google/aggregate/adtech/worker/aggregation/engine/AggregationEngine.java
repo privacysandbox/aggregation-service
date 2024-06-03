@@ -30,11 +30,13 @@ import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKe
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.UnsignedLong;
 import java.math.BigInteger;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -55,7 +57,7 @@ public final class AggregationEngine implements Consumer<Report> {
   private final PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory;
 
   // Track aggregations for individual facts, keyed by fact buckets that are 128-bit integers.
-  private final ConcurrentMap<BigInteger, SingleFactAggregation> aggregationMap;
+  private final ConcurrentMap<BigInteger, LongAdder> aggregationMap;
 
   // Tracks distinct privacy budget unit identifiers for the reports aggregated.
   private final Set<PrivacyBudgetUnit> privacyBudgetUnits;
@@ -64,7 +66,7 @@ public final class AggregationEngine implements Consumer<Report> {
   private final Set<UUID> reportIdSet;
 
   /** Queried filteringIds to filter payload contributions. */
-  private final ImmutableSet<Integer> filteringIds;
+  private final ImmutableSet<UnsignedLong> filteringIds;
 
   /**
    * Consumes a report by adding its individual facts to the aggregation Only reports with unique
@@ -87,9 +89,9 @@ public final class AggregationEngine implements Consumer<Report> {
   }
 
   /** Checks if the queried filteringId matches the fact's. */
-  private static boolean containsFilteringId(Fact fact, ImmutableSet<Integer> filteringIds) {
+  private static boolean containsFilteringId(Fact fact, ImmutableSet<UnsignedLong> filteringIds) {
     // id = 0 is the default for reports w/o ids.
-    int factId = fact.id().orElse(0);
+    UnsignedLong factId = fact.id().orElse(UnsignedLong.ZERO);
     return filteringIds.contains(factId);
   }
 
@@ -97,7 +99,7 @@ public final class AggregationEngine implements Consumer<Report> {
    * Insert a new key with an empty fact. PBKs are not calculated for keys added using this method.
    */
   public void accept(BigInteger key) {
-    aggregationMap.computeIfAbsent(key, unused -> new SingleFactAggregation());
+    aggregationMap.computeIfAbsent(key, unused -> new LongAdder());
   }
 
   public boolean containsKey(BigInteger key) {
@@ -118,9 +120,15 @@ public final class AggregationEngine implements Consumer<Report> {
   }
 
   /** Calculates Privacy Budget Keys for the report for the filteringId. */
-  private void addPrivacyBudgetKey(SharedInfo sharedInfo, int filteringId) {
+  private void addPrivacyBudgetKey(SharedInfo sharedInfo, UnsignedLong filteringId) {
+    PrivacyBudgetKeyInput privacyBudgetKeyInput =
+        PrivacyBudgetKeyInput.builder()
+            .setSharedInfo(sharedInfo)
+            .setFilteringId(filteringId)
+            .build();
+
     Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator =
-        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo);
+        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput);
     if (privacyBudgetKeyGenerator.isEmpty()) {
       // Impossible because validations ensure only the supported reports are allowed.
       throw new IllegalStateException(
@@ -130,16 +138,12 @@ public final class AggregationEngine implements Consumer<Report> {
               sharedInfo.api().get(), sharedInfo.version()));
     }
     String privacyBudgetKey =
-        privacyBudgetKeyGenerator
-            .get()
-            .generatePrivacyBudgetKey(
-                PrivacyBudgetKeyInput.builder()
-                    .setSharedInfo(sharedInfo)
-                    .setFilteringId(filteringId)
-                    .build());
+        privacyBudgetKeyGenerator.get().generatePrivacyBudgetKey(privacyBudgetKeyInput);
     PrivacyBudgetUnit budgetUnitId =
         PrivacyBudgetUnit.create(
-            privacyBudgetKey, sharedInfo.scheduledReportTime().truncatedTo(HOURS));
+            privacyBudgetKey,
+            sharedInfo.scheduledReportTime().truncatedTo(HOURS),
+            sharedInfo.reportingOrigin());
     privacyBudgetUnits.add(budgetUnitId);
   }
 
@@ -149,11 +153,7 @@ public final class AggregationEngine implements Consumer<Report> {
   // TODO: investigate enforcing call of makeAggregation strictly after all accepts.
   public ImmutableMap<BigInteger, AggregatedFact> makeAggregation() {
     return aggregationMap.entrySet().stream()
-        .map(
-            factAggr -> {
-              SingleFactAggregation aggregation = factAggr.getValue();
-              return AggregatedFact.create(factAggr.getKey(), aggregation.getSum());
-            })
+        .map(factAggr -> AggregatedFact.create(factAggr.getKey(), factAggr.getValue().longValue()))
         .collect(toImmutableMap(AggregatedFact::bucket, Function.identity()));
   }
 
@@ -170,17 +170,15 @@ public final class AggregationEngine implements Consumer<Report> {
    * fact is just updated.
    */
   private void upsertAggregationForFact(Fact fact) {
-    aggregationMap
-        .computeIfAbsent(fact.bucket(), unused -> new SingleFactAggregation())
-        .accept(fact);
+    aggregationMap.computeIfAbsent(fact.bucket(), unused -> new LongAdder()).add(fact.value());
   }
 
   AggregationEngine(
       PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory,
-      ConcurrentMap<BigInteger, SingleFactAggregation> aggregationMap,
+      ConcurrentMap<BigInteger, LongAdder> aggregationMap,
       Set<PrivacyBudgetUnit> privacyBudgetUnits,
       Set<UUID> reportIdSet,
-      ImmutableSet<Integer> filteringIds) {
+      ImmutableSet<UnsignedLong> filteringIds) {
     this.privacyBudgetKeyGeneratorFactory = privacyBudgetKeyGeneratorFactory;
     this.aggregationMap = aggregationMap;
     this.privacyBudgetUnits = privacyBudgetUnits;

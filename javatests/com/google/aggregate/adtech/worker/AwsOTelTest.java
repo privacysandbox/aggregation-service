@@ -68,9 +68,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 /**
  * In AwsOTeltest, one job would be sent first to trigger metric/trace generation. And the following
  * tests are testing if OTel metrics and traces exist in Cloudwatch and AWS Xray. In continuous
- * environment, prod binary is used for OTel which would only export prod metrics. The current prod
- * metrics are no-op due to b/305100313; therefore, no metrics and traces should be found in AWS.
- * Use FixMethodOrder for this class to ensure the job will be running first to generate metrics and
+ * environment, prod binary is used for OTel which would only export prod metrics. Use
+ * FixMethodOrder for this class to ensure the job will be running first to generate metrics and
  * traces.
  */
 @RunWith(JUnit4.class)
@@ -150,8 +149,10 @@ public class AwsOTelTest {
     List<MetricDataResult> metrics = amazonCloudWatch.getMetricData(request).getMetricDataResults();
     MetricDataResult metricResult = metrics.get(0);
 
-    // TODO(b/305100313): CPU metrics should be larger than 0 after launch.
-    assertThat(metricResult.getValues().size()).isEqualTo(0);
+    assertThat(metricResult.getValues().size()).isGreaterThan(0);
+    for (int i = 0; i < metricResult.getValues().size(); i++) {
+      assertThat(metricResult.getValues().get(i) % 1).isEqualTo(0);
+    }
   }
 
   @Test
@@ -162,14 +163,16 @@ public class AwsOTelTest {
     List<MetricDataResult> metrics = amazonCloudWatch.getMetricData(request).getMetricDataResults();
     MetricDataResult metricResult = metrics.get(0);
 
-    // TODO(b/305100313): Memory metrics should be larger than 0 after launch.
-    assertThat(metricResult.getValues().size()).isEqualTo(0);
+    assertThat(metricResult.getValues().size()).isGreaterThan(0);
+    for (int i = 0; i < metricResult.getValues().size(); i++) {
+      assertThat(metricResult.getValues().get(i) % 10).isEqualTo(0);
+    }
   }
 
   @Test
   public void e2eTracesTest() throws InterruptedException {
-    // Adding 2 mins sleep here to make sure all traces are uploaded.
-    Thread.sleep(120000);
+    // Adding 3 mins sleep here to make sure all traces are uploaded.
+    Thread.sleep(180000);
     AtomicInteger prodTraceCount = new AtomicInteger(0);
     AtomicInteger debugTraceCount = new AtomicInteger(0);
     AWSXRay awsxRay = AWSXRayClientBuilder.standard().withRegion("us-east-1").build();
@@ -197,8 +200,7 @@ public class AwsOTelTest {
           }
         });
 
-    // TODO(b/305100313): Prod traces should be larger than 0 after launch.
-    assertThat(prodTraceCount.get()).isEqualTo(0);
+    assertThat(prodTraceCount.get()).isEqualTo(1);
     assertThat(debugTraceCount.get()).isEqualTo(0);
   }
 
@@ -211,7 +213,7 @@ public class AwsOTelTest {
     Date startTime = new Date(endTime.getTime() - 600000); // query for the last 10 mins.
     Metric metric =
         new Metric().withMetricName(metricName).withNamespace(ENVIRONMENT_NAME).withDimensions(dim);
-    MetricStat metricStat = new MetricStat().withMetric(metric).withStat("Average").withPeriod(1);
+    MetricStat metricStat = new MetricStat().withMetric(metric).withStat("Sum").withPeriod(1);
     MetricDataQuery query = new MetricDataQuery().withId("test").withMetricStat(metricStat);
     return new GetMetricDataRequest()
         .withMetricDataQueries(query)

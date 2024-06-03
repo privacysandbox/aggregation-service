@@ -23,6 +23,7 @@ import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.Fact;
 import com.google.aggregate.adtech.worker.model.Payload;
 import com.google.common.io.ByteSource;
+import com.google.common.primitives.UnsignedLong;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import java.io.IOException;
@@ -233,13 +234,27 @@ public class CborPayloadSerdesTest {
                 Fact.builder()
                     .setBucket(BigInteger.valueOf(12345))
                     .setValue(12345)
-                    .setId(Integer.MIN_VALUE)
+                    .setId(UnsignedLong.valueOf((1L << 64) - 1))
                     .build())
             .addFact(
                 Fact.builder()
                     .setBucket(BigInteger.valueOf(987654321))
                     .setValue(987654321)
-                    .setId(Integer.MAX_VALUE - 1)
+                    .setId(UnsignedLong.valueOf(Integer.MAX_VALUE + 1L))
+                    .build())
+            .addFact(
+                Fact.builder()
+                    .setBucket(BigInteger.valueOf(8563215486562L))
+                    .setValue(5555556)
+                    .setId(
+                        UnsignedLong.valueOf(
+                            BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)))
+                    .build())
+            .addFact(
+                Fact.builder()
+                    .setBucket(BigInteger.valueOf(4444))
+                    .setValue(4444)
+                    .setId(UnsignedLong.ZERO)
                     .build())
             .build();
 
@@ -252,30 +267,55 @@ public class CborPayloadSerdesTest {
   @Test
   public void deserializeFromCborBytes_reportWithId() throws Exception {
     Payload.Builder expectedPayload =
-            Payload.builder()
-                    .addFact(Fact.builder().setBucket(new BigInteger("1")).setValue(2).setId(0).build())
-                    .addFact(Fact.builder().setBucket(new BigInteger("3")).setValue(4).setId(1).build());
+        Payload.builder()
+            .addFact(
+                Fact.builder()
+                    .setBucket(new BigInteger("1"))
+                    .setValue(2)
+                    .setId(UnsignedLong.ZERO)
+                    .build())
+            .addFact(
+                Fact.builder()
+                    .setBucket(new BigInteger("3"))
+                    .setValue(4)
+                    .setId(UnsignedLong.valueOf(1))
+                    .build());
     // null padding to 20 contributions.
-    for(int ind = 0; ind < 18; ind ++) {
-      expectedPayload.addFact(Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(0).build());
+    for (int ind = 0; ind < 18; ind++) {
+      expectedPayload.addFact(
+          Fact.builder()
+              .setBucket(new BigInteger("0"))
+              .setValue(0)
+              .setId(UnsignedLong.ZERO)
+              .build());
     }
 
     readCborBytesFromFileAndAssert(
-            Path.of(System.getenv("CBOR_REPORT_WITH_ID_1_LOCATION")), expectedPayload.build());
+        Path.of(System.getenv("CBOR_REPORT_WITH_ID_1_LOCATION")), expectedPayload.build());
   }
 
   @Test
   public void deserializeFromCborBytes_reportWith32BitId() throws Exception {
     Payload.Builder expectedPayload =
-            Payload.builder()
-                    .addFact(Fact.builder().setBucket(new BigInteger("1")).setValue(2).setId(1).build());
+        Payload.builder()
+            .addFact(
+                Fact.builder()
+                    .setBucket(new BigInteger("1"))
+                    .setValue(2)
+                    .setId(UnsignedLong.valueOf(1))
+                    .build());
     // null padding to 20 contributions.
-    for(int ind = 0; ind < 19; ind ++) {
-      expectedPayload.addFact(Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(0).build());
+    for (int ind = 0; ind < 19; ind++) {
+      expectedPayload.addFact(
+          Fact.builder()
+              .setBucket(new BigInteger("0"))
+              .setValue(0)
+              .setId(UnsignedLong.ZERO)
+              .build());
     }
 
     readCborBytesFromFileAndAssert(
-            Path.of(System.getenv("CBOR_REPORT_WITH_ID_2_LOCATION")), expectedPayload.build());
+        Path.of(System.getenv("CBOR_REPORT_WITH_ID_2_LOCATION")), expectedPayload.build());
   }
 
   /** No overrides or bindings needed */

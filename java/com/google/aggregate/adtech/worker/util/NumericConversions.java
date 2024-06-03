@@ -20,6 +20,7 @@ import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.UnsignedLong;
 import com.google.errorprone.annotations.Var;
 import java.math.BigInteger;
 import java.util.Arrays;
@@ -62,21 +63,20 @@ public final class NumericConversions {
   }
 
   /**
-   * Reads a 32-bit integer from a big-endian byte array.
+   * Reads a 64-bit UnsignedLong from a big-endian byte array.
    *
-   * @param bytes the byte array to read from. Must be 4 bytes or shorter.
-   * @return the decoded 32-bit integer.
+   * @param bytes the byte array to read from. Must be 8 bytes or shorter.
+   * @return the decoded 64-bit UnsignedLong.
    */
-  public static int getInt32FromBytes(byte[] bytes) {
-    if (bytes.length > 4) {
+  public static UnsignedLong getUnsignedLongFromBytes(byte[] bytes) {
+    if (bytes.length > 8) {
       throw new IllegalArgumentException(
-          "Byte array provided was too long. Must be 4 bytes or shorter. Length was "
+          "Byte array provided was too long. Must be 8 bytes or shorter. Length was "
               + bytes.length);
     }
 
     // Decode from big-endian bytes. BigInteger assumes the byte array is big endian.
-    BigInteger bigIntegerValue = new BigInteger(bytes);
-    return bigIntegerValue.intValueExact();
+    return UnsignedLong.valueOf(new BigInteger(POSITIVE_SIGN, bytes));
   }
 
   /**
@@ -188,12 +188,13 @@ public final class NumericConversions {
   }
 
   /**
-   * Gets the list of integer from its string representation separated by the given delimiter.
+   * Gets the list of unsigned longs from its string representation of <b>unsigned</b> longs
+   * separated by the given delimiter.
    *
-   * @param stringOfNumbers integers separated by delimiter in string.
+   * @param stringOfNumbers unsigned longs separated by delimiter in string.
    * @param delimiter the delimiter separating the numbers.
    */
-  public static ImmutableSet<Integer> getIntegersFromString(
+  public static ImmutableSet<UnsignedLong> getUnsignedLongsFromString(
       String stringOfNumbers, String delimiter) {
     if (Strings.isNullOrEmpty(stringOfNumbers)) {
       return ImmutableSet.of();
@@ -201,7 +202,7 @@ public final class NumericConversions {
 
     return Arrays.stream(stringOfNumbers.trim().split(delimiter))
         .filter(id -> !id.trim().isEmpty())
-        .map(id -> Integer.valueOf(id.trim()))
+        .map(id -> UnsignedLong.valueOf(id.trim()))
         .collect(ImmutableSet.toImmutableSet());
   }
 

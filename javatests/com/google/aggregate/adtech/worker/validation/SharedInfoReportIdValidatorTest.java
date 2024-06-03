@@ -19,9 +19,7 @@ package com.google.aggregate.adtech.worker.validation;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.INVALID_REPORT_ID;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
-import static com.google.aggregate.adtech.worker.validation.SharedInfoReportIdValidator.INVALID_REPORT_ID_ERROR_STRING;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Payload;
@@ -74,15 +72,14 @@ public class SharedInfoReportIdValidatorTest {
             .setReportingOrigin(REPORTING_ORIGIN)
             .setScheduledReportTime(FIXED_TIME)
             .setSourceRegistrationTime(FIXED_TIME)
-            .setDestination(DESTINATION).build();
+            .setDestination(DESTINATION)
+            .build();
     Report report = reportBuilder.setSharedInfo(sharedInfoBuilder).build();
 
     Optional<ErrorMessage> validationError = validator.validate(report, ctx);
 
     assertThat(validationError).isPresent();
     assertThat(validationError.get().category()).isEqualTo(INVALID_REPORT_ID);
-    assertThat(validationError.get().detailedErrorMessage())
-        .isEqualTo(INVALID_REPORT_ID_ERROR_STRING);
   }
 
   @Test
@@ -95,15 +92,14 @@ public class SharedInfoReportIdValidatorTest {
             .setReportingOrigin(REPORTING_ORIGIN)
             .setScheduledReportTime(FIXED_TIME)
             .setSourceRegistrationTime(FIXED_TIME)
-            .setDestination(DESTINATION).build();
+            .setDestination(DESTINATION)
+            .build();
     Report report = reportBuilder.setSharedInfo(sharedInfoBuilder).build();
 
     Optional<ErrorMessage> validationError = validator.validate(report, ctx);
 
     assertThat(validationError).isPresent();
     assertThat(validationError.get().category()).isEqualTo(INVALID_REPORT_ID);
-    assertThat(validationError.get().detailedErrorMessage())
-        .isEqualTo(INVALID_REPORT_ID_ERROR_STRING);
   }
 
   @Test
@@ -116,7 +112,8 @@ public class SharedInfoReportIdValidatorTest {
             .setReportingOrigin(REPORTING_ORIGIN)
             .setScheduledReportTime(FIXED_TIME)
             .setSourceRegistrationTime(FIXED_TIME)
-            .setDestination(DESTINATION).build();
+            .setDestination(DESTINATION)
+            .build();
     Report report = reportBuilder.setSharedInfo(sharedInfoBuilder).build();
 
     Optional<ErrorMessage> validationError = validator.validate(report, ctx);

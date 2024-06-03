@@ -78,7 +78,9 @@ public class DeserializingReportDecrypterTest {
 
   @Before
   public void setUp() throws Exception {
-    report = FakeReportGenerator.generateWithParam(1, /* reportVersion */ LATEST_VERSION);
+    report =
+        FakeReportGenerator.generateWithParam(
+            1, /* reportVersion */ LATEST_VERSION, "https/foo.com");
     sharedInfo = sharedInfoSerdes.reverse().convert(Optional.of(report.sharedInfo()));
     encryptReport();
   }
@@ -109,9 +111,33 @@ public class DeserializingReportDecrypterTest {
         .contains("Couldn't deserialize shared_info");
   }
 
+  /** Test error handling for modified sharedInfo after report encryption */
+  @Test
+  public void testExceptionInDeserializationWithModifiedSharedInfo() throws Exception {
+    encryptReport();
+
+    // Modify the shared info after the report has been encrypted.
+    SharedInfo originalSharedInfo = sharedInfoSerdes.convert(encryptedReport.sharedInfo()).get();
+    SharedInfo modifiedSharedInfo =
+        originalSharedInfo.toBuilder().setReportingOrigin("newReportingOrigin.com").build();
+
+    encryptedReport =
+        EncryptedReport.builder()
+            .setPayload(encryptedReport.payload())
+            .setKeyId(DECRYPTION_KEY_ID)
+            .setSharedInfo(sharedInfoSerdes.reverse().convert(Optional.of(modifiedSharedInfo)))
+            .build();
+
+    DecryptionException decryptionException =
+        assertThrows(
+            DecryptionException.class,
+            () -> deserializingReportDecrypter.decryptSingleReport(encryptedReport));
+    assertThat(decryptionException).hasCauseThat().hasMessageThat().contains("decryption failed");
+  }
+
   /** Test error handling for failed payload deserialization */
   @Test
-  public void testExceptionInPayloadDeserialization() throws Exception {
+  public void testExceptionInPayloadDeserialization() {
     // No setup
 
     DecryptionException decryptionException =

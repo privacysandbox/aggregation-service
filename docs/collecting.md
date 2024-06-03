@@ -36,19 +36,17 @@ This is a sample aggregatable report produced with the
 
 ```json
 {
+    "aggregation_coordinator_origin": "https://publickeyservice.msmt.aws.privacysandboxservices.com",
     "aggregation_service_payloads": [
         {
-            "debug_cleartext_payload": "omRkYXRhgaJldmFsdWVEAACAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAFWWlvcGVyYXRpb25paGlzdG9ncmFt",
-            "key_id": "e101cca5-3dec-4d4f-9823-9c7984b0bafe",
-            "payload": "26/oZSjHABFqsIxR4Gyh/DpmJLNA/fcp43Wdc1/sblss3eAkAPsqJLphnKjAC2eLFR2bQolMTOneOU5sMWuCfag2tmFlQKLjTkNv85Wq6HAmLg+Zq+YU0gxF573yzK38Cj2pWtb65lhnq9dl4Yiz"
+            "debug_cleartext_payload": "omRkYXRhlKJldmFsdWVEAACAAGZidWNrZXRQPPhnkD+7c+wm1RjAlowp3KJldmFsdWVEAAARMGZidWNrZXRQJFJl9DLxbnMm1RjAlowp3KJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAKJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAGlvcGVyYXRpb25paGlzdG9ncmFt",
+            "key_id": "27c22e1b-dc77-4fc0-aee7-4d291262071c",
+            "payload": "vxia0shX3KjvsgdNWZdznk2IUWtOi8+fZCTGFniGeRTzAv5LgSeGLd3PhDANDyazjDNSm8GxjtsPmoG08rd5nL8+qc6NwKJfwnAQUVgg/iCS8alpCcrD9aTSTyjeUdrJBmfwvjjydpm6NA6o+RVbpv1N7v+Z3arSvUzqw3k3UfGy12n10+TkaH/ymCo5Ke/9mbSwxy68aJfAGutEt91fo7qHtvvrTAULBIgQTgNsy9LkSeCTQ2YeEr7wyxBssZLrPEanjh6LGtzj2gXRiz3OiVAqXxnSn7eW8K9V9TosFsIVHijk9o5oz6+9LhkDx5SHHvx048m5OqyFe48KSBAlMcHHSSk+GCwQtHcHWgSVb8TmHDE9UnTc7+tSR60IK/UK4351my7aEaKaacF3q28pYjjoy92idwzcw0IWUUMAb4c1z1RetxZ602txSnjOsFLUcW02ReeUJcgynbi5M/DIbpltqTlg2FeSsMzLvf0yGvP6NDUF6jqgaD9kfHcLgwLR61G/SnjXVtdUU31VdS5bPMyrfBthesHytmNFKQQtBqLZ32uyf60NKed9xZku70IW0r/z06hPlvRG+ME+FqPEgbWC/YsBXv/Ua3wPjQ1Q3/BvQWHIPuaEyA2aeDilE0h3wfHMLsGbHxq/5Tw+pqwR12g069Qf5jiYyCiBdo96Vd40iKbZL4DVt85QHevpHFQYTmANBHYqW09Gl3TWnay8BgbIE+38IX2O9lwR59tiRCXFNwLmE6nUtGjfTBFpz1VCIVRos9K14tE4yGfxyyNVt8dHy6CFABG5wYtnT/+izKMhPzZCVA65wqaKEehk26+inHa4GzXCJfWvX5QNV1FxEaSrktM22/91NWsQXyMC2fT7NtK7MEKsXSmkqL0VdlxNR4b6WCz2yd5hVufSKZA8e4Wfljr43Lc22om54o2Y6qtteoIsj9FhJbHmnke/NbrbmEPf9Jk37d/KxGu96X0E46ACA4WQa18hBxKTir+LKI0g+rXJlfwUn4vvNZz1vInX7VUHelZi0mpVylFD5XP09O0PX4oUPx+WVCCf"
         }
     ],
-    "attribution_destination": "http://shoes.localhost",
-    "shared_info": "{\"debug_mode\":\"enabled\",\"privacy_budget_key\":\"OtLi6K1k0yNpebFbh92gUh/Cf8HgVBVXLo/BU50SRag=\",\"report_id\":\"00cf2236-a4fa-40e5-a7aa-d2ceb33a4d9d\",\"reporting_origin\":\"http://adtech.localhost:3000\",\"scheduled_report_time\":\"1649652363\",\"version\":\"\"}",
-    "source_debug_key": "531933890459023",
-    "source_registration_time": "1649635200",
-    "source_site": "http://news.localhost",
-    "trigger_debug_key": "531933890459023"
+    "shared_info": "{\"api\":\"attribution-reporting\",\"attribution_destination\":\"https://arapi-advertiser.web.app\",\"debug_mode\":\"enabled\",\"report_id\":\"6334058b-301d-40c8-be58-3f63eed454a1\",\"reporting_origin\":\"https://arapi-adtech.web.app\",\"scheduled_report_time\":\"1700089276\",\"source_registration_time\":\"0\",\"version\":\"0.1\"}",
+    "source_debug_key": "685645209142579",
+    "trigger_debug_key": "685645209142579"
 }
 ```
 
@@ -58,15 +56,41 @@ The above CBOR payload decodes into the following data in JSON format (Decoded w
 representing the underlying bytes. While some bytes may be represented as ASCII characters, others
 are unicode escaped.
 
+Using CBOR, you will get the bucket and value in hex format. You can convert the value into decimal
+while the bucket can be converted into an escaped unicode format by converting the characters into
+ASCII or using the JavaScript code below.
+
 ```json
 {
     "data": [
         {
-            "value": "\u0000\u0000\x80\u0000",
-            "bucket": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0005Y"
-        }
+            "value": h'00008000',
+            "bucket": h'3CF867903FBB73EC26D518C0968C29DC'
+        },
+        {
+            "value": h'00001130',
+            "bucket": h'245265F432F16E7326D518C0968C29DC'
+        },
+        {
+            "value": h'00000000',
+            "bucket": h'00000000000000000000000000000000'
+        },
+        ...
     ],
     "operation": "histogram"
+}
+```
+
+```javascript
+function hexToAscii(hexString) {
+    if (hexString.length % 2 != 0) {
+        hexString = '0' + hexString;
+    }
+    let asciiStr = '';
+    for (let i = 0; i < hexString.length; i += 2) {
+        asciiStr += String.fromCharCode(parseInt(hexString.substr(i, 2), 16));
+    }
+    return asciiStr;
 }
 ```
 
@@ -314,7 +338,7 @@ sample uses unicode escaped "characters" to encode the byte array bucket value.
 
 ```json
 {
-    "bucket": "\u0005Y"
+    "bucket": "<øg\u0090?»sì&Õ\u0018À\u0096\u008c)Ü"
 }
 ```
 
@@ -329,43 +353,6 @@ Another sample of a valid output domain json file -
 
 ```json
 {
-    "bucket": "\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0005Y"
+    "bucket": "\u003c\u00f8\u0067\u0090\u003f\u00bb\u0073\u00ec\u0026\u00d5\u0018\u00c0\u0096\u008c\u0029\u00dc"
 }
 ```
-
-### Produce a summary report locally
-
-Using the local testing tool, you now can generate a summary report.
-[See all flags and descriptions](/docs/local-testing-tool.md#local-testing-tool-flags-and-descriptions)
-
-Follow the instructions in the
-[using-the-local-testing-tool](/docs/local-testing-tool.md#using-the-local-testing-tool) to download
-the local testing tool.
-
-We will run the tool, without adding noise to the summary report, to receive the expected value of
-`32768` from the [sample aggregatable report](#aggregatable-report-sample).
-
-```sh
-java -jar LocalRunner_deploy.jar \
---input_data_avro_file output_debug_reports_<timestamp>.avro \
---domain_avro_file output_domain.avro \
---json_output \
---no_noising
-```
-
-The output of above tool execution will be in `output.json` with the following content
-
-```json
-[
-    {
-        "bucket": "\u0005Y",
-        "metric": 32768
-    }
-]
-```
-
-Note: The local testing tool also supports aggregation of
-[Protected Audience](https://github.com/patcg-individual-drafts/private-aggregation-api#reports) and
-[Shared Storage](https://github.com/patcg-individual-drafts/private-aggregation-api#reports)
-reports. Simply pass the batch of FLEDGE or shared-storage unencrypted reports in the
---input_data_avro_file param.

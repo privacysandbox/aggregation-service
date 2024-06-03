@@ -793,7 +793,11 @@ alias(
 alias(
     name = "mockito",
     actual = "@maven//:org_mockito_mockito_core",
-    visibility = ["//javatests:__subpackages__"],
+    visibility = [
+        "//javatests:__subpackages__",
+        "//telemetry/debug/javatests:__subpackages__",
+        "//telemetry/prod/javatests:__subpackages__",
+    ],
 )
 
 alias(
@@ -822,6 +826,11 @@ alias(
 )
 
 alias(
+    name = "proto_gcp_common",
+    actual = "@maven//:com_google_api_grpc_proto_google_common_protos",
+)
+
+alias(
     name = "gcp_pubsub_v1",
     actual = "@maven//:com_google_api_grpc_proto_google_cloud_pubsub_v1",
 )
@@ -844,6 +853,16 @@ alias(
 alias(
     name = "gcp_gax_grpc",
     actual = "@maven//:com_google_api_gax_grpc",
+)
+
+alias(
+    name = "gcp_monitoring",
+    actual = "@maven//:com_google_cloud_google_cloud_monitoring",
+)
+
+alias(
+    name = "gcp_proto_cloud_monitoring",
+    actual = "@maven//:com_google_api_grpc_proto_google_cloud_monitoring_v3",
 )
 
 alias(
@@ -975,4 +994,14 @@ alias(
 alias(
     name = "scp_credsprovider",
     actual = "@shared_libraries//java/com/google/scp/shared/aws/credsprovider:credsprovider",
+)
+
+alias(
+    name = "gcp_trace",
+    actual = "@maven//:com_google_cloud_google_cloud_trace",
+)
+
+alias(
+    name = "gcp_trace_proto",
+    actual = "@maven//:com_google_api_grpc_proto_google_cloud_trace_v1",
 )

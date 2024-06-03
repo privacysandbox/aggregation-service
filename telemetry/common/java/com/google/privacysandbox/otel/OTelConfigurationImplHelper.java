@@ -16,6 +16,7 @@
 
 package com.google.privacysandbox.otel;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.MustBeClosed;
 import com.sun.management.OperatingSystemMXBean;
 import io.opentelemetry.api.common.Attributes;
@@ -28,7 +29,7 @@ import java.lang.management.ManagementFactory;
 import java.util.Map;
 
 /** Implements helper methods for {@link OTelConfiguration} implementations */
-public final class OTelConfigurationImplHelper {
+public class OTelConfigurationImplHelper {
   private final Meter meter;
   private final Tracer tracer;
 
@@ -45,11 +46,19 @@ public final class OTelConfigurationImplHelper {
         .setUnit("percent")
         .buildWithCallback(
             measurement -> {
-              double usedMemory =
-                  (double) (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
-              double ratio = usedMemory / Runtime.getRuntime().maxMemory();
-              measurement.record((ratio) * 100.0);
+              double ratio = getUsedMemoryRatio();
+              // This rounds 14 to 10 and 15 to 20.
+              int ratioRoundToTen = (int) Math.round(ratio / 10.0) * 10;
+              // Clamp the ratio at 90.
+              measurement.record(Math.min(ratioRoundToTen, 90));
             });
+  }
+
+  @VisibleForTesting
+  double getUsedMemoryRatio() {
+    double usedMemory =
+        (double) (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory());
+    return usedMemory / Runtime.getRuntime().maxMemory() * 100.0;
   }
 
   /** Creates a gauge meter that periodically exports memory utilization */
@@ -76,8 +85,8 @@ public final class OTelConfigurationImplHelper {
             measurement -> {
               OperatingSystemMXBean osBean =
                   ManagementFactory.getPlatformMXBean(OperatingSystemMXBean.class);
-              Double CpuUsage = osBean.getProcessCpuLoad() * 100;
-              measurement.record(CpuUsage);
+              int cpuUsage = (int) (osBean.getProcessCpuLoad() * 100);
+              measurement.record(cpuUsage);
             });
   }
 
@@ -113,7 +122,21 @@ public final class OTelConfigurationImplHelper {
   @MustBeClosed
   public Timer createTimerStarted(String name, String jobID) {
     SpanBuilder sp = tracer.spanBuilder(name).setNoParent();
-    return new TimerImpl(sp, jobID);
+    return new TimerImpl(sp, jobID, TimerUnit.NANOSECONDS);
+  }
+
+  /**
+   * Creates a {@link Timer} and adds jobID to the span attributes
+   *
+   * @param name {@link String}
+   * @param jobID {@link String}
+   * @param timeUnit {@link TimerUnit}
+   * @return {@link Timer}
+   */
+  @MustBeClosed
+  public Timer createTimerStarted(String name, String jobID, TimerUnit timeUnit) {
+    SpanBuilder sp = tracer.spanBuilder(name).setNoParent();
+    return new TimerImpl(sp, jobID, timeUnit);
   }
 
   /**

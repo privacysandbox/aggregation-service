@@ -21,9 +21,14 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
+import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetClientException;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient.DistributedPrivacyBudgetServiceException;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import javax.inject.Inject;
 
 /** HTTP privacy budgeting bridge which consumes privacy budget from an external HTTP service. */
@@ -41,23 +46,34 @@ public final class HttpPrivacyBudgetingServiceBridge implements PrivacyBudgeting
 
   @Override
   public ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
-      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo)
+      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String claimedIdentity)
       throws PrivacyBudgetingServiceBridgeException {
+    Map<String, Set<com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit>>
+        originToApiBudgetUnits = new LinkedHashMap<>();
+    for (PrivacyBudgetUnit workerBudgetUnit : budgetsToConsume) {
+      updateOriginToApiBudgetUnitsMap(workerBudgetUnit, originToApiBudgetUnits);
+    }
+    ImmutableList<ReportingOriginToPrivacyBudgetUnits> reportingOriginToPrivacyBudgetUnits =
+        originToApiBudgetUnits.entrySet().stream()
+            .map(
+                entry ->
+                    ReportingOriginToPrivacyBudgetUnits.builder()
+                        .setReportingOrigin(entry.getKey())
+                        .setPrivacyBudgetUnits(ImmutableList.copyOf(entry.getValue()))
+                        .build())
+            .collect(toImmutableList());
     ConsumePrivacyBudgetRequest consumePrivacyBudgetRequest =
         ConsumePrivacyBudgetRequest.builder()
-            .attributionReportTo(attributionReportTo)
-            .privacyBudgetUnits(
-                budgetsToConsume.stream()
-                    .map(HttpPrivacyBudgetingServiceBridge::scpBudgetUnit)
-                    .collect(toImmutableList()))
+            .reportingOriginToPrivacyBudgetUnitsList(reportingOriginToPrivacyBudgetUnits)
+            .claimedIdentity(claimedIdentity)
             .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
             .build();
 
     try {
       ConsumePrivacyBudgetResponse budgetResponse =
           distributedPrivacyBudgetClient.consumePrivacyBudget(consumePrivacyBudgetRequest);
-      return budgetResponse.exhaustedPrivacyBudgetUnits().stream()
-          .map(HttpPrivacyBudgetingServiceBridge::workerBudgetUnit)
+      return budgetResponse.exhaustedPrivacyBudgetUnitsByOrigin().stream()
+          .flatMap(budgetUnitsByOrigin -> buildWorkerBudgetUnits(budgetUnitsByOrigin).stream())
           .collect(toImmutableList());
     } catch (DistributedPrivacyBudgetServiceException e) {
       throw new PrivacyBudgetingServiceBridgeException(e.getStatusCode(), e);
@@ -66,18 +82,35 @@ public final class HttpPrivacyBudgetingServiceBridge implements PrivacyBudgeting
     }
   }
 
-  /** Converts worker's privacy budget unit ID to coordinator's representation */
-  private static com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit scpBudgetUnit(
-      PrivacyBudgetUnit budgetUnit) {
-    return com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit.builder()
-        .privacyBudgetKey(budgetUnit.privacyBudgetKey())
-        .reportingWindow(budgetUnit.scheduledReportTime())
-        .build();
+  private void updateOriginToApiBudgetUnitsMap(
+      PrivacyBudgetUnit workerBudgetUnit,
+      Map<String, Set<com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit>>
+          originToApiBudgetUnits) {
+    String reportingOrigin = workerBudgetUnit.reportingOrigin();
+    // The ordering does not matter from code logic point of view. It simply makes it easier to
+    // assert on during unit tests.
+    Set<com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit> apiBudgetUnits =
+        originToApiBudgetUnits.getOrDefault(reportingOrigin, new LinkedHashSet<>());
+    com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit apiBudgetUnit =
+        com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit.builder()
+            .privacyBudgetKey(workerBudgetUnit.privacyBudgetKey())
+            .reportingWindow(workerBudgetUnit.scheduledReportTime())
+            .build();
+    apiBudgetUnits.add(apiBudgetUnit);
+    originToApiBudgetUnits.put(reportingOrigin, apiBudgetUnits);
   }
 
   /** Converts coordinator's privacy budget unit ID to worker's representation */
-  private static PrivacyBudgetUnit workerBudgetUnit(
-      com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit budgetUnit) {
-    return PrivacyBudgetUnit.create(budgetUnit.privacyBudgetKey(), budgetUnit.reportingWindow());
+  private static ImmutableList<PrivacyBudgetUnit> buildWorkerBudgetUnits(
+      ReportingOriginToPrivacyBudgetUnits reportingOriginToPrivacyBudgetUnits) {
+    String reportingOrigin = reportingOriginToPrivacyBudgetUnits.reportingOrigin();
+    return reportingOriginToPrivacyBudgetUnits.privacyBudgetUnits().stream()
+        .map(
+            apiBudgetUnit ->
+                PrivacyBudgetUnit.create(
+                    apiBudgetUnit.privacyBudgetKey(),
+                    apiBudgetUnit.reportingWindow(),
+                    reportingOrigin))
+        .collect(toImmutableList());
   }
 }

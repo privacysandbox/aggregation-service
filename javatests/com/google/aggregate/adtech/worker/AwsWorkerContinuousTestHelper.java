@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
+import com.google.aggregate.adtech.worker.util.JobUtils;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReader;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
 import com.google.aggregate.protocol.avro.AvroDebugResultsRecord;
@@ -79,7 +80,7 @@ public class AwsWorkerContinuousTestHelper {
   // allowed_principals_map in coordinator setting which would be different in different test
   // environments.
   public static final String ENV_ATTRIBUTION_REPORT_TO = System.getenv("ATTRIBUTION_REPORT_TO");
-  public static final String DEFAULT_ATTRIBUTION_REPORT_TO = "foo.com";
+  public static final String DEFAULT_ATTRIBUTION_REPORT_TO = "https://foo.com";
   public static final String CREATE_JOB_URI_PATTERN =
       "https://%s.execute-api.us-east-1.amazonaws.com/%s/%s/createJob";
   public static final String GET_JOB_URI_PATTERN =
@@ -147,7 +148,13 @@ public class AwsWorkerContinuousTestHelper {
             outputDataBlobBucket,
             outputDataBlobPrefix,
             jobId)
-        .putAllJobParameters(getJobParams(false, outputDomainBucketName, outputDomainPrefix, 100))
+        .putAllJobParameters(
+            getJobParams(
+                false,
+                outputDomainBucketName,
+                outputDomainPrefix,
+                /* reportErrorThresholdPercentage= */ 100,
+                /* inputReportCount= */ Optional.empty()))
         .build();
   }
 
@@ -167,7 +174,12 @@ public class AwsWorkerContinuousTestHelper {
             outputDataBlobPrefix,
             jobId)
         .putAllJobParameters(
-            getJobParams(debugRun, outputDomainBucketName, outputDomainPrefix, 100))
+            getJobParams(
+                debugRun,
+                outputDomainBucketName,
+                outputDomainPrefix,
+                /* reportErrorThresholdPercentage= */ 100,
+                /* inputReportCount= */ Optional.empty()))
         .build();
   }
 
@@ -180,7 +192,8 @@ public class AwsWorkerContinuousTestHelper {
       String jobId,
       Optional<String> outputDomainBucketName,
       Optional<String> outputDomainPrefix,
-      int reportErrorThresholdPercentage) {
+      int reportErrorThresholdPercentage,
+      Optional<Long> inputReportCount) {
     return createDefaultJobRequestBuilder(
             inputDataBlobBucket,
             inputDataBlobPrefix,
@@ -192,7 +205,8 @@ public class AwsWorkerContinuousTestHelper {
                 debugRun,
                 outputDomainBucketName,
                 outputDomainPrefix,
-                reportErrorThresholdPercentage))
+                reportErrorThresholdPercentage,
+                inputReportCount))
         .build();
   }
 
@@ -223,13 +237,17 @@ public class AwsWorkerContinuousTestHelper {
       Boolean debugRun,
       Optional<String> outputDomainBucketName,
       Optional<String> outputDomainPrefix,
-      int reportErrorThresholdPercentage) {
+      int reportErrorThresholdPercentage,
+      Optional<Long> inputReportCountOptional) {
     ImmutableMap.Builder<String, String> jobParams = ImmutableMap.builder();
     jobParams.put("attribution_report_to", getAttributionReportTo());
 
     if (debugRun) {
       jobParams.put("debug_run", "true");
     }
+    inputReportCountOptional.ifPresent(
+        inputReportCount ->
+            jobParams.put(JobUtils.JOB_PARAM_INPUT_REPORT_COUNT, String.valueOf(inputReportCount)));
     jobParams.put(
         "report_error_threshold_percentage", String.valueOf(reportErrorThresholdPercentage));
     if (outputDomainPrefix.isPresent() && outputDomainBucketName.isPresent()) {

@@ -33,14 +33,3 @@ java_test(
         "//java/external:javax_inject",
     ],
 )
-
-java_test(
-    name = "SingleFactAggregationTest",
-    srcs = ["SingleFactAggregationTest.java"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/aggregation/engine:single_fact_aggregation",
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
-        "//java/external:google_truth",
-    ],
-)

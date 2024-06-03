@@ -211,6 +211,52 @@ public class JobValidatorTest {
   }
 
   @Test
+  public void validate_validInputReportCount_succeeds() {
+    Job jobWithoutCount = buildJob(ImmutableMap.of("attribution_report_to", "foo.com")).build();
+    Job jobWithEmptyString =
+        buildJob(ImmutableMap.of("attribution_report_to", "foo.com", "input_report_count", " "))
+            .build();
+    Job jobWithTrailingSpace =
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to", "foo.com", "input_report_count", "100     "))
+            .build();
+    Job jobWithZeroReportCount =
+        buildJob(ImmutableMap.of("attribution_report_to", "foo.com", "input_report_count", "0"))
+            .build();
+
+    JobValidator.validate(Optional.of(jobWithoutCount), /* domainOptional= */ true);
+    JobValidator.validate(Optional.of(jobWithEmptyString), /* domainOptional= */ true);
+    JobValidator.validate(Optional.of(jobWithTrailingSpace), /* domainOptional= */ true);
+    JobValidator.validate(Optional.of(jobWithZeroReportCount), /* domainOptional= */ true);
+  }
+
+  @Test
+  public void validate_invalidInputReportCount_fails() {
+    Job job1 =
+        buildJob(ImmutableMap.of("attribution_report_to", "foo.com", "input_report_count", "-1"))
+            .build();
+    Job job2 =
+        buildJob(
+                ImmutableMap.of(
+                    "attribution_report_to", "foo.com", "input_report_count", "not a number"))
+            .build();
+    Job job3 =
+        buildJob(ImmutableMap.of("attribution_report_to", "foo.com", "input_report_count", "100.1"))
+            .build();
+
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> JobValidator.validate(Optional.of(job1), /* domainOptional= */ true));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> JobValidator.validate(Optional.of(job2), /* domainOptional= */ true));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> JobValidator.validate(Optional.of(job3), /* domainOptional= */ true));
+  }
+
+  @Test
   public void validate_reportErrorThresholdPercentageNotANumber_fails() {
     Job job1 =
         buildJob(

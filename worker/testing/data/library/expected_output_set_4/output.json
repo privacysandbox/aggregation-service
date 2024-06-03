@@ -1,19 +1,19 @@
 [ {
-  "bucket" : "a2V5MTM=",
+  "bucket" : "key13",
   "metric" : 0
 }, {
-  "bucket" : "a2V5MTQ=",
+  "bucket" : "key14",
   "metric" : 0
 }, {
-  "bucket" : "a2V5MTU=",
+  "bucket" : "key15",
   "metric" : 0
 }, {
-  "bucket" : "a2V5MTY=",
+  "bucket" : "key16",
   "metric" : 0
 }, {
-  "bucket" : "a2V5MTE=",
+  "bucket" : "key11",
   "metric" : 0
 }, {
-  "bucket" : "a2V5MTI=",
+  "bucket" : "key12",
   "metric" : 0
 } ]

@@ -64,14 +64,14 @@ public final class FakePrivacyBudgetingServiceBridge implements PrivacyBudgeting
 
   @Override
   public ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
-      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo)
+      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String claimedIdentity)
       throws PrivacyBudgetingServiceBridgeException {
     if (exception != null) {
       throw exception;
     }
 
     lastBudgetsToConsumeSent = Optional.of(budgetsToConsume);
-    lastAttributionReportToSent = Optional.of(attributionReportTo);
+    lastAttributionReportToSent = Optional.of(claimedIdentity);
 
     ImmutableList<PrivacyBudgetUnit> insufficientPrivacyBudgetUnits =
         budgetsToConsume.stream()

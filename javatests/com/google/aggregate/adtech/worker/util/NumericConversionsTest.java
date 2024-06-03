@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.primitives.Bytes;
+import com.google.common.primitives.UnsignedLong;
 import java.math.BigInteger;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -303,25 +304,60 @@ public class NumericConversionsTest {
   }
 
   @Test
-  public void getIntegersFromString_withValidList() {
-    assertThat(NumericConversions.getIntegersFromString(",2,  3, , 99999, ", ","))
-        .containsExactly(3, 99999, 2);
-    assertThat(NumericConversions.getIntegersFromString("   5 ", "\\s*,\\s*")).containsExactly(5);
+  public void getLongsFromString_withValidList() {
+    assertThat(NumericConversions.getUnsignedLongsFromString(",2,  3, , 99999, 4294967295, 9223372036854775808", ","))
+        .containsExactly(
+            UnsignedLong.valueOf(3),
+            UnsignedLong.valueOf(99999),
+            UnsignedLong.valueOf(2),
+            UnsignedLong.valueOf(4294967295L),
+            UnsignedLong.valueOf(new BigInteger("9223372036854775808")));
+    assertThat(NumericConversions.getUnsignedLongsFromString("   5 ", ","))
+        .containsExactly(UnsignedLong.valueOf(5));
   }
 
   @Test
-  public void getIntegersFromString_emptyString_returnsEmptySet() {
-    assertThat(NumericConversions.getIntegersFromString("     ", ",")).isEmpty();
-    assertThat(NumericConversions.getIntegersFromString("   ,, , ,", ",")).isEmpty();
+  public void getLongsFromString_emptyString_returnsEmptySet() {
+    assertThat(NumericConversions.getUnsignedLongsFromString("     ", ",")).isEmpty();
+    assertThat(NumericConversions.getUnsignedLongsFromString("   ,, , ,", ",")).isEmpty();
   }
 
   @Test
-  public void getIntegersFromString_withNonIntegers_throwsIllegalArgument() {
-    assertThrows(
-        IllegalArgumentException.class, () -> NumericConversions.getIntegersFromString("5.5", ","));
+  public void getLongsFromString_withNonIntegers_throwsIllegalArgument() {
     assertThrows(
         IllegalArgumentException.class,
-        () -> NumericConversions.getIntegersFromString("5,6,null", ","));
+        () -> NumericConversions.getUnsignedLongsFromString("5.5", ","));
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> NumericConversions.getUnsignedLongsFromString("5,6,null", ","));
+  }
+
+  @Test
+  public void getUnsignedLongFromBytes_withVariousByteSize() {
+    byte[] value1 = NumericConversions.toUnsignedByteArray(BigInteger.valueOf(4));
+    byte[] value2 = NumericConversions.toUnsignedByteArray(BigInteger.valueOf(127));
+    byte[] value3 = NumericConversions.toUnsignedByteArray(BigInteger.valueOf(Integer.MAX_VALUE));
+    byte[] value4 = NumericConversions.toUnsignedByteArray(BigInteger.valueOf(Long.MAX_VALUE));
+    byte[] value5 = NumericConversions.toUnsignedByteArray(BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE));
+
+    assertThat(value1).hasLength(1);
+    assertThat(value2).hasLength(1);
+    assertThat(value3).hasLength(4);
+    assertThat(value4).hasLength(8);
+    assertThat(value5).hasLength(8);
+
+    assertThat(NumericConversions.getUnsignedLongFromBytes(value1)).isEqualTo(UnsignedLong.valueOf(4));
+    assertThat(NumericConversions.getUnsignedLongFromBytes(value2)).isEqualTo(UnsignedLong.valueOf(127));
+    assertThat(NumericConversions.getUnsignedLongFromBytes(value3)).isEqualTo(UnsignedLong.valueOf(Integer.MAX_VALUE));
+    assertThat(NumericConversions.getUnsignedLongFromBytes(value4)).isEqualTo(UnsignedLong.valueOf(Long.MAX_VALUE));
+    assertThat(NumericConversions.getUnsignedLongFromBytes(value5)).isEqualTo(UnsignedLong.valueOf(BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)));
+  }
+
+  @Test
+  public void getUnsignedLongFromBytes_withInvalidValue_throwsIllegalArgument() {
+    byte[] valueLargerThanMaxUnsignedLong = BigInteger.valueOf(Long.MAX_VALUE).multiply(BigInteger.valueOf(5)).toByteArray();
+
+    assertThrows(IllegalArgumentException.class, () -> NumericConversions.getUnsignedLongFromBytes(valueLargerThanMaxUnsignedLong));
   }
 
   @Test

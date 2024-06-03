@@ -49,6 +49,8 @@ _The `SHA256` of the `LocalTestingTool_{version}.jar` can be found on the
 
 ### Generating a summary report
 
+Using the local testing tool, you can generate a summary report.
+
 Simply pass any of the 3 kinds of supported reports as `--input_data_avro_file` param.
 
 Follow the instructions on how to
@@ -71,9 +73,43 @@ This will create a summary report as output.avro file in the same directory wher
 You can use [avro tools](https://mvnrepository.com/artifact/org.apache.avro/avro-tools) to read avro
 output as JSON.
 
+You can also batch the `output_debug_reports.avro` file into a summary report without adding noise
+to the summary report. You should expect to receive the value of `32768` and `4400` from the
+[sample aggregatable report](collecting.md#aggregatable-report-sample)
+
+```sh
+java -jar LocalTestingTool_<version>.jar \
+--input_data_avro_file output_debug_reports_<timestamp>.avro \
+--domain_avro_file output_domain.avro \
+--json_output \
+--output_directory . \
+--no_noising
+```
+
+The output of above tool execution will be in `output.json` with the following content
+
+```json
+[
+    {
+        "bucket": "<øg\u0090?»sì&Õ\u0018À\u0096\u008c)Ü",
+        "metric": 32768
+    },
+    {
+        "bucket": "$Reô2ñns&Õ\u0018À\u0096\u008c)Ü",
+        "metric": 4400
+    }
+]
+```
+
 To see all supported flags for the local testing tool run
 `java -jar LocalTestingTool_{version}.jar --help`, e.g. you can adjust the noising epsilon with the
 `--epsilon` flag or disable noising all together with the `--no_noising` flag.
+
+Note: The local testing tool also supports aggregation of
+[Protected Audience](https://github.com/patcg-individual-drafts/private-aggregation-api#reports) and
+[Shared Storage](https://github.com/patcg-individual-drafts/private-aggregation-api#reports)
+reports. Simply pass the batch of FLEDGE or shared-storage unencrypted reports in the
+--input_data_avro_file param.
 
 ## Local Testing tool flags and descriptions
 

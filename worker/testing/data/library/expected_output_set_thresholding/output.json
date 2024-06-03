@@ -1,13 +1,13 @@
 [ {
-  "bucket" : "MjI=",
+  "bucket" : "22",
   "metric" : 1
 }, {
-  "bucket" : "MzM=",
+  "bucket" : "33",
   "metric" : 2
 }, {
-  "bucket" : "NDQ=",
+  "bucket" : "44",
   "metric" : 3
 }, {
-  "bucket" : "NTU=",
+  "bucket" : "55",
   "metric" : 1
 } ]

@@ -20,6 +20,7 @@ java_test(
     name = "NoisedAggregationRunnerImplTest",
     srcs = ["NoisedAggregationRunnerImplTest.java"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker:annotations",
         "//java/com/google/aggregate/adtech/worker/configs",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/privacy/noise",

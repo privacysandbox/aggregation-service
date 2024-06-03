@@ -34,6 +34,7 @@ import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.privacysandbox.otel.OTelConfiguration;
 import com.google.privacysandbox.otel.Timer;
+import com.google.privacysandbox.otel.TimerUnit;
 import com.google.scp.operator.cpio.jobclient.JobClient;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
@@ -46,9 +47,7 @@ import javax.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Guava service for repeatedly pulling from the pubsub and processing the request
- */
+/** Guava service for repeatedly pulling from the pubsub and processing the request */
 public final class WorkerPullWorkService extends AbstractExecutionThreadService {
 
   private static final Logger logger = LoggerFactory.getLogger(WorkerPullWorkService.class);
@@ -138,7 +137,9 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
         Job currentJob = job.get();
         JobResult jobResult = null;
         String jobID = toJobKeyString(currentJob.jobKey());
-        try (Timer t = oTelConfiguration.createProdTimerStarted("total_execution_time", jobID)) {
+        try (Timer t =
+            oTelConfiguration.createProdTimerStarted(
+                "total_execution_time", jobID, TimerUnit.SECONDS)) {
           jobResult = jobProcessor.process(currentJob);
         }
         jobClient.markJobCompleted(jobResult);

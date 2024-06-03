@@ -28,7 +28,8 @@ public final class UnlimitedPrivacyBudgetingServiceBridge implements PrivacyBudg
 
   @Override
   public ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
-      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo) {
+      ImmutableList<PrivacyBudgetUnit> originToPrivacyBudgetUnits, String claimedIdentity)
+      throws PrivacyBudgetingServiceBridgeException {
     return ImmutableList.of();
   }
 }

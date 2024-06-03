@@ -80,6 +80,12 @@ public final class OTelConfigurationImpl implements OTelConfiguration {
 
   @Override
   @MustBeClosed
+  public Timer createProdTimerStarted(String name, String jobID, TimerUnit unit) {
+    return NOOP_TIMER;
+  }
+
+  @Override
+  @MustBeClosed
   public Timer createProdTimerStarted(String name, Map attributeMap) {
     return NOOP_TIMER;
   }

@@ -58,6 +58,9 @@ public final class ErrorSummaryAggregator {
     Optional<Long> errorThresholdValue =
         totalReportCountsOptional.map(
             totalReportCounts -> Math.round(totalReportCounts * errorThresholdPercentage / 100));
+    if (errorThresholdValue.isEmpty() && errorThresholdPercentage == 0) {
+      errorThresholdValue = Optional.of(0L);
+    }
     return new ErrorSummaryAggregator(errorThresholdValue, errorThresholdPercentage);
   }
 

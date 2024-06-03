@@ -27,11 +27,10 @@ import com.google.aggregate.privacy.budgeting.budgetkeygenerator.sharedstorage.V
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.sharedstorage.V2PrivacyBudgetKeyGenerator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
+import com.google.common.primitives.UnsignedLong;
 import com.google.inject.AbstractModule;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Random;
-import java.util.stream.DoubleStream;
 import javax.inject.Inject;
 import org.junit.Rule;
 import org.junit.Test;
@@ -76,7 +75,7 @@ public class SharedStoragePrivacyBudgetKeyGeneratorTest {
         PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder().setSharedInfo(si).build();
 
     PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator =
-        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(si).get();
+        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput).get();
     String privacyBudgetKey =
         privacyBudgetKeyGenerator.generatePrivacyBudgetKey(privacyBudgetKeyInput);
 
@@ -87,7 +86,7 @@ public class SharedStoragePrivacyBudgetKeyGeneratorTest {
   @Test
   public void generatePrivacyBudgetKey_forV2() {
     SharedInfo sharedInfo = buildSharedInfo(SHARED_STORAGE_VERSION_1_0);
-    int filteringId = 78;
+    UnsignedLong filteringId = UnsignedLong.valueOf(78);
     String privacyBudgetKeyHashInput =
         String.join(
             "-",
@@ -109,7 +108,7 @@ public class SharedStoragePrivacyBudgetKeyGeneratorTest {
             .build();
 
     PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator =
-        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo).get();
+        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput).get();
     String privacyBudgetKey =
         privacyBudgetKeyGenerator.generatePrivacyBudgetKey(privacyBudgetKeyInput);
 
@@ -117,75 +116,45 @@ public class SharedStoragePrivacyBudgetKeyGeneratorTest {
     assertEquals(privacyBudgetKey, expectedPBK);
   }
 
-  /**
-   * Test to verify Privacy Budget Key generated for two Shared Storage SharedInfo with same fields
-   * is same. This ensures the budget key generator hash is stable.
-   */
-  @Test
-  public void validate_PrivacyBudgetKey_ProtectedAudienceAPI_forSameSharedInfos() {
-    SharedInfo.Builder sharedInfoBuilder1 =
-        SharedInfo.builder()
-            .setVersion(SHARED_STORAGE_VERSION_0_1)
-            .setApi(SHARED_STORAGE_API)
-            .setReportingOrigin(REPORTING_ORIGIN)
-            .setScheduledReportTime(FIXED_TIME);
-    SharedInfo si1 = sharedInfoBuilder1.build();
-    SharedInfo.Builder sharedInfoBuilder2 =
-        SharedInfo.builder()
-            .setVersion(SHARED_STORAGE_VERSION_0_1)
-            .setApi(SHARED_STORAGE_API)
-            .setReportingOrigin(REPORTING_ORIGIN)
-            .setScheduledReportTime(FIXED_TIME);
-    SharedInfo si2 = sharedInfoBuilder2.build();
-
-    String privacyBudgetKey1 =
-        sharedStoragePrivacyBudgetKeyGenerator.generatePrivacyBudgetKey(si1).get();
-    String privacyBudgetKey2 =
-        sharedStoragePrivacyBudgetKeyGenerator.generatePrivacyBudgetKey(si2).get();
-
-    assertEquals(privacyBudgetKey1, privacyBudgetKey2);
-  }
-
-  @Test
-  public void generatePrivacyBudgetKey_forV1_withStaticFactory() {
-    SharedInfo si = buildSharedInfo(SHARED_STORAGE_VERSION_0_1);
-
-    String privacyBudgetKey =
-        PrivacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(si.api())
-            .get()
-            .generatePrivacyBudgetKey(si)
-            .get();
-
-    assertEquals(privacyBudgetKey, PRIVACY_BUDGET_KEY_1);
-  }
-
   @Test
   public void versionedPBKProvider_noOverlapsInVersions() {
-    Random random = new Random();
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.1", UnsignedLong.ZERO, V1PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.679999", UnsignedLong.ZERO, V1PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.999999", UnsignedLong.ZERO, V1PrivacyBudgetKeyGenerator.class);
 
-    DoubleStream reportVersionsCorrespondingToPBKV1 =
-        random.doubles().map(version -> Math.floor(version * 1000) / 1000).limit(50);
-    reportVersionsCorrespondingToPBKV1.forEach(
-        version -> assertPBKGeneratorForVersion(version, V1PrivacyBudgetKeyGenerator.class));
-
-    DoubleStream reportVersionsCorrespondingToPBKV2 =
-        random
-            .doubles(
-                /* size= */ 50,
-                /* startingVersionInclusive= */ 1.0,
-                /* endingVersionExclusive= */ 100)
-            .map(version -> Math.floor(version * 1000) / 1000);
-    reportVersionsCorrespondingToPBKV2.forEach(
-        version -> assertPBKGeneratorForVersion(version, V2PrivacyBudgetKeyGenerator.class));
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.1", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.679999", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.999999", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "1.0", UnsignedLong.ZERO, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "1.9999", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "167.9999", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
   }
 
-  private void assertPBKGeneratorForVersion(double version, Class privacyBudgetKeyGeneratorClass) {
-    SharedInfo sharedInfoForV2 = buildSharedInfo(String.valueOf(version));
+  private void assertPBKGeneratorForVersion(
+      String version, UnsignedLong filteringId, Class privacyBudgetKeyGeneratorClass) {
+    SharedInfo sharedInfo = buildSharedInfo(version);
+    PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput privacyBudgetKeyInput =
+        PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
+            .setFilteringId(filteringId)
+            .setSharedInfo(sharedInfo)
+            .build();
 
     assertTrue(
         versionedPrivacyBudgetKeyGeneratorProvider.doesExactlyOneCorrespondingPBKGeneratorExist(
-            sharedInfoForV2.version()));
-    assertThat(privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfoForV2).get())
+            privacyBudgetKeyInput));
+    assertThat(
+            privacyBudgetKeyGeneratorFactory
+                .getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput)
+                .get())
         .isInstanceOf(privacyBudgetKeyGeneratorClass);
   }
 

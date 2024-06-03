@@ -24,6 +24,8 @@ java_library(
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/adtech/worker/writer",
+        "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
+        "//java/external:avro",
         "//java/external:guava",
         "//java/external:jackson_core",
         "//java/external:jackson_databind",

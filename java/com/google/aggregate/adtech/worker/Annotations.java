@@ -25,142 +25,115 @@ import com.google.inject.BindingAnnotation;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-/**
- * Guice annotations for dependency injection
- */
+/** Guice annotations for dependency injection */
 public final class Annotations {
 
   /**
-   * Annotation for the {@link com.google.common.util.concurrent.ServiceManager} running the
-   * worker.
+   * Annotation for the {@link com.google.common.util.concurrent.ServiceManager} running the worker.
    */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface WorkerServiceManager {
+  public @interface WorkerServiceManager {}
 
-  }
-
-  /**
-   * Annotation for the {@link com.google.common.util.concurrent.Service} doing the work.
-   */
+  /** Annotation for the {@link com.google.common.util.concurrent.Service} doing the work. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface PullWorkService {
+  public @interface PullWorkService {}
 
-  }
-
-  /**
-   * Annotation for the thread pool doing the non-blocking work.
-   */
+  /** Annotation for the thread pool doing the non-blocking work. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface NonBlockingThreadPool {
+  public @interface NonBlockingThreadPool {}
 
-  }
-
-  /**
-   * Annotation for the thread pool doing the blocking work.
-   */
+  /** Annotation for the thread pool doing the blocking work. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface BlockingThreadPool {
-
-  }
+  public @interface BlockingThreadPool {}
 
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface BenchmarkMode {
-
-  }
+  public @interface BenchmarkMode {}
 
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface DomainOptional {
-
-  }
+  public @interface DomainOptional {}
 
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface EnableThresholding {
-
-  }
+  public @interface EnableThresholding {}
 
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  @interface DebugWriter {
-
-  }
+  @interface DebugWriter {}
 
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  @interface ResultWriter {
+  @interface ResultWriter {}
 
-  }
-
-  /**
-   * Annotation to enable or disable returning stack trace in response.
-   */
+  /** Annotation to enable or disable returning stack trace in response. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface EnableStackTraceInResponse {
+  public @interface EnableStackTraceInResponse {}
 
-  }
-
-  /**
-   * Annotation to declare the max depth of stacktrace to be returned.
-   */
+  /** Annotation to declare the max depth of stacktrace to be returned. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface MaxDepthOfStackTrace {
+  public @interface MaxDepthOfStackTrace {}
 
-  }
-
-  /**
-   * Annotation to declare the threshold of report errors to fail the job.
-   */
+  /** Annotation to declare the threshold of report errors to fail the job. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface ReportErrorThresholdPercentage {
+  public @interface ReportErrorThresholdPercentage {}
 
-  }
-
-  /**
-   * Annotation to set a size of shard with single key-value pair.
-   */
+  /** Annotation to set a size of shard with single key-value pair. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface OutputShardFileSizeBytes {
-
-  }
+  public @interface OutputShardFileSizeBytes {}
 
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface EnableParallelSummaryUpload {
-
-  }
+  public @interface EnableParallelSummaryUpload {}
 
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
-  public @interface StreamingOutputDomainProcessing {
+  public @interface StreamingOutputDomainProcessing {}
 
-  }
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface EnablePrivacyBudgetKeyFiltering {}
 
+  /** Annotation for the set of supported APIs. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface SupportedApis {}
 
-  private Annotations() {
-  }
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface ParallelAggregatedFactNoising {}
+
+  /** Annotation for the custom ForkJoin thread pool. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface CustomForkJoinThreadPool {}
+
+  private Annotations() {}
 }

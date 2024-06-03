@@ -40,7 +40,6 @@ public class AttributionReportingPrivacyBudgetKeyFieldsValidator
         && sharedInfo.scheduledReportTime() != null) {
       return Optional.empty();
     }
-    return createErrorMessage(
-        REQUIRED_SHAREDINFO_FIELD_INVALID, NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING);
+    return createErrorMessage(REQUIRED_SHAREDINFO_FIELD_INVALID);
   }
 }

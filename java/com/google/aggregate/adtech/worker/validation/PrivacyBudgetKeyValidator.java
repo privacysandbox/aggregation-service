@@ -25,8 +25,5 @@ import java.util.Optional;
  * budget key for Reports.
  */
 public interface PrivacyBudgetKeyValidator {
-  String NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING =
-      "One or more required fields in report's SharedInfo are null or invalid.";
-
   Optional<ErrorMessage> validatePrivacyBudgetKey(SharedInfo sharedInfo);
 }

@@ -29,9 +29,6 @@ import java.util.UUID;
 /** Validates that the report ID in SharedInfo is a valid UUID. */
 public final class SharedInfoReportIdValidator implements ReportValidator {
 
-  static final String INVALID_REPORT_ID_ERROR_STRING =
-      "Report ID is missing or is invalid in SharedInfo.";
-
   @Override
   public Optional<ErrorMessage> validate(Report report, Job unused) {
     if (isFieldNonEmpty(report.sharedInfo().reportId())) {
@@ -39,9 +36,9 @@ public final class SharedInfoReportIdValidator implements ReportValidator {
         UUID.fromString(report.sharedInfo().reportId().get());
         return Optional.empty();
       } catch (IllegalArgumentException exception) {
-        return createErrorMessage(INVALID_REPORT_ID, INVALID_REPORT_ID_ERROR_STRING);
+        return createErrorMessage(INVALID_REPORT_ID);
       }
     }
-    return createErrorMessage(INVALID_REPORT_ID, INVALID_REPORT_ID_ERROR_STRING);
+    return createErrorMessage(INVALID_REPORT_ID);
   }
 }

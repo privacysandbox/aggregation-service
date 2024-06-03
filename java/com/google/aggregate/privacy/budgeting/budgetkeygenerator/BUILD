@@ -20,6 +20,7 @@ java_library(
     name = "privacy_budget_key_generator_module",
     srcs = [
         "PrivacyBudgetKeyGenerator.java",
+        "PrivacyBudgetKeyGeneratorUtil.java",
         "VersionedPrivacyBudgetKeyGeneratorProvider.java",
     ],
     javacopts = ["-Xep:Var"],
@@ -45,6 +46,7 @@ java_library(
         ":privacy_budget_key_generator_module",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator/attributionreporting:pbk_generator",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator/attributionreportingdebug:pbk_generator",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator/protectedaudience:pbk_generator",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator/sharedstorage:pbk_generator",
         "//java/external:autovalue",

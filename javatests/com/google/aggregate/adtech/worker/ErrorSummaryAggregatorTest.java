@@ -47,7 +47,9 @@ public class ErrorSummaryAggregatorTest {
 
   private static final DecryptionValidationResult NO_ERROR_RESULTS =
       DecryptionValidationResult.builder()
-          .setReport(FakeReportGenerator.generateWithParam(0, /* reportVersion */ LATEST_VERSION))
+          .setReport(
+              FakeReportGenerator.generateWithParam(
+                  0, /* reportVersion */ LATEST_VERSION, "https://foo.com"))
           .build();
 
   private static final ImmutableList<DecryptionValidationResult> DECRYPTION_VALIDATION_RESULTS =
@@ -174,6 +176,23 @@ public class ErrorSummaryAggregatorTest {
   }
 
   @Test
+  public void countsAboveThreshold_withNoCountProvided_withThresholdZero_exceedsThreshold() {
+    ImmutableList<DecryptionValidationResult> decryptionValidationResults =
+        ImmutableList.of(
+            generateResult(ErrorCounter.DECRYPTION_ERROR),
+            generateResult(ErrorCounter.ATTRIBUTION_REPORT_TO_MISMATCH),
+            generateResult(ErrorCounter.ATTRIBUTION_REPORT_TO_MISMATCH),
+            NO_ERROR_RESULTS,
+            NO_ERROR_RESULTS,
+            NO_ERROR_RESULTS);
+    ErrorSummaryAggregator aggregator =
+        ErrorSummaryAggregator.createErrorSummaryAggregator(Optional.empty(), 0);
+    decryptionValidationResults.forEach(aggregator::add);
+
+    assertThat(aggregator.countsAboveThreshold()).isTrue();
+  }
+
+  @Test
   public void countsAboveThreshold_withNoCountProvided_exceedsThreshold() {
     ImmutableList<DecryptionValidationResult> decryptionValidationResults =
         ImmutableList.of(
@@ -217,8 +236,7 @@ public class ErrorSummaryAggregatorTest {
 
   private static DecryptionValidationResult generateResult(ErrorCounter error) {
     return DecryptionValidationResult.builder()
-        .addErrorMessage(
-            ErrorMessage.builder().setCategory(error).setDetailedErrorMessage("foo").build())
+        .addErrorMessage(ErrorMessage.builder().setCategory(error).build())
         .build();
   }
 

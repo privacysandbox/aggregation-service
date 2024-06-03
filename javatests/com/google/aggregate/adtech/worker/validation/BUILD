@@ -99,12 +99,16 @@ java_test(
     name = "SupportedReportApiTypeValidatorTest",
     srcs = ["SupportedReportApiTypeValidatorTest.java"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker:annotations",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/validation",
+        "//java/external:acai",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
+        "//java/external:guice",
     ],
 )
 
@@ -138,6 +142,18 @@ java_test(
 java_test(
     name = "AttributionReportingPrivacyBudgetKeyFieldsValidatorTest",
     srcs = ["v01/AttributionReportingPrivacyBudgetKeyFieldsValidatorTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/validation",
+        "//java/com/google/aggregate/adtech/worker/validation/v01",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+    ],
+)
+
+java_test(
+    name = "AttributionReportingDebugPrivacyBudgetKeyFieldsValidatorTest",
+    srcs = ["v01/AttributionReportingDebugPrivacyBudgetKeyFieldsValidatorTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/validation",

@@ -22,6 +22,7 @@ java_library(
     javacopts = ["-Xep:Var:ERROR"],
     deps = [
         "//java/external:error_prone_anntotations",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:opentelemetry_api",
         "//java/external:opentelemetry_context",

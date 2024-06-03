@@ -45,19 +45,13 @@ public final class FakeValidator implements ReportValidator {
     if (this.reportIdShouldReturnError.isPresent() && report.sharedInfo().reportId().isPresent()) {
       if (this.reportIdShouldReturnError.get().contains(report.sharedInfo().reportId().get())) {
         return Optional.of(
-            ErrorMessage.builder()
-                .setCategory(ErrorCounter.DECRYPTION_ERROR)
-                .setDetailedErrorMessage("")
-                .build());
+            ErrorMessage.builder().setCategory(ErrorCounter.DECRYPTION_ERROR).build());
       }
     }
     if (this.nextShouldReturnError.isPresent()) {
       if (this.nextShouldReturnError.get().next()) {
         return Optional.of(
-            ErrorMessage.builder()
-                .setCategory(ErrorCounter.DECRYPTION_ERROR)
-                .setDetailedErrorMessage("")
-                .build());
+            ErrorMessage.builder().setCategory(ErrorCounter.DECRYPTION_ERROR).build());
       }
     }
     return Optional.empty();

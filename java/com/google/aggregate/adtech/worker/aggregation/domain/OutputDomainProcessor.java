@@ -190,7 +190,8 @@ public abstract class OutputDomainProcessor {
       Boolean debugRun)
       throws DomainReadException {
     Set<BigInteger> reportsOnlyKeys = Sets.newConcurrentHashSet(aggregationEngine.getKeySet());
-    Set<BigInteger> domainOnlyKeys = Sets.newConcurrentHashSet();
+    Set<BigInteger> overlappingKeys = Sets.newConcurrentHashSet();
+
     AtomicLong outputDomainTotalCount = new AtomicLong(0);
 
     Flowable.fromStream(domainShards.stream())
@@ -210,9 +211,9 @@ public abstract class OutputDomainProcessor {
                         domainKeys -> {
                           domainKeys.forEach(
                               domainKey -> {
-                                // Domain only keys are separately annotated only for debug run.
-                                if (debugRun && !aggregationEngine.containsKey(domainKey)) {
-                                  domainOnlyKeys.add(domainKey);
+                                // keys are separately annotated only for debug run.
+                                if (debugRun && reportsOnlyKeys.contains(domainKey)) {
+                                  overlappingKeys.add(domainKey);
                                 }
 
                                 reportsOnlyKeys.remove(domainKey);
@@ -271,10 +272,10 @@ public abstract class OutputDomainProcessor {
           .noisedAggregatedFacts()
           .forEach(
               (f) -> {
-                if (domainOnlyKeys.contains(f.bucket())) {
-                  domainOnlyFacts.add(f);
-                } else {
+                if (overlappingKeys.contains(f.bucket())) {
                   overlappingFacts.add(f);
+                } else {
+                  domainOnlyFacts.add(f);
                 }
               });
 
@@ -322,6 +323,9 @@ public abstract class OutputDomainProcessor {
     return Flowable.using(
         () -> {
           try {
+            if (blobStorageClient.getBlobSize(shard) <= 0) {
+              return InputStream.nullInputStream();
+            }
             return blobStorageClient.getBlob(shard);
           } catch (BlobStorageClientException e) {
             throw new DomainReadException(e);

@@ -46,18 +46,12 @@ public final class ValidatorHelper {
   }
 
   /**
-   * Returns ErrorMessage from given ErrorCounter and errorMessage String
+   * Returns ErrorMessage from given ErrorCounter.
    *
    * @param errorCounter
-   * @param errorMessage
    * @return
    */
-  public static Optional<ErrorMessage> createErrorMessage(
-      ErrorCounter errorCounter, String errorMessage) {
-    return Optional.of(
-        ErrorMessage.builder()
-            .setCategory(errorCounter)
-            .setDetailedErrorMessage(errorMessage)
-            .build());
+  public static Optional<ErrorMessage> createErrorMessage(ErrorCounter errorCounter) {
+    return Optional.of(ErrorMessage.builder().setCategory(errorCounter).build());
   }
 }

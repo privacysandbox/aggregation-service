@@ -42,8 +42,7 @@ public final class ReportVersionValidator implements ReportValidator {
       Version version = Version.parse(report.sharedInfo().version());
       if (version.isZero()) {
         // 0.0 is not supported sharedInfo version.
-        return createErrorMessage(
-            UNSUPPORTED_SHAREDINFO_VERSION, UNSUPPORTED_SHAREDINFO_VERSION.getDescription());
+        return createErrorMessage(UNSUPPORTED_SHAREDINFO_VERSION);
       } else if (isReportVersionHigherThanLatestVersion(version)) {
         // throw exception to fail job.
         throw new ValidationException(
@@ -60,12 +59,10 @@ public final class ReportVersionValidator implements ReportValidator {
         return Optional.empty();
       }
     } catch (IllegalArgumentException ex) {
-      return createErrorMessage(
-          UNSUPPORTED_SHAREDINFO_VERSION, UNSUPPORTED_SHAREDINFO_VERSION.getDescription());
+      return createErrorMessage(UNSUPPORTED_SHAREDINFO_VERSION);
     }
 
-    return createErrorMessage(
-        UNSUPPORTED_SHAREDINFO_VERSION, UNSUPPORTED_SHAREDINFO_VERSION.getDescription());
+    return createErrorMessage(UNSUPPORTED_SHAREDINFO_VERSION);
   }
 
   private boolean isReportVersionHigherThanLatestVersion(Version version) {

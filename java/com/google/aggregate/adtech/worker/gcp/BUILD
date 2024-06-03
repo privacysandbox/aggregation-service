@@ -106,8 +106,7 @@ java_binary(
     main_class = "com.google.aggregate.adtech.worker.gcp.AggregationWorkerRunner",
     runtime_deps = [
         # //telemetry library should be before :worker_runner
-        # TODO(b/305100313) Re-enable prod library when building prod jar.
-        "//telemetry/noop/java/com/google/privacysandbox/otel:otel_noop",
+        "//telemetry/prod/java/com/google/privacysandbox/otel:otel_prod",
         ":worker_runner",
         "//java/external:commons_logging",
         "//java/external:slf4j_simple",

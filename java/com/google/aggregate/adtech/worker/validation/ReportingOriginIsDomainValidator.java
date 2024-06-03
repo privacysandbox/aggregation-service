@@ -41,11 +41,6 @@ public final class ReportingOriginIsDomainValidator implements ReportValidator {
       return Optional.empty();
     }
 
-    return createErrorMessage(
-        ATTRIBUTION_REPORT_TO_MALFORMED,
-        String.format(
-            "Report's attributionReportTo to is malformed, must be a domain. Report's"
-                + " attributionReportTo was: %s",
-            report.sharedInfo().reportingOrigin()));
+    return createErrorMessage(ATTRIBUTION_REPORT_TO_MALFORMED);
   }
 }

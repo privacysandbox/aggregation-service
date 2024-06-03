@@ -16,7 +16,7 @@
 
 package com.google.aggregate.privacy.budgeting.budgetkeygenerator;
 
-import com.google.aggregate.adtech.worker.model.Version;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -35,10 +35,10 @@ public abstract class VersionedPrivacyBudgetKeyGeneratorProvider {
   }
 
   /** Returns the PrivacyBudgetKeyGenerator for the given version of the report. */
-  protected Optional<PrivacyBudgetKeyGenerator> getPrivacyBudgetKeyGenerator(String reportVersion) {
-    Version versionObj = getReportVersion(reportVersion);
+  protected Optional<PrivacyBudgetKeyGenerator> getPrivacyBudgetKeyGenerator(
+      PrivacyBudgetKeyInput privacyBudgetKeyInput) {
     return versionedPrivacyBudgetKeyGeneratorList().stream()
-        .filter(privacyGenerator -> privacyGenerator.isMappedVersion(versionObj))
+        .filter(privacyGenerator -> privacyGenerator.isMappedVersion(privacyBudgetKeyInput))
         .map(privacyGenerator -> privacyGenerator.privacyBudgetKeyGenerator())
         .findAny();
   }
@@ -48,23 +48,14 @@ public abstract class VersionedPrivacyBudgetKeyGeneratorProvider {
    * testing.
    */
   @VisibleForTesting
-  boolean doesExactlyOneCorrespondingPBKGeneratorExist(String reportVersion) {
-    Version versionObj = getReportVersion(reportVersion);
+  boolean doesExactlyOneCorrespondingPBKGeneratorExist(
+      PrivacyBudgetKeyInput privacyBudgetKeyInput) {
     ImmutableList<PrivacyBudgetKeyGenerator> privacyBudgetKeyGeneratorsList =
         versionedPrivacyBudgetKeyGeneratorList().stream()
-            .filter(privacyGenerator -> privacyGenerator.isMappedVersion(versionObj))
+            .filter(privacyGenerator -> privacyGenerator.isMappedVersion(privacyBudgetKeyInput))
             .map(privacyGenerator -> privacyGenerator.privacyBudgetKeyGenerator())
             .collect(ImmutableList.toImmutableList());
     return privacyBudgetKeyGeneratorsList.size() == 1;
-  }
-
-  private static Version getReportVersion(String reportVersion) {
-    try {
-      return Version.parse(reportVersion);
-    } catch (IllegalArgumentException iae) {
-      // Impossible since the validation layer verifies the format.
-      throw new AssertionError("Invalid report version format.", iae);
-    }
   }
 
   @AutoValue.Builder
@@ -74,7 +65,8 @@ public abstract class VersionedPrivacyBudgetKeyGeneratorProvider {
         versionedPrivacyBudgetKeyGeneratorListBuilder();
 
     public Builder add(
-        Predicate<Version> versionPredicate, PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator) {
+        Predicate<PrivacyBudgetKeyInput> versionPredicate,
+        PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator) {
       versionedPrivacyBudgetKeyGeneratorListBuilder()
           .add(
               VersionedPrivacyBudgetKeyGenerator.create(
@@ -88,23 +80,24 @@ public abstract class VersionedPrivacyBudgetKeyGeneratorProvider {
   /** Maps the version with PrivacyBudgetKeyGenerator. */
   @AutoValue
   abstract static class VersionedPrivacyBudgetKeyGenerator {
-    abstract Predicate<Version> versionPredicate();
+    abstract Predicate<PrivacyBudgetKeyInput> privacyBudgetKeyInputPredicate();
 
     abstract PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator();
 
     static VersionedPrivacyBudgetKeyGenerator create(
-        Predicate<Version> versionPredicate, PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator) {
+        Predicate<PrivacyBudgetKeyInput> privacyBudgetKeyInputPredicate,
+        PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator) {
       return new AutoValue_VersionedPrivacyBudgetKeyGeneratorProvider_VersionedPrivacyBudgetKeyGenerator(
-          versionPredicate, privacyBudgetKeyGenerator);
+          privacyBudgetKeyInputPredicate, privacyBudgetKeyGenerator);
     }
 
     /**
      * Checks if the given version corresponds to the privacy budget calculation.
      *
-     * @param version report version.
+     * @param privacyBudgetKeyInput input needed for privacy budget generation.
      */
-    boolean isMappedVersion(Version version) {
-      return versionPredicate().test(version);
+    boolean isMappedVersion(PrivacyBudgetKeyInput privacyBudgetKeyInput) {
+      return privacyBudgetKeyInputPredicate().test(privacyBudgetKeyInput);
     }
   }
 }

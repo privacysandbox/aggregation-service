@@ -32,5 +32,16 @@ java_test(
     srcs = ["SharedInfoTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+    ],
+)
+
+java_test(
+    name = "VersionTest",
+    srcs = ["VersionTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/external:google_truth",
     ],
 )

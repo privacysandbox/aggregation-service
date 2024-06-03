@@ -36,8 +36,10 @@ import com.google.aggregate.protocol.avro.AvroRecordWriter.MetadataElement;
 import com.google.aggregate.protocol.avro.AvroReportRecord;
 import com.google.aggregate.protocol.avro.AvroReportWriter;
 import com.google.aggregate.protocol.avro.AvroReportWriterFactory;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
+import com.google.common.primitives.UnsignedLong;
 import com.google.common.util.concurrent.ServiceManager;
 import com.google.crypto.tink.hybrid.HybridConfig;
 import com.google.inject.AbstractModule;
@@ -51,6 +53,7 @@ import com.google.scp.operator.shared.testing.AwsHermeticTestHelper;
 import com.google.scp.operator.shared.testing.SimulationTestParams;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -949,7 +952,14 @@ public class AggregationWorkerHermeticTest {
             .setVersion(VERSION_1_0)
             .build());
     Files.copy(reportsAvro, reportShardsDir.resolve("shard_2.avro"));
-    setupLocalAggregationWorker(args);
+    setupLocalAggregationWorker(
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false,
+            /* outputDomain= */ false,
+            /* domainOptional= */ true,
+            /* reportErrorThresholdPercentage= */ "10",
+            /* enablePrivacyBudgetKeyFiltering= */ true,
+            /* filteringIds= */ ""));
 
     runWorker();
     ImmutableList<AggregatedFact> factList = waitForAggregation();
@@ -962,6 +972,133 @@ public class AggregationWorkerHermeticTest {
         AggregatedFact.create(
             /* key= */ createBucketFromInt(5), /* metric= */ 50, /* unnoisedMetric= */ 50L);
     assertThat(factList).containsExactly(expectedFact1, expectedFact2);
+  }
+
+  @Test
+  public void aggregate_withQueriedFilteringId_aggregatesCorrespondingContributions()
+      throws Exception {
+    ImmutableList<String> inputWithoutIds = ImmutableList.of("1:10,1:20,0:0", "5:50");
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(inputWithoutIds)
+            .setVersion(VERSION_0_1)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_1.avro"));
+    UnsignedLong queriedFilteringId1 =
+        UnsignedLong.valueOf(
+            BigInteger.valueOf(Long.MAX_VALUE).multiply(BigInteger.TWO).add(BigInteger.ONE));
+    UnsignedLong queriedFilteringId2 = UnsignedLong.valueOf((1L << 32) + 5);
+    // In this input with ids, only facts corresponding to id = 18446744073709551615 and 4294967301
+    // are considered for aggregation.
+    ImmutableList<String> inputWithIds =
+        ImmutableList.of(
+            String.format("1:10:0,1:20:%s,0:0:0", queriedFilteringId1),
+            String.format("5:51:%s", queriedFilteringId2));
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(inputWithIds)
+            .setSourceRegistrationTime(Instant.EPOCH.minusSeconds(600))
+            .setVersion(VERSION_1_0)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_2.avro"));
+    setupLocalAggregationWorker(
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false,
+            /* outputDomain= */ false,
+            /* domainOptional= */ true,
+            /* reportErrorThresholdPercentage= */ "10",
+            /* enablePrivacyBudgetKeyFiltering= */ true,
+            /* filteringIds= */ queriedFilteringId1.toString()
+                + ","
+                + queriedFilteringId2.toString()));
+
+    runWorker();
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(1), /* metric= */ 20, /* unnoisedMetric= */ 20L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(5), /* metric= */ 51, /* unnoisedMetric= */ 51L);
+    assertThat(factList).containsExactly(expectedFact1, expectedFact2);
+  }
+
+  @Test
+  public void
+      aggregate_withFilteringNotEnabled_ignoresQueriedIds_aggregatesDefaultOrIdContributions()
+          throws Exception {
+    // All facts without ids, so considered for aggregation.
+    ImmutableList<String> inputWithoutIds = ImmutableList.of("1:10,1:20,0:0", "5:50");
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(inputWithoutIds)
+            .setVersion(VERSION_0_1)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_1.avro"));
+    // In this input with ids, only facts corresponding to id = 0 will be considered for
+    // aggregation.
+    ImmutableList<String> inputWithIds = ImmutableList.of("1:10:0,1:20:10,0:0:0", "5:51:4");
+    AwsHermeticTestHelper.generateAvroReportsFromTextList(
+        SimulationTestParams.builder()
+            .setHybridKey(hybridKey)
+            .setReportsAvro(reportsAvro)
+            .setSimulationInputFileLines(inputWithIds)
+            .setSourceRegistrationTime(Instant.EPOCH.minusSeconds(600))
+            .setVersion(VERSION_1_0)
+            .build());
+    Files.copy(reportsAvro, reportShardsDir.resolve("shard_2.avro"));
+    setupLocalAggregationWorker(
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false,
+            /* outputDomain= */ false,
+            /* domainOptional= */ true,
+            /* reportErrorThresholdPercentage= */ "10",
+            /* enablePrivacyBudgetKeyFiltering= */ false,
+            /* filteringIds= */ "4,10"));
+
+    runWorker();
+    ImmutableList<AggregatedFact> factList = waitForAggregation();
+
+    // Aggregates all the facts without id or has id = 0.
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(1), /* metric= */ 40, /* unnoisedMetric= */ 40L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* key= */ createBucketFromInt(5), /* metric= */ 50, /* unnoisedMetric= */ 50L);
+    assertThat(factList).containsExactly(expectedFact1, expectedFact2);
+  }
+
+  @Test
+  public void aggregate_withInvalidFilteringIds_throwsValidation() throws Exception {
+    setupLocalAggregationWorker(
+        getLocalAggregationWorkerArgs(
+            /* noEncryption= */ false,
+            /* outputDomain= */ false,
+            /* domainOptional= */ true,
+            /* reportErrorThresholdPercentage= */ "10",
+            /* enablePrivacyBudgetKeyFiltering= */ false,
+            /* filteringIds= */ "invalid,not a number,1,2,3"));
+
+    runWorker();
+
+    String actualResultSerialized = Files.readString(resultFile);
+    ResultInfo.Builder builder = ResultInfo.newBuilder();
+    JSON_PARSER.merge(actualResultSerialized, builder);
+    ResultInfo actualResult = builder.build();
+    assertThat(actualResult.getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.INVALID_JOB.name());
+    assertThat(actualResult.getReturnMessage())
+        .containsMatch(
+            "Job parameters for the job 'request' should have comma separated integers for"
+                + " 'filtering_ids' parameter.");
   }
 
   @Test
@@ -1130,7 +1267,15 @@ public class AggregationWorkerHermeticTest {
 
   private String[] getLocalAggregationWorkerArgs(
       boolean noEncryption, boolean outputDomain, boolean domainOptional) throws Exception {
-    return getLocalAggregationWorkerArgs(noEncryption, outputDomain, domainOptional, "100");
+    return getLocalAggregationWorkerArgs(
+        noEncryption,
+        outputDomain,
+        domainOptional,
+        "100",
+        /** enablePrivacyBudgetKeyFiltering = */
+        true,
+        /** filteringIds = */
+        null);
   }
 
   private String[] getLocalAggregationWorkerArgs(
@@ -1138,6 +1283,25 @@ public class AggregationWorkerHermeticTest {
       boolean outputDomain,
       boolean domainOptional,
       String reportErrorThresholdPercentage)
+      throws Exception {
+    return getLocalAggregationWorkerArgs(
+        noEncryption,
+        outputDomain,
+        domainOptional,
+        reportErrorThresholdPercentage,
+        /** enablePrivacyBudgetKeyFiltering = */
+        true,
+        /** filteringIds = */
+        null);
+  }
+
+  private String[] getLocalAggregationWorkerArgs(
+      boolean noEncryption,
+      boolean outputDomain,
+      boolean domainOptional,
+      String reportErrorThresholdPercentage,
+      boolean enablePrivacyBudgetKeyFiltering,
+      String filteringIds)
       throws Exception {
     // Create the local key
     HybridConfig.register();
@@ -1183,6 +1347,12 @@ public class AggregationWorkerHermeticTest {
                 reportErrorThresholdPercentage);
     if (domainOptional) {
       argsBuilder.add("--domain_optional");
+    }
+    if (enablePrivacyBudgetKeyFiltering) {
+      argsBuilder.add("--labeled_privacy_budget_keys_enabled");
+    }
+    if (!Strings.isNullOrEmpty(filteringIds)) {
+      argsBuilder.add("--local_job_params_input_filtering_ids").add(filteringIds);
     }
     return argsBuilder.build().toArray(String[]::new);
   }

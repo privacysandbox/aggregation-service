@@ -16,7 +16,8 @@
 
 package com.google.aggregate.privacy.budgeting.budgetkeygenerator.protectedaudience;
 
-import com.google.aggregate.adtech.worker.model.Version;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorUtil;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.VersionedPrivacyBudgetKeyGeneratorProvider;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -31,20 +32,15 @@ public class PrivacyBudgetKeyGeneratorModule extends AbstractModule {
   @Provides
   @ProtectedAudiencePrivacyBudgetKeyGenerators
   VersionedPrivacyBudgetKeyGeneratorProvider providePrivacyBudgetKeyGenerators() {
-    Version version1_0 =
-        Version.create(
-            /** majorVersion = */
-            1,
-            /** minorVersion = */
-            0);
-    Predicate<Version> versionsLessThan1_0 = version -> version.compareTo(version1_0) < 0;
-    Predicate<Version> versionsGreaterThanOrEqualTo1_0 =
-        version -> version.compareTo(version1_0) >= 0;
+    Predicate<PrivacyBudgetKeyInput> versionV1Predicate =
+        PrivacyBudgetKeyGeneratorUtil.getPrivacyBudgetKeyGeneratorV1Predicate();
+    Predicate<PrivacyBudgetKeyInput> versionV2Predicate =
+        PrivacyBudgetKeyGeneratorUtil.getPrivacyBudgetKeyGeneratorV2Predicate();
 
     // <Important> A version should map to only one Privacy Budget Key generator.
     return VersionedPrivacyBudgetKeyGeneratorProvider.builder()
-        .add(versionsLessThan1_0, new V1PrivacyBudgetKeyGenerator())
-        .add(versionsGreaterThanOrEqualTo1_0, new V2PrivacyBudgetKeyGenerator())
+        .add(versionV1Predicate, new V1PrivacyBudgetKeyGenerator())
+        .add(versionV2Predicate, new V2PrivacyBudgetKeyGenerator())
         .build();
   }
 

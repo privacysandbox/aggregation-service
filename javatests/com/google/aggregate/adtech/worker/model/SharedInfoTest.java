@@ -17,9 +17,13 @@
 package com.google.aggregate.adtech.worker.model;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_1_0;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -33,8 +37,6 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class SharedInfoTest {
-
-  private static final String PRIVACY_BUDGET_KEY_1 = "test_privacy_budget_key";
 
   // FIXED_TIME = Jan 01 2021 00:00:00 GMT+0000
   private static final Instant FIXED_TIME = Instant.ofEpochSecond(1609459200);
@@ -152,6 +154,37 @@ public class SharedInfoTest {
     SharedInfo sharedInfoAttributionReporting = sharedInfoAttributionReportingBuilder.build();
 
     assertEquals(sharedInfoAttributionReporting.api().get(), ATTRIBUTION_REPORTING_API);
+  }
+
+  /**
+   * Verifies that both V0.1 and V1.0 of the Attribution Reporting Debug API work with SharedInfo.
+   */
+  @Test
+  public void sharedInfo_withAttributionReportingDebugAPIType() {
+    SharedInfo attributionReportingDebug1 =
+        SharedInfo.builder()
+            .setVersion(VERSION_0_1)
+            .setApi(ATTRIBUTION_REPORTING_DEBUG_API)
+            .setScheduledReportTime(FIXED_TIME)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID)
+            .build();
+
+    SharedInfo attributionReportingDebug2 =
+        SharedInfo.builder()
+            .setVersion(VERSION_1_0)
+            .setApi(ATTRIBUTION_REPORTING_DEBUG_API)
+            .setScheduledReportTime(FIXED_TIME)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setDestination(DESTINATION)
+            .setSourceRegistrationTime(FIXED_TIME)
+            .setReportId(RANDOM_UUID)
+            .build();
+
+    assertThat(attributionReportingDebug1.api()).hasValue(ATTRIBUTION_REPORTING_DEBUG_API);
+    assertThat(attributionReportingDebug2.api()).hasValue(ATTRIBUTION_REPORTING_DEBUG_API);
   }
 
   @Test

@@ -18,6 +18,7 @@ package com.google.aggregate.privacy.budgeting.budgetkeygenerator;
 
 import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.auto.value.AutoValue;
+import com.google.common.primitives.UnsignedLong;
 import java.util.Optional;
 
 /** PrivacyBudgetKeyGenerator is used to generate privacy budget key for Reports */
@@ -25,21 +26,6 @@ public interface PrivacyBudgetKeyGenerator {
   String PRIVACY_BUDGET_KEY_DELIMITER = "-";
 
   String generatePrivacyBudgetKey(PrivacyBudgetKeyInput privacyBudgetKeyInput);
-
-  /**
-   * Generates Privacy Budget Key for the report.
-   *
-   * @deprecated This method is deprecated in favor of
-   *     generatePrivacyBudgetKey(PrivacyBudgetKeyInput).
-   *     <p>TODO(b/292494729): Remove this method with Privacy Budget Labels implementation.
-   * @param sharedInfo
-   */
-  @Deprecated(forRemoval = true)
-  default Optional<String> generatePrivacyBudgetKey(SharedInfo sharedInfo) {
-    return Optional.of(
-        generatePrivacyBudgetKey(
-            PrivacyBudgetKeyInput.builder().setSharedInfo(sharedInfo).build()));
-  }
 
   /** An input object containing values for generating Privacy Budget Key. */
   @AutoValue
@@ -51,7 +37,7 @@ public interface PrivacyBudgetKeyGenerator {
     public abstract SharedInfo sharedInfo();
 
     /** Queried filteringId to be included in the budget key calculation for reports > V1.0. */
-    public abstract Optional<Integer> filteringId();
+    public abstract Optional<UnsignedLong> filteringId();
 
     @AutoValue.Builder
     public abstract static class Builder {
@@ -59,7 +45,7 @@ public interface PrivacyBudgetKeyGenerator {
 
       public abstract Builder setSharedInfo(SharedInfo sharedInfo);
 
-      public abstract Builder setFilteringId(Integer filteringId);
+      public abstract Builder setFilteringId(UnsignedLong filteringId);
     }
   }
 }

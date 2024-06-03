@@ -69,6 +69,10 @@ worker_gcp_deployment(
         "--noising",
         "DP_NOISING",
         "--return_stack_trace",
+        "--parallel_summary_upload_enabled",
+        "--streaming_output_domain_processing_enabled",
+        "--parallel_fact_noising_enabled",
+        "--labeled_privacy_budget_keys_enabled",
     ],
     entrypoint = [
         "/usr/bin/java",

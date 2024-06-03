@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_FILTERING_IDS;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_FILTERING_IDS_DELIMITER;
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_INPUT_REPORT_COUNT;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
@@ -25,6 +26,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.util.NumericConversions;
+import com.google.common.primitives.Longs;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import java.util.Map;
 import java.util.Optional;
@@ -72,6 +74,12 @@ public final class JobValidator {
             "Job parameters for the job '%s' should have a valid value between 0 and 100 for"
                 + " 'report_error_threshold_percentage' parameter.",
             jobKey));
+    checkArgument(
+        isAValidCount(jobParams.get(JOB_PARAM_INPUT_REPORT_COUNT)),
+        String.format(
+            "Job parameters for the job '%s' should have a valid non-negative value for"
+                + " 'input_report_count' parameter.",
+            jobKey));
 
     String filteringIds = jobParams.getOrDefault(JOB_PARAM_FILTERING_IDS, null);
     checkArgument(
@@ -82,10 +90,18 @@ public final class JobValidator {
             jobKey));
   }
 
+  /** Checks if the string represents a non-negative number or is empty. */
+  private static boolean isAValidCount(String countInString) {
+    return countInString == null
+        || countInString.trim().isEmpty()
+        || (Longs.tryParse(countInString.trim()) != null
+            && Longs.tryParse(countInString.trim()) >= 0);
+  }
+
   /** Checks if the given string is a list of integers separated by delimiter. */
   private static boolean validStringOfIntegers(String stringOfNumbers, String delimiter) {
     try {
-      NumericConversions.getIntegersFromString(stringOfNumbers, delimiter);
+      NumericConversions.getUnsignedLongsFromString(stringOfNumbers, delimiter);
       return true;
     } catch (IllegalArgumentException iae) {
       return false;

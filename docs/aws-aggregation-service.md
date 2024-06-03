@@ -6,14 +6,11 @@ To test the aggregation service with support for encrypted reports, you need the
 
 -   Have an [AWS account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html)
     available to you.
--   [Register](https://developer.chrome.com/origintrials/#/view_trial/771241436187197441) for the
-    Privacy Sandbox Relevance and Measurement origin trial (OT)
 -   Complete the aggregation service [onboarding form](https://forms.gle/EHoecersGKhpcLPNA)
 
 Once you've submitted the onboarding form, we will contact you to verify your information. Then,
 we'll send you the remaining instructions and information needed for this setup.</br> _You won't be
-able to successfully setup your AWS system without registering for the origin trial and completing
-the onboarding process!_
+able to successfully setup your AWS system without completing the onboarding process!_
 
 To set up aggregation service in AWS you'll use [Terraform](https://www.terraform.io/).
 
@@ -278,15 +275,6 @@ file into smaller shards.
     for sending an authenticated request. [Detailed API spec](/docs/api.md#getjob-endpoint)_
 
 ## Updating the system
-
-If you have deployed the system before, we recommend to run `terraform destroy` in your environment
-folder (e.g. `<repository_root>/terraform/aws/environments/dev`) when upgrading from `0.3.z` to
-`0.4.z+` and follow the [setup steps](#set-up-your-deployment-environment) again.
-
-After your upgrade to `0.4.z+` and if you have followed the above setup, next time you can update
-your system to the latest version by checking out the latest tagged version and running
-`terraform apply` in your environment folder (e.g.
-`<repository_root>/terraform/aws/environments/dev`).
 
 Run the following in the `<repository_root>`.
 

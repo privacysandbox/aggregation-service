@@ -16,6 +16,9 @@
 
 package com.google.aggregate.adtech.worker.writer.json;
 
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -23,15 +26,28 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
+import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
+import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumWriter;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.avro.io.JsonEncoder;
 
 /**
  * Local writer result implementation in json format. This helps standalone library to be in
@@ -39,27 +55,47 @@ import javax.inject.Inject;
  */
 public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
 
+  private AvroResultsSchemaSupplier schemaSupplier;
   private final ObjectMapper mapper = new ObjectMapper();
   private final SimpleModule module = new SimpleModule();
 
   @Inject
-  LocalJsonResultFileWriter() {
+  LocalJsonResultFileWriter(AvroResultsSchemaSupplier schemaSupplier) {
+    this.schemaSupplier = schemaSupplier;
     module.addSerializer(EncryptedReport.class, new EncryptedReportSerializer());
-    module.addSerializer(AggregatedFact.class, new AggregatedFactSerializer());
     mapper.registerModule(module);
   }
 
   @Override
-  public void writeLocalFile(Stream<AggregatedFact> results, Path resultFile)
+  public void writeLocalFile(Stream<AggregatedFact> results, Path resultFilePath)
       throws FileWriteException {
+    Schema schema = schemaSupplier.get();
 
+    DatumWriter<Object> writer = new GenericDatumWriter<>(schema);
     try {
-      List<AggregatedFact> aggregatedFactList = results.collect(Collectors.toList());
-      String prettyJson =
-          mapper.writerWithDefaultPrettyPrinter().writeValueAsString(aggregatedFactList);
-      Files.writeString(resultFile, prettyJson, StandardOpenOption.CREATE);
-    } catch (Exception e) {
-      throw new FileWriteException("Failed to write local Json file", e);
+      OutputStream outStream = Files.newOutputStream(resultFilePath, CREATE, TRUNCATE_EXISTING);
+      PrintWriter printWriter = new PrintWriter(outStream);
+      JsonEncoder jsonEncoder = EncoderFactory.get().jsonEncoder(schema, outStream, true);
+
+      Iterator<AggregatedFact> resultsIterator = results.iterator();
+      printWriter.print('[');
+      printWriter.flush();
+      while (resultsIterator.hasNext()) {
+        AggregatedFact aggregatedFact = resultsIterator.next();
+        GenericRecord aggregatedFactRecord = aggregatedFactToGenericRecord(aggregatedFact);
+        writer.write(aggregatedFactRecord, jsonEncoder);
+        jsonEncoder.flush();
+        outStream.flush();
+        if (resultsIterator.hasNext()) {
+          printWriter.print(',');
+          printWriter.flush();
+        }
+      }
+      printWriter.print(']');
+      printWriter.flush();
+      printWriter.close();
+    } catch (IOException e) {
+      throw new FileWriteException("Failed to write local JSON file", e);
     }
   }
 
@@ -81,25 +117,13 @@ public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
     return ".json";
   }
 
-  private static class AggregatedFactSerializer extends StdSerializer<AggregatedFact> {
-
-    AggregatedFactSerializer() {
-      this(null);
-    }
-
-    AggregatedFactSerializer(Class<AggregatedFact> t) {
-      super(t);
-    }
-
-    @Override
-    public void serialize(
-        AggregatedFact aggregatedFact, JsonGenerator jgen, SerializerProvider serializerProvider)
-        throws IOException {
-      jgen.writeStartObject();
-      jgen.writeBinaryField("bucket", aggregatedFact.bucket().toByteArray());
-      jgen.writeNumberField("metric", aggregatedFact.metric());
-      jgen.writeEndObject();
-    }
+  private GenericRecord aggregatedFactToGenericRecord(AggregatedFact aggregatedFact) {
+    GenericRecord genericRecord = new GenericData.Record(schemaSupplier.get());
+    ByteBuffer bucketBytes =
+        ByteBuffer.wrap(NumericConversions.toUnsignedByteArray(aggregatedFact.bucket()));
+    genericRecord.put("bucket", bucketBytes);
+    genericRecord.put("metric", aggregatedFact.metric());
+    return genericRecord;
   }
 
   private static class EncryptedReportSerializer extends StdSerializer<EncryptedReport> {

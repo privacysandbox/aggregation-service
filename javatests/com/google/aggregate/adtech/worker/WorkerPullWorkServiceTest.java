@@ -38,6 +38,7 @@ import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
 import com.google.aggregate.adtech.worker.selector.MetricClientSelector;
 import com.google.aggregate.adtech.worker.testing.NoopJobProcessor;
 import com.google.aggregate.adtech.worker.testing.NoopJobProcessor.ExceptionToThrow;
+import com.google.aggregate.adtech.worker.util.JobUtils;
 import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.common.base.Ticker;
@@ -92,6 +93,43 @@ public class WorkerPullWorkServiceTest {
   @Test
   public void pullJob() throws Exception {
     Job job = createJob("test job");
+    jobClient.setReturnConstant(job);
+    jobProcessor.setJobResultToReturn(createJobResult(job, RETURN_CODE_SUCCESS));
+
+    service.run();
+
+    verify(jobClient).markJobCompleted(jobResultCaptor.capture());
+    assertThat(jobResultCaptor.getAllValues()).hasSize(1);
+    assertThat(jobResultCaptor.getValue().resultInfo().getReturnCode())
+        .isEqualTo(RETURN_CODE_SUCCESS);
+  }
+
+  @Test
+  public void withInvalidFilteringIds_returnsInvalidJobCode() throws Exception {
+    RequestInfo requestInfo =
+        RequestInfo.getDefaultInstance().toBuilder()
+            .putJobParameters("attribution_report_to", "https://foo.com")
+            .putJobParameters(JobUtils.JOB_PARAM_FILTERING_IDS, "5,6,null")
+            .build();
+    Job job = createJob("test job").toBuilder().setRequestInfo(requestInfo).build();
+    jobClient.setReturnConstant(job);
+
+    service.run();
+
+    verify(jobClient).markJobCompleted(jobResultCaptor.capture());
+    assertThat(jobResultCaptor.getAllValues()).hasSize(1);
+    assertThat(jobResultCaptor.getValue().resultInfo().getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.INVALID_JOB.name());
+  }
+
+  @Test
+  public void withValidFilteringIds_processingSucceeds() throws Exception {
+    RequestInfo requestInfo =
+        RequestInfo.getDefaultInstance().toBuilder()
+            .putJobParameters("attribution_report_to", "https://foo.com")
+            .putJobParameters(JobUtils.JOB_PARAM_FILTERING_IDS, " ,5,6, ,, 67, ")
+            .build();
+    Job job = createJob("test job").toBuilder().setRequestInfo(requestInfo).build();
     jobClient.setReturnConstant(job);
     jobProcessor.setJobResultToReturn(createJobResult(job, RETURN_CODE_SUCCESS));
 

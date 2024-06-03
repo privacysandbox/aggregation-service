@@ -99,6 +99,16 @@ public interface OTelConfiguration {
   Timer createProdTimerStarted(String name, String jobID);
 
   /**
+   * Creates a {@link Timer} given name in both debug and prod environments
+   *
+   * @param name {@link String}
+   * @param jobID {@link String}
+   * @param timeUnit {@link String}
+   * @return {@link Timer}
+   */
+  Timer createProdTimerStarted(String name, String jobID, TimerUnit timeUnit);
+
+  /**
    * Creates a {@link Timer} given name in both prod environments only. Add attributes to its span
    * attributes.
    *

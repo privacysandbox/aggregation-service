@@ -17,11 +17,13 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.aggregate.adtech.worker.validation.v01.AttributionReportingDebugPrivacyBudgetKeyFieldsValidator;
 import com.google.aggregate.adtech.worker.validation.v01.AttributionReportingPrivacyBudgetKeyFieldsValidator;
 import com.google.aggregate.adtech.worker.validation.v01.ProtectedAudiencePrivacyBudgetKeyFieldsValidator;
 import com.google.aggregate.adtech.worker.validation.v01.SharedStoragePrivacyBudgetKeyFieldsValidator;
@@ -60,6 +62,38 @@ public class PrivacyBudgetKeyValidatorFactoryTest {
 
   @Test
   public void attributionReporting_higherMajorVersion_privacyBudgetValidator_returnsNoValidator() {
+    assertThat(
+            PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
+                ATTRIBUTION_REPORTING_API, HIGHER_MAJOR_VERSION))
+        .isEqualTo(Optional.empty());
+  }
+
+  @Test
+  public void attributionReportingDebugV01_privacyBudgetValidator_returnsValidator() {
+    Optional<PrivacyBudgetKeyValidator> attributionReportingDebugValidator =
+        PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
+            ATTRIBUTION_REPORTING_DEBUG_API, VERSION_0_1);
+
+    assertThat(attributionReportingDebugValidator).isPresent();
+    assertThat(attributionReportingDebugValidator.get())
+        .isInstanceOf(AttributionReportingDebugPrivacyBudgetKeyFieldsValidator.class);
+  }
+
+  @Test
+  public void
+      attributionReportingDebug_higherMinorVersion_privacyBudgetValidator_returnsValidator() {
+    Optional<PrivacyBudgetKeyValidator> attributionReportingDebugValidator =
+        PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
+            ATTRIBUTION_REPORTING_DEBUG_API, HIGHER_MINOR_VERSION);
+
+    assertThat(attributionReportingDebugValidator).isPresent();
+    assertThat(attributionReportingDebugValidator.get())
+        .isInstanceOf(AttributionReportingDebugPrivacyBudgetKeyFieldsValidator.class);
+  }
+
+  @Test
+  public void
+      attributionReportingDebug_higherMajorVersion_privacyBudgetValidator_returnsNoValidator() {
     assertThat(
             PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
                 ATTRIBUTION_REPORTING_API, HIGHER_MAJOR_VERSION))

@@ -31,26 +31,31 @@ public interface PrivacyBudgetingServiceBridge {
    * budgets are consumed and the first few units for which the budget was not available are
    * returned.
    *
+   * @param budgetsToConsume - List of PrivacyBudgetUnits to consume budget against.
+   * @param claimedIdentity - Adtech site value to be used for authorization.
    * @return Empty list if budgets were consumed successfully. Otherwise, first few privacy budget
    *     units for which the privacy budget was not available.
    */
   ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
-      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String attributionReportTo)
+      ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String claimedIdentity)
       throws PrivacyBudgetingServiceBridgeException;
 
   /** Identifier for an individual key of the privacy budget to be consumed. */
   @AutoValue
   abstract class PrivacyBudgetUnit {
 
-    public static PrivacyBudgetUnit create(String privacyBudgetKey, Instant scheduledReportTime) {
+    public static PrivacyBudgetUnit create(
+        String privacyBudgetKey, Instant scheduledReportTime, String reportingOrigin) {
       return new com.google.aggregate.privacy.budgeting.bridge
           .AutoValue_PrivacyBudgetingServiceBridge_PrivacyBudgetUnit(
-          privacyBudgetKey, scheduledReportTime);
+          privacyBudgetKey, scheduledReportTime, reportingOrigin);
     }
 
     public abstract String privacyBudgetKey();
 
     public abstract Instant scheduledReportTime();
+
+    public abstract String reportingOrigin();
   }
 
   /** Exception that may happen when consuming the privacy budget. */

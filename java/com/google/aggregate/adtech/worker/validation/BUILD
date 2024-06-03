@@ -21,6 +21,7 @@ java_library(
     srcs = glob(["*.java"]),
     javacopts = ["-Xep:Var"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker:annotations",
         "//java/com/google/aggregate/adtech/worker:return_code",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/util",

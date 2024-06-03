@@ -17,12 +17,14 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.MAJOR_VERSION_ONE;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.MAJOR_VERSION_ZERO;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 
 import com.google.aggregate.adtech.worker.model.Version;
+import com.google.aggregate.adtech.worker.validation.v01.AttributionReportingDebugPrivacyBudgetKeyFieldsValidator;
 import com.google.aggregate.adtech.worker.validation.v01.AttributionReportingPrivacyBudgetKeyFieldsValidator;
 import com.google.aggregate.adtech.worker.validation.v01.ProtectedAudiencePrivacyBudgetKeyFieldsValidator;
 import com.google.aggregate.adtech.worker.validation.v01.SharedStoragePrivacyBudgetKeyFieldsValidator;
@@ -44,6 +46,16 @@ public final class PrivacyBudgetKeyValidatorFactory {
   private static final ApiAndMajorVersion ATTRIBUTION_REPORTING_V1 =
       ApiAndMajorVersion.builder()
           .setApi(ATTRIBUTION_REPORTING_API)
+          .setMajorVersion(MAJOR_VERSION_ONE)
+          .build();
+  private static final ApiAndMajorVersion ATTRIBUTION_REPORTING_DEBUG_V0 =
+      ApiAndMajorVersion.builder()
+          .setApi(ATTRIBUTION_REPORTING_DEBUG_API)
+          .setMajorVersion(MAJOR_VERSION_ZERO)
+          .build();
+  private static final ApiAndMajorVersion ATTRIBUTION_REPORTING_DEBUG_V1 =
+      ApiAndMajorVersion.builder()
+          .setApi(ATTRIBUTION_REPORTING_DEBUG_API)
           .setMajorVersion(MAJOR_VERSION_ONE)
           .build();
   private static final ApiAndMajorVersion PROTECTED_AUDIENCE_API_V0 =
@@ -73,6 +85,10 @@ public final class PrivacyBudgetKeyValidatorFactory {
               new AttributionReportingPrivacyBudgetKeyFieldsValidator(),
               ATTRIBUTION_REPORTING_V1,
               new AttributionReportingPrivacyBudgetKeyFieldsValidator(),
+              ATTRIBUTION_REPORTING_DEBUG_V0,
+              new AttributionReportingDebugPrivacyBudgetKeyFieldsValidator(),
+              ATTRIBUTION_REPORTING_DEBUG_V1,
+              new AttributionReportingDebugPrivacyBudgetKeyFieldsValidator(),
               PROTECTED_AUDIENCE_API_V0,
               new ProtectedAudiencePrivacyBudgetKeyFieldsValidator(),
               PROTECTED_AUDIENCE_API_V1,

@@ -19,9 +19,7 @@ package com.google.aggregate.adtech.worker.validation.v01;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.REQUIRED_SHAREDINFO_FIELD_INVALID;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
-import static com.google.aggregate.adtech.worker.validation.PrivacyBudgetKeyValidator.NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
@@ -69,8 +67,6 @@ public class AttributionReportingPrivacyBudgetKeyFieldsValidatorTest {
 
     assertThat(validationError).isPresent();
     assertThat(validationError.get().category()).isEqualTo(REQUIRED_SHAREDINFO_FIELD_INVALID);
-    assertThat(validationError.get().detailedErrorMessage())
-        .isEqualTo(NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING);
   }
 
   @Test
@@ -103,12 +99,8 @@ public class AttributionReportingPrivacyBudgetKeyFieldsValidatorTest {
 
     assertThat(validationError1).isPresent();
     assertThat(validationError1.get().category()).isEqualTo(REQUIRED_SHAREDINFO_FIELD_INVALID);
-    assertThat(validationError1.get().detailedErrorMessage())
-        .isEqualTo(NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING);
     assertThat(validationError2).isPresent();
     assertThat(validationError2.get().category()).isEqualTo(REQUIRED_SHAREDINFO_FIELD_INVALID);
-    assertThat(validationError2.get().detailedErrorMessage())
-        .isEqualTo(NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING);
   }
 
   @Test
@@ -129,16 +121,14 @@ public class AttributionReportingPrivacyBudgetKeyFieldsValidatorTest {
 
     assertThat(validationError).isPresent();
     assertThat(validationError.get().category()).isEqualTo(REQUIRED_SHAREDINFO_FIELD_INVALID);
-    assertThat(validationError.get().detailedErrorMessage())
-        .isEqualTo(NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING);
   }
 
   @Test
-  public void attributionReportingReport_emptySourceRegistrationTime_validationFails() {
+  public void attributionReportingReport_emptySourceRegistrationTime_validationSucceeds() {
     SharedInfo sharedInfo =
         SharedInfo.builder()
             .setApi(ATTRIBUTION_REPORTING_API)
-            .setVersion(EMPTY_STRING)
+            .setVersion(VERSION_0_1)
             .setReportId(RANDOM_UUID)
             .setDestination(DESTINATION)
             .setReportingOrigin(REPORTING_ORIGIN)
@@ -148,10 +138,7 @@ public class AttributionReportingPrivacyBudgetKeyFieldsValidatorTest {
     Optional<ErrorMessage> validationError =
         attributionReportingPrivacyBudgetKeyFieldsValidator.validatePrivacyBudgetKey(sharedInfo);
 
-    assertThat(validationError).isPresent();
-    assertThat(validationError.get().category()).isEqualTo(REQUIRED_SHAREDINFO_FIELD_INVALID);
-    assertThat(validationError.get().detailedErrorMessage())
-        .isEqualTo(NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING);
+    assertThat(validationError).isEmpty();
   }
 
   @Test

@@ -18,7 +18,6 @@ package com.google.aggregate.adtech.worker.writer.json;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,7 +31,6 @@ import com.google.common.io.ByteSource;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.inject.AbstractModule;
-import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -105,14 +103,10 @@ public class LocalJsonResultFileWriterTest {
         .iterator()
         .forEachRemaining(
             entry -> {
-              try {
-                writtenResults.add(
-                    AggregatedFact.create(
-                        NumericConversions.uInt128FromBytes(entry.get("bucket").binaryValue()),
-                        entry.get("metric").asLong()));
-              } catch (IOException e) {
-                fail(e.getMessage());
-              }
+              writtenResults.add(
+                  AggregatedFact.create(
+                      NumericConversions.createBucketFromString(entry.get("bucket").asText()),
+                      entry.get("metric").asLong()));
             });
     assertThat(writtenResults).containsExactly(results.toArray());
   }

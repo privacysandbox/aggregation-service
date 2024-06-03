@@ -36,6 +36,7 @@ public final class LocalAggregationWorkerRunner {
 
   private AggregationWorker worker;
   private ServiceManager serviceManager;
+
   private LocalAggregationWorkerRunner(AggregationWorkerArgs args) {
     createRunner(args);
   }
@@ -80,9 +81,13 @@ public final class LocalAggregationWorkerRunner {
           "--local_output_domain_path",
           rootDir.resolve("domain.txt").toAbsolutePath().toString(),
           "--simulation_inputs",
+          "--parallel_summary_upload_enabled",
+          "--streaming_output_domain_processing_enabled",
+          "--attribution_reporting_debug_api_enabled",
         };
     AggregationWorkerArgs cliArgs = new AggregationWorkerArgs();
-    JCommander jCommander = JCommander.newBuilder().allowParameterOverwriting(true).addObject(cliArgs).build();
+    JCommander jCommander =
+        JCommander.newBuilder().allowParameterOverwriting(true).addObject(cliArgs).build();
     jCommander.parse(args);
     jCommander.parse(newArgs);
     return new LocalAggregationWorkerRunner(cliArgs);

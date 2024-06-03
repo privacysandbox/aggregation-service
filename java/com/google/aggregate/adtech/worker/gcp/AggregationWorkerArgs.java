@@ -35,7 +35,42 @@ import com.google.common.annotations.Beta;
 import com.google.privacysandbox.otel.OTelExporterSelector;
 import java.util.Optional;
 
+/**
+ * Worker args are runtime flags that are set when building an image or as CLI args when running a
+ * standalone binary and set by the Aggregation Service team. They differ from aggregation job
+ * params, which are set in the Job Request when requesting an aggregation report. For available job
+ * parameters see <a
+ * href="https://github.com/privacysandbox/aggregation-service/blob/main/docs/api.md">API docs</a>.
+ *
+ * <p>
+ *
+ * <p>
+ *
+ * <p>To add a new worker arg: declare a new parameter in this class and its getter function, update
+ * the {@link AggregationWorkerModule} to inject it to the appropriate location, and set the param
+ * in the BUILD rules.
+ *
+ * <p>
+ *
+ * <p>
+ *
+ * <p>Use the following convention for naming the new param:
+ *
+ * <ul>
+ *   <li>Use "lower_underscore" style for the 'names' attribute.
+ *   <li>Prefer "long_descriptive_names" over "short_names" and noun phrases.
+ *   <li>For Boolean flags:
+ *       <ul>
+ *         <li>Use positive or neutral terms (--foo_enabled rather than --foo_disabled).
+ *         <li>Param name should be "feature_name_enabled"
+ *         <li>Variable name should be "featureNameEnabled"
+ *         <li>Getter name should be "isFeatureNameEnabled(...)"
+ *       </ul>
+ * </ul>
+ */
 public class AggregationWorkerArgs {
+
+  private static final int NUM_CPUS = Runtime.getRuntime().availableProcessors();
 
   @Parameter(names = "--client_config_env", description = "Selects client config environment")
   private ClientConfigSelector clientConfigSelector = ClientConfigSelector.GCP;
@@ -265,12 +300,14 @@ public class AggregationWorkerArgs {
   @Parameter(
       names = "--nonblocking_thread_pool_size",
       description = "Size of the non-blocking thread pool")
-  private int nonBlockingThreadPoolSize = 16;
+  private int nonBlockingThreadPoolSize = Math.max(1, NUM_CPUS);
 
   @Parameter(
       names = "--blocking_thread_pool_size",
       description = "Size of the blocking thread pool")
-  private int blockingThreadPoolSize = 64;
+  // Blocking thread is for I/O which is faster than non-IO operation in aggregation service.
+  // Therefore, the thread pool size default is set to be smaller than nonBlockingThreadPool size.
+  private int blockingThreadPoolSize = Math.max(1, NUM_CPUS / 2);
 
   @Parameter(names = "--benchmark", description = "Set to true to run in benchmark mode.")
   private boolean benchmark = false;
@@ -332,20 +369,42 @@ public class AggregationWorkerArgs {
   private String testCoordinatorBEncodedKeysetHandle = "";
 
   @Parameter(
-      names = "--parallel-summary-upload",
+      names = "--parallel_summary_upload_enabled",
       description = "Flag to enable parallel upload of the sharded summary reports.")
-  private boolean enableParallelSummaryUpload = false;
+  private boolean parallelSummaryUploadEnabled = false;
 
   @Parameter(
       names = "--decrypter_cache_entry_ttl_sec",
-      description = "Flag to set the private key cache time to live. Used for testing only.")
-  private long decrypterCacheEntryTtlSec = 3600;
+      description =
+          "Flag to set the private key cache time to live. Flag exposed for testing only.")
+  private long decrypterCacheEntryTtlSec = 28800; // 8 hours.
 
   @Parameter(
-      names = "--streaming-output-domain-processing",
-      description = "Flag to enable RxJava streaming based output domain processing."
-  )
-  private boolean streamingOutputDomainProcessing = false;
+      names = "--exception_cache_entry_ttl_sec",
+      description = "Flag to set the exception cache time to live.")
+  private long exceptionCacheEntryTtlSec = 10; // 10 seconds.
+
+  @Parameter(
+      names = "--streaming_output_domain_processing_enabled",
+      description = "Flag to enable RxJava streaming based output domain processing.")
+  private boolean streamingOutputDomainProcessingEnabled = false;
+
+  @Parameter(
+      names = "--labeled_privacy_budget_keys_enabled",
+      description =
+          "Flag to allow filtering of labeled payload contributions. If enabled, only contributions"
+              + " corresponding to queried labels/ids are included in aggregation.")
+  private boolean labeledPrivacyBudgetKeysEnabled = false;
+
+  @Parameter(
+      names = "--attribution_reporting_debug_api_enabled",
+      description = "Flag to enable support for Attribution Reporting Debug API.")
+  private boolean attributionReportingDebugApiEnabled = false;
+
+  @Parameter(
+      names = "--parallel_fact_noising_enabled",
+      description = "Flag to enable parallel aggregated fact noising.")
+  private boolean parallelAggregatedFactNoisingEnabled = false;
 
   ResultLoggerModuleSelector resultLoggerModuleSelector() {
     return resultLoggerModuleSelector;
@@ -587,15 +646,31 @@ public class AggregationWorkerArgs {
     return outputShardFileSizeBytes;
   }
 
-  public boolean isEnableParallelSummaryUpload() {
-    return enableParallelSummaryUpload;
+  public boolean isParallelSummaryUploadEnabled() {
+    return parallelSummaryUploadEnabled;
   }
 
   public long getDecrypterCacheEntryTtlSec() {
     return decrypterCacheEntryTtlSec;
   }
 
-  public boolean isStreamingOutputDomainProcessing() {
-    return streamingOutputDomainProcessing;
+  public long getExceptionCacheEntryTtlSec() {
+    return exceptionCacheEntryTtlSec;
+  }
+
+  public boolean isStreamingOutputDomainProcessingEnabled() {
+    return streamingOutputDomainProcessingEnabled;
+  }
+
+  boolean isLabeledPrivacyBudgetKeysEnabled() {
+    return labeledPrivacyBudgetKeysEnabled;
+  }
+
+  boolean isAttributionReportingDebugApiEnabled() {
+    return attributionReportingDebugApiEnabled;
+  }
+
+  public boolean isParallelAggregatedFactNoisingEnabled() {
+    return parallelAggregatedFactNoisingEnabled;
   }
 }

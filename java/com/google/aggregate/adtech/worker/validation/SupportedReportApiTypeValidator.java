@@ -19,28 +19,33 @@ package com.google.aggregate.adtech.worker.validation;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_REPORT_API_TYPE;
 import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 
+import com.google.aggregate.adtech.worker.Annotations.SupportedApis;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
-import com.google.aggregate.adtech.worker.model.SharedInfo;
+import com.google.common.collect.ImmutableSet;
+import com.google.inject.Inject;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import java.util.Optional;
 
 /** Validates that the report API type is supported for aggregation. */
 public final class SupportedReportApiTypeValidator implements ReportValidator {
+  private final ImmutableSet<String> supportedApis;
+
+  @Inject
+  SupportedReportApiTypeValidator(@SupportedApis ImmutableSet<String> supportedApis) {
+    this.supportedApis = supportedApis;
+  }
 
   @Override
   public Optional<ErrorMessage> validate(Report report, Job unused) {
     if (report.sharedInfo().api().isEmpty()
-        || SharedInfo.SUPPORTED_APIS.contains(report.sharedInfo().api().get())) {
-      /**
+        || supportedApis.contains(report.sharedInfo().api().get())) {
+      /*
        * attribution-reporting reports with version "" do not have api field present in shared Info
        */
       return Optional.empty();
     }
 
-    return createErrorMessage(
-        UNSUPPORTED_REPORT_API_TYPE,
-        String.format(
-            "Report's api type %s is not supported.", report.sharedInfo().api().orElse("")));
+    return createErrorMessage(UNSUPPORTED_REPORT_API_TYPE);
   }
 }

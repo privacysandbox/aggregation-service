@@ -19,6 +19,7 @@ package com.google.aggregate.adtech.worker.model;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
 /** Represents the version of the report. */
@@ -66,5 +67,33 @@ public abstract class Version implements Comparable<Version> {
       return result;
     }
     return minor() - other.minor();
+  }
+
+  /**
+   * Creates a predicate that checks if the version is between lowerInclusiveVersion and
+   * higherExclusiveVersion.
+   *
+   * @param lowerInclusiveVersion lower version included in the range
+   * @param higherExclusiveVersion higher version excluded from the range.
+   */
+  public static Predicate<Version> getBetweenVersionPredicate(
+      Version lowerInclusiveVersion, Version higherExclusiveVersion) {
+    if (higherExclusiveVersion.compareTo(lowerInclusiveVersion) <= 0) {
+      throw new IllegalArgumentException(
+          "higherExclusiveVersion should be greater than lowerInclusiveVersion");
+    }
+    return version ->
+        version.compareTo(lowerInclusiveVersion) >= 0
+            && version.compareTo(higherExclusiveVersion) < 0;
+  }
+
+  /**
+   * Creates a predicate that checks if the version >= compareToVersion.
+   *
+   * @param compareToVersion
+   */
+  public static Predicate<Version> getGreaterThanOrEqualToVersionPredicate(
+      Version compareToVersion) {
+    return version -> version.compareTo(compareToVersion) >= 0;
   }
 }

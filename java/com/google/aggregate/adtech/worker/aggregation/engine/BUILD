@@ -24,20 +24,10 @@ java_library(
     ],
     javacopts = ["-Xep:Var"],
     deps = [
-        ":single_fact_aggregation",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
         "//java/external:guava",
         "//java/external:javax_inject",
-    ],
-)
-
-java_library(
-    name = "single_fact_aggregation",
-    srcs = ["SingleFactAggregation.java"],
-    javacopts = ["-Xep:Var"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
     ],
 )

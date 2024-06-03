@@ -22,10 +22,12 @@ import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBrid
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
+import com.google.common.primitives.UnsignedLong;
 import java.math.BigInteger;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Inject;
 
 /**
@@ -43,7 +45,7 @@ public class AggregationEngineFactory {
   /**
    * Creates AggregationEngine object with queried filteringId.
    */
-  public AggregationEngine create(ImmutableSet<Integer> filteringIds) {
+  public AggregationEngine create(ImmutableSet<UnsignedLong> filteringIds) {
     // Number of logical cores available to the JVM is used to hint the concurrent map maker. Any
     // number will work, this is just a hint that is passed to the map maker, but different values
     // may result in different performance.
@@ -53,17 +55,17 @@ public class AggregationEngineFactory {
     // is used, the number obtained here is 2x larger than the number of physical cores.
     int concurrentMapConcurrencyHint = Runtime.getRuntime().availableProcessors();
 
-    ConcurrentMap<BigInteger, SingleFactAggregation> aggregationMap =
+    ConcurrentMap<BigInteger, LongAdder> aggregationMap =
         new MapMaker().concurrencyLevel(concurrentMapConcurrencyHint).makeMap();
     Set<PrivacyBudgetingServiceBridge.PrivacyBudgetUnit> privacyBudgetUnits =
         newConcurrentHashSet();
     Set<UUID> reportIdSet = newConcurrentHashSet();
 
     // null and zero are to be treated as the same.
-    ImmutableSet.Builder<Integer> filteringIdsEnhanced = new ImmutableSet.Builder<>();
+    ImmutableSet.Builder<UnsignedLong> filteringIdsEnhanced = new ImmutableSet.Builder<>();
     filteringIdsEnhanced.addAll(filteringIds);
     if (filteringIds.isEmpty()) {
-      filteringIdsEnhanced.add(0);
+      filteringIdsEnhanced.add(UnsignedLong.ZERO);
     }
 
     return new AggregationEngine(

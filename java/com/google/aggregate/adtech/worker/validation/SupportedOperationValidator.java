@@ -28,20 +28,12 @@ import java.util.Optional;
 /** Validates that the report's operation is an accepted value */
 public final class SupportedOperationValidator implements ReportValidator {
 
-  private static final String DETAILED_ERROR_MESSAGE_TEMPLATE =
-      "Report's operation is not supported. Operation was '%s'. Supported operations are %s.";
-
   @Override
   public Optional<ErrorMessage> validate(Report report, Job unused) {
     if (SharedInfo.SUPPORTED_OPERATIONS.contains(report.payload().operation())) {
       return Optional.empty();
     }
 
-    return createErrorMessage(
-        UNSUPPORTED_OPERATION,
-        String.format(
-            DETAILED_ERROR_MESSAGE_TEMPLATE,
-            report.payload().operation(),
-            SharedInfo.SUPPORTED_OPERATIONS));
+    return createErrorMessage(UNSUPPORTED_OPERATION);
   }
 }

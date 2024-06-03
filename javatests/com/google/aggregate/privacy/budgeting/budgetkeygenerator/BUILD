@@ -33,6 +33,23 @@ java_test(
 )
 
 java_test(
+    name = "AttributionReportingDebugPrivacyBudgetKeyGeneratorTest",
+    srcs = ["AttributionReportingDebugPrivacyBudgetKeyGeneratorTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator_module",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator/attributionreportingdebug:pbk_generator",
+        "//java/external:acai",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:javax_inject",
+    ],
+)
+
+java_test(
     name = "ProtectedAudiencePrivacyBudgetKeyGeneratorTest",
     srcs = ["ProtectedAudiencePrivacyBudgetKeyGeneratorTest.java"],
     deps = [
@@ -74,12 +91,25 @@ java_test(
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator_module",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator/attributionreporting:pbk_generator",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator/attributionreportingdebug:pbk_generator",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator/protectedaudience:pbk_generator",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator/sharedstorage:pbk_generator",
         "//java/external:acai",
         "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
+    ],
+)
+
+java_test(
+    name = "PrivacyBudgetKeyGeneratorUtilTest",
+    srcs = ["PrivacyBudgetKeyGeneratorUtilTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator_module",
+        "//java/external:google_truth",
+        "//java/external:guava",
     ],
 )

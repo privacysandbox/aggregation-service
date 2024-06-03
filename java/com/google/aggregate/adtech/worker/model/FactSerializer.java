@@ -43,7 +43,8 @@ public final class FactSerializer extends StdSerializer<Fact> {
     jsonGenerator.writeBinaryField("bucket", bucketBytes);
     jsonGenerator.writeBinaryField("value", valueBytes);
     if (fact.id().isPresent()) {
-      jsonGenerator.writeBinaryField("id", BigInteger.valueOf(fact.id().get()).toByteArray());
+      jsonGenerator.writeBinaryField(
+          "id", NumericConversions.toUnsignedByteArray(fact.id().get().bigIntegerValue()));
     }
     jsonGenerator.writeEndObject();
   }

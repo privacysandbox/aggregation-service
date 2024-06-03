@@ -19,9 +19,7 @@ package com.google.aggregate.adtech.worker.validation.v01;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.REQUIRED_SHAREDINFO_FIELD_INVALID;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
-import static com.google.aggregate.adtech.worker.validation.PrivacyBudgetKeyValidator.NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
@@ -65,8 +63,6 @@ public class ProtectedAudiencePrivacyBudgetKeyFieldsValidatorTest {
 
     assertThat(validationError).isPresent();
     assertThat(validationError.get().category()).isEqualTo(REQUIRED_SHAREDINFO_FIELD_INVALID);
-    assertThat(validationError.get().detailedErrorMessage())
-        .isEqualTo(NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING);
   }
 
   @Test
@@ -85,8 +81,6 @@ public class ProtectedAudiencePrivacyBudgetKeyFieldsValidatorTest {
 
     assertThat(validationError).isPresent();
     assertThat(validationError.get().category()).isEqualTo(REQUIRED_SHAREDINFO_FIELD_INVALID);
-    assertThat(validationError.get().detailedErrorMessage())
-        .isEqualTo(NULL_OR_INVALID_SHAREDINFO_FIELD_ERROR_STRING);
   }
 
   @Test

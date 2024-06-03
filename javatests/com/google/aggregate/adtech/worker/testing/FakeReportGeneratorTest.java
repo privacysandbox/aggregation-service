@@ -86,7 +86,7 @@ public class FakeReportGeneratorTest {
                         .setVersion("0.1")
                         .setApi("attribution-reporting")
                         .setDestination("dummy")
-                        .setReportingOrigin("dummy")
+                        .setReportingOrigin("https://foo.com")
                         .setScheduledReportTime(Instant.EPOCH.plus(1, SECONDS))
                         .setSourceRegistrationTime(Instant.EPOCH.plus(1, SECONDS))
                         .setReportId(generatedReport.sharedInfo().reportId().get())
@@ -103,7 +103,8 @@ public class FakeReportGeneratorTest {
   public void testGenerate_version_0_1() {
     int id = 2;
 
-    Report generatedReport = FakeReportGenerator.generateWithParam(id, VERSION_0_1);
+    Report generatedReport =
+        FakeReportGenerator.generateWithParam(id, VERSION_0_1, "https://foo.com");
 
     assertThat(generatedReport)
         .isEqualTo(
@@ -113,7 +114,7 @@ public class FakeReportGeneratorTest {
                         .setVersion("0.1")
                         .setApi("attribution-reporting")
                         .setDestination(String.valueOf(id))
-                        .setReportingOrigin(String.valueOf(id))
+                        .setReportingOrigin("https://foo.com")
                         .setScheduledReportTime(Instant.EPOCH.plus(id, SECONDS))
                         .setSourceRegistrationTime(Instant.EPOCH.plus(id, SECONDS))
                         .setReportId(generatedReport.sharedInfo().reportId().get())
@@ -138,7 +139,7 @@ public class FakeReportGeneratorTest {
                     SharedInfo.builder()
                         .setVersion(LATEST_VERSION)
                         .setDestination("dummy")
-                        .setReportingOrigin("dummy")
+                        .setReportingOrigin("https://foo.com")
                         .setScheduledReportTime(Instant.EPOCH.plus(1, SECONDS))
                         .setSourceRegistrationTime(Instant.EPOCH.plus(1, SECONDS))
                         .setReportId(generatedReport.sharedInfo().reportId().get())

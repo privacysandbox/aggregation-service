@@ -32,12 +32,12 @@ public class FakePrivacyBudgetingServiceBridgeTest {
 
   private FakePrivacyBudgetingServiceBridge privacyBudgetingService;
 
-  private String attributionReportTo = "foo.com";
+  private String attributionReportTo = "https://foo.com";
 
   private final PrivacyBudgetUnit firstId =
-      PrivacyBudgetUnit.create("foo", Instant.ofEpochMilli(1000));
+      PrivacyBudgetUnit.create("foo", Instant.ofEpochMilli(1000), attributionReportTo);
   private final PrivacyBudgetUnit secondId =
-      PrivacyBudgetUnit.create("foo", Instant.ofEpochMilli(2000));
+      PrivacyBudgetUnit.create("foo", Instant.ofEpochMilli(2000), attributionReportTo);
 
   @Before
   public void setUp() {

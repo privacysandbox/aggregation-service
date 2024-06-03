@@ -38,6 +38,7 @@ import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyStri
 
 import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
@@ -58,6 +59,7 @@ import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.util.DebugSupportHelper;
 import com.google.aggregate.adtech.worker.util.JobResultHelper;
+import com.google.aggregate.adtech.worker.util.JobUtils;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.adtech.worker.validation.ValidationException;
 import com.google.aggregate.perf.StopwatchRegistry;
@@ -71,6 +73,7 @@ import com.google.aggregate.protocol.avro.AvroReportsReaderFactory;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.UnsignedLong;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -145,6 +148,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   private final PrivacyBudgetingServiceBridge privacyBudgetingServiceBridge;
   private final ListeningExecutorService blockingThreadPool;
   private final ListeningExecutorService nonBlockingThreadPool;
+  private final boolean enablePrivacyBudgetKeyFiltering;
   private final OTelConfiguration oTelConfiguration;
   private final double defaultReportErrorThresholdPercentage;
   private final Boolean streamingOutputDomainProcessing;
@@ -166,7 +170,8 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       @ReportErrorThresholdPercentage double defaultReportErrorThresholdPercentage,
-      @StreamingOutputDomainProcessing Boolean streamingOutputDomainProcessing) {
+      @StreamingOutputDomainProcessing Boolean streamingOutputDomainProcessing,
+      @EnablePrivacyBudgetKeyFiltering boolean enablePrivacyBudgetKeyFiltering) {
     this.reportDecrypterAndValidator = reportDecrypterAndValidator;
     this.aggregationEngineFactory = aggregationEngineFactory;
     this.outputDomainProcessor = outputDomainProcessor;
@@ -183,6 +188,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     this.oTelConfiguration = oTelConfiguration;
     this.defaultReportErrorThresholdPercentage = defaultReportErrorThresholdPercentage;
     this.streamingOutputDomainProcessing = streamingOutputDomainProcessing;
+    this.enablePrivacyBudgetKeyFiltering = enablePrivacyBudgetKeyFiltering;
   }
 
   /**
@@ -255,12 +261,19 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
 
     try {
       double reportErrorThresholdPercentage = getReportErrorThresholdPercentage(jobParams);
-      AggregationEngine aggregationEngine = aggregationEngineFactory.create();
+      @Var ImmutableSet<UnsignedLong> filteringIds = ImmutableSet.of();
+      if (enablePrivacyBudgetKeyFiltering) {
+        filteringIds =
+            NumericConversions.getUnsignedLongsFromString(
+                jobParams.get(JobUtils.JOB_PARAM_FILTERING_IDS),
+                JobUtils.JOB_PARAM_FILTERING_IDS_DELIMITER);
+      }
+      AggregationEngine aggregationEngine = aggregationEngineFactory.create(filteringIds);
       // TODO(b/218924983) Estimate report counts to enable failing early on report errors reaching
       // threshold.
       ErrorSummaryAggregator errorAggregator =
           ErrorSummaryAggregator.createErrorSummaryAggregator(
-              Optional.empty(), reportErrorThresholdPercentage);
+              getInputReportCountFromJobParams(jobParams), reportErrorThresholdPercentage);
       AtomicLong totalReportCount = new AtomicLong(0);
 
       try (Timer reportsProcessTimer =
@@ -339,7 +352,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
           job, errorSummary, jobCode, /* message= */ Optional.empty());
     } catch (ResultLogException e) {
       throw new AggregationJobProcessException(
-          RESULT_WRITE_ERROR, "Exception occured while writing result.", e);
+          RESULT_WRITE_ERROR, "Exception occurred while writing result.", e);
     } catch (AccessControlException e) {
       throw new AggregationJobProcessException(
           PERMISSION_ERROR, "Exception because of missing permission.", e);
@@ -358,6 +371,14 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
             INVALID_JOB, "Error due to validation exception.", e);
       }
     }
+  }
+
+  private static Optional<Long> getInputReportCountFromJobParams(Map<String, String> jobParams) {
+    String inputReportCount = jobParams.get(JobUtils.JOB_PARAM_INPUT_REPORT_COUNT);
+    if (inputReportCount == null || inputReportCount.trim().isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(Long.parseLong(inputReportCount.trim()));
   }
 
   private NoisedAggregatedResultSet conflateWithDomainAndAddNoiseStreaming(
@@ -500,6 +521,9 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     return Flowable.using(
         () -> {
           try {
+            if (blobStorageClient.getBlobSize(shard) <= 0) {
+              return InputStream.nullInputStream();
+            }
             return blobStorageClient.getBlob(shard);
           } catch (BlobStorageClientException e) {
             throw new ConcurrentShardReadException(e);
@@ -542,6 +566,10 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
                             decryptAndAggregateReports(
                                 encryptedReports, job, aggregationEngine, errorAggregator)),
             NUM_PROCESS_THREADS)
+        .takeUntil(
+            unused -> {
+              return errorAggregator.countsAboveThreshold();
+            })
         .blockingSubscribe();
   }
 

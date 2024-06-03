@@ -34,18 +34,10 @@ public abstract class ErrorMessage {
   /** The category of the error message, used for identifying the type of an error message */
   public abstract ErrorCounter category();
 
-  /**
-   * Detailed diagnostic information related to the error that would be useful for debugging or
-   * error logging. Not intended to be provided in aggregation response.
-   */
-  public abstract String detailedErrorMessage();
-
   @AutoValue.Builder
   public abstract static class Builder {
 
     public abstract Builder setCategory(ErrorCounter category);
-
-    public abstract Builder setDetailedErrorMessage(String detailedErrorMessage);
 
     public abstract ErrorMessage build();
   }

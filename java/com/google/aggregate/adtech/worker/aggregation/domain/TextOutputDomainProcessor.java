@@ -39,9 +39,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 
-/**
- * Reads output domain from a text file with each aggregation key on a separate line.
- */
+/** Reads output domain from a text file with each aggregation key on a separate line. */
 public final class TextOutputDomainProcessor extends OutputDomainProcessor {
 
   private final BlobStorageClient blobStorageClient;
@@ -70,12 +68,18 @@ public final class TextOutputDomainProcessor extends OutputDomainProcessor {
     Stopwatch stopwatch =
         stopwatches.createStopwatch(String.format("domain-shard-read-%s", UUID.randomUUID()));
     stopwatch.start();
-    try (InputStream domainStream = blobStorageClient.getBlob(outputDomainLocation)) {
-      byte[] bytes = ByteStreams.toByteArray(domainStream);
-      try (Stream<String> fileLines = NumericConversions.createStringFromByteArray(bytes).lines()) {
-        ImmutableList<BigInteger> shard =
-            fileLines.map(NumericConversions::createBucketFromString).collect(toImmutableList());
-        return shard;
+    try {
+      if (blobStorageClient.getBlobSize(outputDomainLocation) <= 0) {
+        return ImmutableList.of();
+      }
+      try (InputStream domainStream = blobStorageClient.getBlob(outputDomainLocation)) {
+        byte[] bytes = ByteStreams.toByteArray(domainStream);
+        try (Stream<String> fileLines =
+            NumericConversions.createStringFromByteArray(bytes).lines()) {
+          ImmutableList<BigInteger> shard =
+              fileLines.map(NumericConversions::createBucketFromString).collect(toImmutableList());
+          return shard;
+        }
       }
     } catch (IOException | BlobStorageClientException | IllegalArgumentException e) {
       throw new DomainReadException(e);

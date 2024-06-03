@@ -38,11 +38,6 @@ public final class ReportingOriginMatchesRequestValidator implements ReportValid
       return Optional.empty();
     }
 
-    return createErrorMessage(
-        ATTRIBUTION_REPORT_TO_MISMATCH,
-        String.format(
-            "Report's attributionReportTo didn't match the AdTech request. Report's"
-                + " attributionReportTo: %s, Request's attributionReportTo: %s",
-            report.sharedInfo().reportingOrigin(), attributionReportTo));
+    return createErrorMessage(ATTRIBUTION_REPORT_TO_MISMATCH);
   }
 }

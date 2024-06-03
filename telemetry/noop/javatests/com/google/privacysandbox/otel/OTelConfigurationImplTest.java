@@ -246,4 +246,16 @@ public final class OTelConfigurationImplTest {
 
     assertThat(metric.size()).isEqualTo(0);
   }
+
+  @Test
+  public void createProdTimerStart_setTimeUnitSeconds() {
+    String timerName = "prodTimer";
+    TimerUnit timeUnit = TimerUnit.SECONDS;
+    String jobID = "job1";
+
+    try (Timer timer = oTelConfigurationImpl.createProdTimerStarted(timerName, jobID, timeUnit)) {}
+    List<SpanData> spanItems = spanExporter.getFinishedSpanItems();
+
+    assertThat(spanItems).isEmpty();
+  }
 }

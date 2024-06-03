@@ -15,9 +15,7 @@
  */
 package com.google.aggregate.privacy.budgeting.budgetkeygenerator;
 
-import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
-import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.*;
 import static com.google.aggregate.privacy.budgeting.budgetkeygenerator.protectedaudience.PrivacyBudgetKeyGeneratorModule.ProtectedAudiencePrivacyBudgetKeyGenerators;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
@@ -29,11 +27,10 @@ import com.google.aggregate.privacy.budgeting.budgetkeygenerator.protectedaudien
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.protectedaudience.V2PrivacyBudgetKeyGenerator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.Hashing;
+import com.google.common.primitives.UnsignedLong;
 import com.google.inject.AbstractModule;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Random;
-import java.util.stream.DoubleStream;
 import javax.inject.Inject;
 import org.junit.Rule;
 import org.junit.Test;
@@ -74,7 +71,7 @@ public class ProtectedAudiencePrivacyBudgetKeyGeneratorTest {
         PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder().setSharedInfo(si).build();
 
     PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator =
-        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(si).get();
+        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput).get();
     String privacyBudgetKey =
         privacyBudgetKeyGenerator.generatePrivacyBudgetKey(privacyBudgetKeyInput);
 
@@ -84,7 +81,7 @@ public class ProtectedAudiencePrivacyBudgetKeyGeneratorTest {
 
   @Test
   public void generatePrivacyBudgetKey_V2() {
-    int filteringId = 67890;
+    UnsignedLong filteringId = UnsignedLong.valueOf(67890);
     SharedInfo sharedInfo =
         SharedInfo.builder()
             .setApi(PROTECTED_AUDIENCE_API)
@@ -113,7 +110,7 @@ public class ProtectedAudiencePrivacyBudgetKeyGeneratorTest {
             .toString();
 
     PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator =
-        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo).get();
+        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput).get();
     String privacyBudgetKey =
         privacyBudgetKeyGenerator.generatePrivacyBudgetKey(privacyBudgetKeyInput);
 
@@ -121,67 +118,51 @@ public class ProtectedAudiencePrivacyBudgetKeyGeneratorTest {
     assertEquals(privacyBudgetKey, expectedPBK);
   }
 
-  /**
-   * Test to verify Privacy Budget Key generated for two protected audience SharedInfo with same
-   * fields is same. This ensures the budget key generator hash is stable.
-   */
-  @Test
-  public void validate_PrivacyBudgetKey_ProtectedAudienceAPI_forSameSharedInfos() {
-    SharedInfo.Builder sharedInfoBuilder1 =
-        SharedInfo.builder()
-            .setVersion(LATEST_VERSION)
-            .setApi(PROTECTED_AUDIENCE_API)
-            .setReportingOrigin(REPORTING_ORIGIN)
-            .setScheduledReportTime(FIXED_TIME);
-    SharedInfo si1 = sharedInfoBuilder1.build();
-    SharedInfo.Builder sharedInfoBuilder2 =
-        SharedInfo.builder()
-            .setVersion(LATEST_VERSION)
-            .setApi(PROTECTED_AUDIENCE_API)
-            .setReportingOrigin(REPORTING_ORIGIN)
-            .setScheduledReportTime(FIXED_TIME);
-    SharedInfo si2 = sharedInfoBuilder2.build();
-
-    PrivacyBudgetKeyGenerator v1PrivacyBudgetKeyGenerator = new V1PrivacyBudgetKeyGenerator();
-    String privacyBudgetKey1 = v1PrivacyBudgetKeyGenerator.generatePrivacyBudgetKey(si1).get();
-    String privacyBudgetKey2 = v1PrivacyBudgetKeyGenerator.generatePrivacyBudgetKey(si2).get();
-
-    assertEquals(privacyBudgetKey1, privacyBudgetKey2);
-  }
-
   @Test
   public void versionedPBKProvider_noOverlapsInVersions() {
-    Random random = new Random();
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.1", UnsignedLong.ZERO, V1PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.679999", UnsignedLong.ZERO, V1PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.999999", UnsignedLong.ZERO, V1PrivacyBudgetKeyGenerator.class);
 
-    DoubleStream reportVersionsCorrespondingToPBKV1 =
-        random.doubles().map(version -> Math.floor(version * 1000) / 1000).limit(50);
-    reportVersionsCorrespondingToPBKV1.forEach(
-        version -> assertPBKGeneratorForVersion(version, V1PrivacyBudgetKeyGenerator.class));
-
-    DoubleStream reportVersionsCorrespondingToPBKV2 =
-        random
-            .doubles(
-                /* size= */ 50,
-                /* startingVersionInclusive= */ 1.0,
-                /* endingVersionExclusive= */ 100)
-            .map(version -> Math.floor(version * 1000) / 1000);
-    reportVersionsCorrespondingToPBKV2.forEach(
-        version -> assertPBKGeneratorForVersion(version, V2PrivacyBudgetKeyGenerator.class));
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.1", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.679999", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "0.999999", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "1.0", UnsignedLong.ZERO, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "1.9999", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
+    assertPBKGeneratorForVersion(
+        /* version= */ "167.9999", UnsignedLong.ONE, V2PrivacyBudgetKeyGenerator.class);
   }
 
-  private void assertPBKGeneratorForVersion(double version, Class privacyBudgetKeyGeneratorClass) {
+  private void assertPBKGeneratorForVersion(
+      String version, UnsignedLong filteringId, Class privacyBudgetKeyGeneratorClass) {
     SharedInfo sharedInfo =
         SharedInfo.builder()
-            .setVersion(String.valueOf(version))
+            .setVersion(version)
             .setApi(PROTECTED_AUDIENCE_API)
             .setReportingOrigin(REPORTING_ORIGIN)
             .setScheduledReportTime(FIXED_TIME)
             .build();
+    PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput privacyBudgetKeyInput =
+        PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
+            .setFilteringId(filteringId)
+            .setSharedInfo(sharedInfo)
+            .build();
 
     assertTrue(
         versionedPrivacyBudgetKeyGeneratorProvider.doesExactlyOneCorrespondingPBKGeneratorExist(
-            sharedInfo.version()));
-    assertThat(privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(sharedInfo).get())
+            privacyBudgetKeyInput));
+    assertThat(
+            privacyBudgetKeyGeneratorFactory
+                .getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput)
+                .get())
         .isInstanceOf(privacyBudgetKeyGeneratorClass);
   }
 

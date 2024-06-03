@@ -138,6 +138,18 @@ public class AvroOutputDomainProcessorTest {
   }
 
   @Test
+  public void skipsZeroByteDomains() throws Exception {
+    writeOutputDomain(outputDomainDirectory.resolve("domain_1.avro"), Stream.of());
+    writeOutputDomain(
+        outputDomainDirectory.resolve("domain_2.avro"), Stream.of(11, 22, 11, 11, 22, 33));
+
+    ImmutableSet<BigInteger> keys = readOutputDomain();
+
+    assertThat(keys)
+        .containsExactly(BigInteger.valueOf(11), BigInteger.valueOf(22), BigInteger.valueOf(33));
+  }
+
+  @Test
   public void ioProblem() {
     // No file written, path pointing to a non-existing file, this should be an IO exception.
     ExecutionException error = assertThrows(ExecutionException.class, this::readOutputDomain);

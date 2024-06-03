@@ -19,6 +19,7 @@ package com.google.aggregate.adtech.worker.model;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
+import com.google.common.primitives.UnsignedLong;
 import java.math.BigInteger;
 import java.util.Optional;
 
@@ -44,7 +45,7 @@ public abstract class Fact {
   public abstract Long value();
 
   /** Filtering id for the contribution. */
-  public abstract Optional<Integer> id();
+  public abstract Optional<UnsignedLong> id();
 
   @AutoValue.Builder
   public abstract static class Builder {
@@ -53,7 +54,7 @@ public abstract class Fact {
 
     public abstract Builder setValue(long value);
 
-    public abstract Builder setId(int id);
+    public abstract Builder setId(UnsignedLong id);
 
     public abstract Fact build();
   }

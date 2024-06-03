@@ -18,6 +18,8 @@ package com.google.privacysandbox.otel;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -55,6 +57,7 @@ public final class OTelConfigurationImplTest {
   private InMemorySpanExporter spanExporter;
   private InMemoryMetricReader metricReader;
   private OTelConfiguration oTelConfigurationImpl;
+  private OpenTelemetry openTelemetry;
 
   @Before
   public void setUp() {
@@ -78,7 +81,7 @@ public final class OTelConfigurationImplTest {
             .build();
 
     // Setup OpenTelemetry object
-    OpenTelemetry openTelemetry =
+    openTelemetry =
         OpenTelemetrySdk.builder()
             .setTracerProvider(sdkTracerProvider)
             .setMeterProvider(sdkMeterProvider)
@@ -155,6 +158,41 @@ public final class OTelConfigurationImplTest {
     assertCounterValue(counterName, counterValue);
   }
 
+  @Test
+  public void createProdMemoryUtilizationRatioGauge_returnCorrectValues() {
+    ImmutableList<Double> getMemoryValues = ImmutableList.of(1.0, 14.0, 15.0, 91.0, 95.0, 100.0);
+    ImmutableList<Integer> expectedMemoryRatio = ImmutableList.of(0, 10, 20, 90, 90, 90);
+    String gaugeName = "process.runtime.jvm.memory.utilization_ratio";
+
+    for (int i = 0; i < expectedMemoryRatio.size(); i++) {
+      metricReader = InMemoryMetricReader.create();
+      SdkMeterProvider sdkMeterProvider =
+          SdkMeterProvider.builder()
+              .setResource(RESOURCE)
+              .setClock(CLOCK)
+              .registerMetricReader(metricReader)
+              .build();
+      openTelemetry = OpenTelemetrySdk.builder().setMeterProvider(sdkMeterProvider).build();
+      OTelConfigurationImplHelper helper =
+          spy(
+              new OTelConfigurationImplHelper(
+                  openTelemetry.getMeter(OTelConfigurationImpl.class.getName()),
+                  openTelemetry.getTracer(OTelConfigurationImpl.class.getName())));
+      when(helper.getUsedMemoryRatio()).thenReturn(getMemoryValues.get(i));
+      OTelConfigurationImpl mockOTelConfigurationImpl = new OTelConfigurationImpl(helper);
+      mockOTelConfigurationImpl.createProdMemoryUtilizationRatioGauge();
+      MetricData metric =
+          metricReader.collectAllMetrics().stream().collect(toImmutableList()).get(0);
+      DoublePointData point =
+          (DoublePointData) metric.getData().getPoints().stream().collect(toImmutableList()).get(0);
+
+      assertThat(metric.getName()).isEqualTo(gaugeName);
+      assertThat(metric.getUnit()).isEqualTo("percent");
+      assertThat(point.getValue()).isNotNull();
+      assertThat(point.getValue()).isEqualTo(expectedMemoryRatio.get(i));
+    }
+  }
+
   private void assertGaugeNonNull(String name, String unit) {
     MetricData metric = metricReader.collectAllMetrics().stream().collect(toImmutableList()).get(0);
     DoublePointData point =
@@ -172,15 +210,6 @@ public final class OTelConfigurationImplTest {
     oTelConfigurationImpl.createProdMemoryUtilizationGauge();
 
     assertGaugeNonNull(gaugeName, "MiB");
-  }
-
-  @Test
-  public void createProdMemoryUtilizationRatioGauge_isNotNull() {
-    String gaugeName = "process.runtime.jvm.memory.utilization_ratio";
-
-    oTelConfigurationImpl.createProdMemoryUtilizationRatioGauge();
-
-    assertGaugeNonNull(gaugeName, "percent");
   }
 
   @Test
@@ -323,5 +352,30 @@ public final class OTelConfigurationImplTest {
 
     assertThat(spanData.getName()).isEqualTo(timerName);
     assertThat(spanData.getEvents().get(0).getName()).isEqualTo(eventName);
+  }
+
+  @Test
+  public void createProdTimerStart_setTimeUnitSeconds() {
+    String timerName = "prodTimer";
+    TimerUnit timeUnit = TimerUnit.SECONDS;
+    String jobID = "job1";
+
+    try (Timer timer = oTelConfigurationImpl.createProdTimerStarted(timerName, jobID, timeUnit)) {
+      Thread.sleep(1234); // Add delay to make startEpoch and endEpoch different
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    List<SpanData> spanItems = spanExporter.getFinishedSpanItems();
+
+    assertThat(spanItems).isNotNull();
+
+    ImmutableList startEpoch =
+        spanItems.stream().map(SpanData::getStartEpochNanos).collect(toImmutableList());
+    ImmutableList endEpoch =
+        spanItems.stream().map(SpanData::getEndEpochNanos).collect(toImmutableList());
+
+    // It should end with 0s because it is in seconds and converts to nanoseconds.
+    assertThat((long) startEpoch.get(0) % 1000000000).isEqualTo(0);
+    assertThat((long) endEpoch.get(0) % 1000000000).isEqualTo(0);
   }
 }

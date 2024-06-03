@@ -58,7 +58,7 @@ DEFAULT_ENCLAVE_ARGS = [
     "--result_working_directory_path",
     "/",
     "--decryption_key_service",
-    "AWS_ENCLAVE_CLI_DECRYPTION_KEY_SERVICE",
+    "AWS_ENCLAVE_CLI_MULTI_PARTY_DECRYPTION_KEY_SERVICE",
     "--param_client",
     "AWS",  # getting parameters from AWS parameter store
     "--lifecycle_client",
@@ -108,7 +108,7 @@ PROD_ENCLAVE_ARGS = [
     "--result_logger",
     "LOCAL_TO_CLOUD",
     "--decryption_key_service",
-    "AWS_ENCLAVE_CLI_DECRYPTION_KEY_SERVICE",
+    "AWS_ENCLAVE_CLI_MULTI_PARTY_DECRYPTION_KEY_SERVICE",
     "--trusted_party_region_override",
     "us-east-1",
     "--param_client",
@@ -120,8 +120,10 @@ PROD_ENCLAVE_ARGS = [
     "--noising",
     "DP_NOISING",
     "--return_stack_trace",
-    "--parallel-summary-upload",
-    "--streaming-output-domain-processing",
+    "--parallel_summary_upload_enabled",
+    "--streaming_output_domain_processing_enabled",
+    "--parallel_fact_noising_enabled",
+    "--labeled_privacy_budget_keys_enabled",
 ]
 # Check the documentation for the worker_aws_deployment macro for details on
 # what is available in this package.

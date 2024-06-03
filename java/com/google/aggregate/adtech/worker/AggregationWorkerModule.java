@@ -16,18 +16,27 @@
 
 package com.google.aggregate.adtech.worker;
 
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUpload;
+import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
+import com.google.aggregate.adtech.worker.Annotations.ParallelAggregatedFactNoising;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
+import com.google.aggregate.adtech.worker.Annotations.SupportedApis;
 import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWorkingDirectory;
 import com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
@@ -39,6 +48,7 @@ import com.google.aggregate.adtech.worker.decryption.DeserializingReportDecrypte
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.model.serdes.PayloadSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.cbor.CborPayloadSerdes;
+import com.google.aggregate.adtech.worker.util.JobUtils;
 import com.google.aggregate.adtech.worker.validation.SimulationValidationModule;
 import com.google.aggregate.adtech.worker.validation.ValidationModule;
 import com.google.aggregate.perf.StopwatchExporter;
@@ -49,7 +59,9 @@ import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBrid
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.shared.mapper.TimeObjectMapper;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.AbstractModule;
@@ -73,6 +85,7 @@ import com.google.scp.operator.cpio.configclient.local.Annotations.SqsJobQueueUr
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
+import com.google.scp.operator.cpio.cryptoclient.Annotations.ExceptionCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.HttpPrivateKeyFetchingService.PrivateKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.aws.Annotations.KmsEndpointOverride;
 import com.google.scp.operator.cpio.cryptoclient.local.LocalFileDecryptionKeyServiceModule.DecryptionKeyFilePath;
@@ -104,6 +117,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 import javax.inject.Singleton;
 import software.amazon.awssdk.http.SdkHttpClient;
@@ -156,8 +170,7 @@ public final class AggregationWorkerModule extends AbstractModule {
         if (!args.getLocalFileJobInfoPath().isEmpty()) {
           localJobInfoPath = Optional.of(Paths.get(args.getLocalFileJobInfoPath()));
         }
-        bind(new TypeLiteral<Optional<Path>>() {
-        })
+        bind(new TypeLiteral<Optional<Path>>() {})
             .annotatedWith(LocalFileJobHandlerResultPath.class)
             .toInstance(localJobInfoPath);
         bind(ObjectMapper.class).to(TimeObjectMapper.class);
@@ -281,11 +294,11 @@ public final class AggregationWorkerModule extends AbstractModule {
     // Dependency for the aggregation processor.
     bind(JobProcessor.class).to(ConcurrentAggregationProcessor.class);
 
-    bind(boolean.class).annotatedWith(StreamingOutputDomainProcessing.class)
-        .toInstance(args.isStreamingOutputDomainProcessing());
-
     // Noising module.
     install(args.getNoisingSelector().getNoisingModule());
+    bind(boolean.class)
+        .annotatedWith(ParallelAggregatedFactNoising.class)
+        .toInstance(args.isParallelAggregatedFactNoisingEnabled());
 
     // Result logger module.
     install(args.resultLoggerModuleSelector().getResultLoggerModule());
@@ -296,12 +309,27 @@ public final class AggregationWorkerModule extends AbstractModule {
             .toInstance(Paths.get(args.getResultWorkingDirectoryPathString()));
         break;
     }
-    bind(boolean.class).annotatedWith(EnableParallelSummaryUpload.class)
-        .toInstance(args.isEnableParallelSummaryUpload());
+
+    // Feature flags.
+    bind(boolean.class)
+        .annotatedWith(EnableParallelSummaryUpload.class)
+        .toInstance(args.isParallelSummaryUploadEnabled());
+    bind(boolean.class)
+        .annotatedWith(EnablePrivacyBudgetKeyFiltering.class)
+        .toInstance(args.isLabeledPrivacyBudgetKeysEnabled());
+    bind(boolean.class)
+        .annotatedWith(StreamingOutputDomainProcessing.class)
+        .toInstance(args.isStreamingOutputDomainProcessingEnabled());
 
     // Parameter to set key cache. This is a test only flag.
-    bind(Long.class).annotatedWith(DecrypterCacheEntryTtlSec.class)
+    bind(Long.class)
+        .annotatedWith(DecrypterCacheEntryTtlSec.class)
         .toInstance(args.getDecrypterCacheEntryTtlSec());
+
+    // Parameter to set exception cache. This is a test only flag.
+    bind(Long.class)
+            .annotatedWith(ExceptionCacheEntryTtlSec.class)
+            .toInstance(args.getExceptionCacheEntryTtlSec());
 
     // Dependencies for privacy budgeting.
     bind(PrivacyBudgetingServiceBridge.class).to(args.getPrivacyBudgeting().getBridge());
@@ -357,8 +385,8 @@ public final class AggregationWorkerModule extends AbstractModule {
 
     // Otel exporter.
     switch (args.getOTelExporterSelector()) {
-      // Specifying CollectorEndpoint is required for GRPC exporter because aggregation service
-      // would send metric to the CollectorEndpoint and thus collector/exporter could collect.
+        // Specifying CollectorEndpoint is required for GRPC exporter because aggregation service
+        // would send metric to the CollectorEndpoint and thus collector/exporter could collect.
       case GRPC:
         bind(String.class)
             .annotatedWith(GrpcOtelCollectorEndpoint.class)
@@ -382,6 +410,20 @@ public final class AggregationWorkerModule extends AbstractModule {
     bind(long.class)
         .annotatedWith(OutputShardFileSizeBytes.class)
         .toInstance(args.getOutputShardFileSizeBytes());
+  }
+
+  @Provides
+  @SupportedApis
+  ImmutableSet<String> providesSupportedApis() {
+    if (args.isAttributionReportingDebugApiEnabled()) {
+      return ImmutableSet.of(
+          ATTRIBUTION_REPORTING_API,
+          ATTRIBUTION_REPORTING_DEBUG_API,
+          PROTECTED_AUDIENCE_API,
+          SHARED_STORAGE_API);
+    } else {
+      return ImmutableSet.of(ATTRIBUTION_REPORTING_API, PROTECTED_AUDIENCE_API, SHARED_STORAGE_API);
+    }
   }
 
   @Provides
@@ -409,6 +451,9 @@ public final class AggregationWorkerModule extends AbstractModule {
     if (args.isDebugRun()) {
       jobParametersBuilder.put("debug_run", "true");
     }
+    if (!Strings.isNullOrEmpty(args.getFilteringIds())) {
+      jobParametersBuilder.put(JobUtils.JOB_PARAM_FILTERING_IDS, args.getFilteringIds());
+    }
     return () -> (jobParametersBuilder.build());
   }
 
@@ -428,5 +473,12 @@ public final class AggregationWorkerModule extends AbstractModule {
     // TODO(b/281572881): Investigate on optimal value for blockingThreadPool size.
     return MoreExecutors.listeningDecorator(
         Executors.newFixedThreadPool(args.getBlockingThreadPoolSize()));
+  }
+
+  @Provides
+  @Singleton
+  @CustomForkJoinThreadPool
+  ListeningExecutorService provideCustomForkJoinThreadPool() {
+    return MoreExecutors.listeningDecorator(new ForkJoinPool(args.getNonBlockingThreadPoolSize()));
   }
 }

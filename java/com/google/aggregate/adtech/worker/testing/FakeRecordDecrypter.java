@@ -56,7 +56,7 @@ public final class FakeRecordDecrypter implements RecordDecrypter {
       }
     }
 
-    return FakeReportGenerator.generateWithParam(idToGenerate, LATEST_VERSION);
+    return FakeReportGenerator.generateWithParam(idToGenerate, LATEST_VERSION, "https://foo.com");
   }
 
   public void setShouldThrow(boolean shouldThrow, ErrorReason reason) {

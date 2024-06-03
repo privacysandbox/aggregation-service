@@ -16,6 +16,7 @@
 
 package com.google.privacysandbox.otel;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.MustBeClosed;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.metrics.LongCounter;
@@ -34,6 +35,11 @@ public final class OTelConfigurationImpl implements OTelConfiguration {
         new OTelConfigurationImplHelper(
             oTel.getMeter(OTelConfigurationImpl.class.getName()),
             oTel.getTracer(OTelConfigurationImpl.class.getName()));
+  }
+
+  @VisibleForTesting
+  OTelConfigurationImpl(OTelConfigurationImplHelper oTelConfigurationImplHelper) {
+    this.oTelConfigurationImplHelper = oTelConfigurationImplHelper;
   }
 
   @Override
@@ -88,7 +94,13 @@ public final class OTelConfigurationImpl implements OTelConfiguration {
   @Override
   @MustBeClosed
   public Timer createProdTimerStarted(String name, String jobID) {
-    return oTelConfigurationImplHelper.createTimerStarted(name, jobID);
+    return oTelConfigurationImplHelper.createTimerStarted(name, jobID, TimerUnit.NANOSECONDS);
+  }
+
+  @Override
+  @MustBeClosed
+  public Timer createProdTimerStarted(String name, String jobID, TimerUnit timeUnit) {
+    return oTelConfigurationImplHelper.createTimerStarted(name, jobID, timeUnit);
   }
 
   @Override

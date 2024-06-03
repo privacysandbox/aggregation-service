@@ -104,10 +104,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 @RunWith(JUnit4.class)
 public class AwsWorkerContinuousSmokeTest {
 
-  @Rule
-  public final Acai acai = new Acai(TestEnv.class);
-  @Rule
-  public final TestName name = new TestName();
+  @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
@@ -119,12 +117,9 @@ public class AwsWorkerContinuousSmokeTest {
 
   private static final Logger logger = LoggerFactory.getLogger(AwsWorkerContinuousSmokeTest.class);
 
-  @Inject
-  S3BlobStorageClient s3BlobStorageClient;
-  @Inject
-  AvroResultsFileReader avroResultsFileReader;
-  @Inject
-  private AvroDebugResultsReaderFactory readerFactory;
+  @Inject S3BlobStorageClient s3BlobStorageClient;
+  @Inject AvroResultsFileReader avroResultsFileReader;
+  @Inject private AvroDebugResultsReaderFactory readerFactory;
 
   @Before
   public void checkBuildEnv() {
@@ -149,10 +144,10 @@ public class AwsWorkerContinuousSmokeTest {
   }
 
   /*
-      Starts with a createJob request to API gateway with the test inputs pre-uploaded in s3
-      bucket. Ends by calling getJob API to retrieve result information. Assertions are made on
-      result status (SUCCESS) and result avro (not empty) which sits in the testing bucket.
-   */
+     Starts with a createJob request to API gateway with the test inputs pre-uploaded in s3
+     bucket. Ends by calling getJob API to retrieve result information. Assertions are made on
+     result status (SUCCESS) and result avro (not empty) which sits in the testing bucket.
+  */
   @Test
   public void createJobE2ETest() throws Exception {
     var inputKey =
@@ -243,14 +238,12 @@ public class AwsWorkerContinuousSmokeTest {
     assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
     // The debug file shouldn't exist because it's not debug run
     assertThat(
-        AwsWorkerContinuousTestHelper.checkS3FileExists(
-            s3BlobStorageClient, getTestDataBucket(), getDebugFilePrefix(outputKey)))
+            AwsWorkerContinuousTestHelper.checkS3FileExists(
+                s3BlobStorageClient, getTestDataBucket(), getDebugFilePrefix(outputKey)))
         .isFalse();
   }
 
-  /**
-   * This test includes sending a debug job and aggregatable reports with debug mode enabled.
-   */
+  /** This test includes sending a debug job and aggregatable reports with debug mode enabled. */
   @Test
   public void createDebugJobE2EReportDebugModeEnabledTest() throws Exception {
     var inputKey =
@@ -339,31 +332,31 @@ public class AwsWorkerContinuousSmokeTest {
     assertThat(result.get("result_info").get("return_code").asText())
         .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
     assertThat(
-        result
-            .get("result_info")
-            .get("error_summary")
-            .get("error_counts")
-            .get(0)
-            .get("count")
-            .asInt())
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("count")
+                .asInt())
         .isEqualTo(10000);
     assertThat(
-        result
-            .get("result_info")
-            .get("error_summary")
-            .get("error_counts")
-            .get(0)
-            .get("category")
-            .asText())
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("category")
+                .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.name());
     assertThat(
-        result
-            .get("result_info")
-            .get("error_summary")
-            .get("error_counts")
-            .get(0)
-            .get("description")
-            .asText())
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("description")
+                .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.getDescription());
 
     // Read output avro from s3.
@@ -416,42 +409,101 @@ public class AwsWorkerContinuousSmokeTest {
             /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey),
-            /* reportErrorThresholdPercentage= */ 10);
+            /* reportErrorThresholdPercentage= */ 10,
+            /* inputReportCount= */ Optional.of(10000L));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText())
         .isEqualTo(AggregationWorkerReturnCode.REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD.name());
-    assertThat(
+    // Due to parallel aggregation, the processing may stop a little over the threshold.
+    // So, asserting below that the processing stopped somewhere above the threshold but before all
+    // the 10K reports are processed.
+    int erroringReportCount =
         result
             .get("result_info")
             .get("error_summary")
             .get("error_counts")
             .get(0)
             .get("count")
-            .asInt())
-        .isAtLeast(1000);
+            .asInt();
+    assertThat(erroringReportCount).isAtLeast(1000);
+    assertThat(erroringReportCount).isLessThan(10000);
     assertThat(
-        result
-            .get("result_info")
-            .get("error_summary")
-            .get("error_counts")
-            .get(0)
-            .get("category")
-            .asText())
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("category")
+                .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.name());
     assertThat(
-        result
-            .get("result_info")
-            .get("error_summary")
-            .get("error_counts")
-            .get(0)
-            .get("description")
-            .asText())
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("description")
+                .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.getDescription());
     assertThat(
-        AwsWorkerContinuousTestHelper.checkS3FileExists(
-            s3BlobStorageClient, getTestDataBucket(), outputKey))
+            AwsWorkerContinuousTestHelper.checkS3FileExists(
+                s3BlobStorageClient, getTestDataBucket(), outputKey))
         .isFalse();
+  }
+
+  /**
+   * End to end test for the Aggregate Reporting Debug API. </a> 10k attribution-reporting-debug
+   * type reports are provided for aggregation.
+   */
+  @Test
+  public void createJobE2EAggregateReportingDebugTest() throws Exception {
+    var inputKey =
+        String.format(
+            "%s/%s/test-inputs/10k_test_input_attribution_debug.avro",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var domainKey =
+        String.format(
+            "%s/%s/test-inputs/10k_test_domain_attribution_debug.avro",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var outputKey =
+        String.format(
+            "%s/%s/test-outputs/10k_test_output_attribution_debug.avro",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        AwsWorkerContinuousTestHelper.createJobRequest(
+            getTestDataBucket(),
+            inputKey,
+            getTestDataBucket(),
+            outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
+            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
+            /* outputDomainPrefix= */ Optional.of(domainKey));
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    // TODO: b/322832198 - Update assertions once Debug Reporting API is launched.
+    // The threshold is 100%, so we get SUCCESS_WITH_ERRORS.
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
+    assertThat(
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("count")
+                .asInt())
+        .isEqualTo(10000);
+    assertThat(
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("category")
+                .asText())
+        .isEqualTo(ErrorCounter.UNSUPPORTED_REPORT_API_TYPE.name());
   }
 
   @Test
@@ -657,11 +709,11 @@ public class AwsWorkerContinuousSmokeTest {
   }
 
   /*
-    Starts with a createJob request to API gateway with the test inputs pre-uploaded to s3
-    bucket. Ends by calling getJob API to retrieve result information. Assertions are made on
-    result status (SUCCESS) and result avro (not empty) which sits in the testing bucket.
-    The output files must be sharded into 3 separate files.
-   */
+   Starts with a createJob request to API gateway with the test inputs pre-uploaded to s3
+   bucket. Ends by calling getJob API to retrieve result information. Assertions are made on
+   result status (SUCCESS) and result avro (not empty) which sits in the testing bucket.
+   The output files must be sharded into 3 separate files.
+  */
   @Test
   public void createJobE2ETestWithMultiOutputShard() throws Exception {
     // Skip this test for the case where build parameter cannot be set (ex> release image)
@@ -714,6 +766,43 @@ public class AwsWorkerContinuousSmokeTest {
     assertThat(aggregatedFactsInShard2.size()).isGreaterThan(14000);
   }
 
+  /**
+   * End to end test for aggregating 10k reports with invalid key. Tests if the exception caching
+   * works. This test would fail without exception caching due to timeout.
+   */
+  @Test
+  public void createJobE2ETestWithInvalidReports() throws Exception {
+    var inputKey =
+        String.format(
+            "%s/%s/test-inputs/10k_test_input_invalid_key.avro",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var domainKey =
+        String.format(
+            "%s/%s/test-inputs/10k_test_domain_invalid_key.avro",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var outputKey =
+        String.format(
+            "%s/%s/test-outputs/10k_test_output_invalid_key.avro",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        AwsWorkerContinuousTestHelper.createJobRequest(
+            getTestDataBucket(),
+            inputKey,
+            getTestDataBucket(),
+            outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
+            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
+            /* outputDomainPrefix= */ Optional.of(domainKey));
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    // The job should be completed before the completion timeout.
+    assertThat(result.get("job_status").asText()).isEqualTo("FINISHED");
+    // The threshold is 100%, so we get SUCCESS_WITH_ERRORS.
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
+  }
+
   private static class TestEnv extends AbstractModule {
 
     @Override
@@ -725,9 +814,7 @@ public class AwsWorkerContinuousSmokeTest {
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
       bind(S3AsyncClient.class)
-          .toInstance(
-              S3AsyncClient.builder()
-                  .region(AWS_S3_BUCKET_REGION).build());
+          .toInstance(S3AsyncClient.builder().region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

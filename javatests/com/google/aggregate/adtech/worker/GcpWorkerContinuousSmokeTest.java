@@ -57,21 +57,15 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * GCP integration tests.
- */
+/** GCP integration tests. */
 @RunWith(JUnit4.class)
 public final class GcpWorkerContinuousSmokeTest {
 
-  @Rule
-  public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final Acai acai = new Acai(TestEnv.class);
 
-  @Inject
-  GcsBlobStorageClient gcsBlobStorageClient;
-  @Inject
-  AvroResultsFileReader avroResultsFileReader;
-  @Inject
-  private AvroDebugResultsReaderFactory readerFactory;
+  @Inject GcsBlobStorageClient gcsBlobStorageClient;
+  @Inject AvroResultsFileReader avroResultsFileReader;
+  @Inject private AvroDebugResultsReaderFactory readerFactory;
   public static final String OUTPUT_DATA_PREFIX_NAME = "-1-of-1";
   private static final Integer DEBUG_DOMAIN_KEY_SIZE = 10000;
   private static final Duration COMPLETION_TIMEOUT = Duration.of(30, ChronoUnit.MINUTES);
@@ -152,10 +146,10 @@ public final class GcpWorkerContinuousSmokeTest {
     assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
     // The debug file shouldn't exist because it's not debug run
     assertThat(
-        checkFileExists(
-            gcsBlobStorageClient,
-            getTestDataBucket(),
-            getDebugFilePrefix(outputDataPrefix + OUTPUT_DATA_PREFIX_NAME)))
+            checkFileExists(
+                gcsBlobStorageClient,
+                getTestDataBucket(),
+                getDebugFilePrefix(outputDataPrefix + OUTPUT_DATA_PREFIX_NAME)))
         .isFalse();
   }
 
@@ -234,31 +228,31 @@ public final class GcpWorkerContinuousSmokeTest {
     assertThat(result.get("result_info").get("return_code").asText())
         .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
     assertThat(
-        result
-            .get("result_info")
-            .get("error_summary")
-            .get("error_counts")
-            .get(0)
-            .get("count")
-            .asInt())
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("count")
+                .asInt())
         .isEqualTo(10000);
     assertThat(
-        result
-            .get("result_info")
-            .get("error_summary")
-            .get("error_counts")
-            .get(0)
-            .get("category")
-            .asText())
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("category")
+                .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.name());
     assertThat(
-        result
-            .get("result_info")
-            .get("error_summary")
-            .get("error_counts")
-            .get(0)
-            .get("description")
-            .asText())
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("description")
+                .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.getDescription());
 
     // Read output avro from s3.
@@ -285,6 +279,55 @@ public final class GcpWorkerContinuousSmokeTest {
     // all reports are filtered out.
     // Noised metric in both debug reports and summary reports should be noise value instead of 0.
     aggregatedDebugFacts.forEach(fact -> assertThat(fact.unnoisedMetric().get()).isEqualTo(0));
+  }
+
+  /**
+   * End-to-end test for the Aggregate Reporting Debug API. </a> 10k attribution-reporting-debug
+   * type reports are provided for aggregation. Verifies job status and the size of summary report
+   * facts.
+   */
+  @Test
+  public void createJobE2EAggregateReportingDebugTest() throws Exception {
+    String inputDataPrefix =
+        String.format("%s/test-inputs/10k_test_input_attribution_debug.avro", KOKORO_BUILD_ID);
+    String domainDataPrefix =
+        String.format("%s/test-inputs/10k_test_domain_attribution_debug.avro", KOKORO_BUILD_ID);
+    String outputDataPrefix =
+        String.format(
+            "%s/test-outputs/10k_test_output_attribution_debug.avro.result", KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        SmokeTestBase.createJobRequest(
+            getTestDataBucket(),
+            inputDataPrefix,
+            getTestDataBucket(),
+            outputDataPrefix,
+            Optional.of(getTestDataBucket()),
+            Optional.of(domainDataPrefix));
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    // TODO: b/322832198 - Update assertions once Debug Reporting API is launched.
+    // The threshold is 100%, so we get SUCCESS_WITH_ERRORS.
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
+    assertThat(
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("count")
+                .asInt())
+        .isEqualTo(10000);
+    assertThat(
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("category")
+                .asText())
+        .isEqualTo(ErrorCounter.UNSUPPORTED_REPORT_API_TYPE.name());
   }
 
   /*
