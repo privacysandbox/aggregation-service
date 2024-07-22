@@ -62,12 +62,12 @@ final class AvroResultsDeserializerRunner {
   }
 
   private static String formatOutput(AggregatedFact fact, boolean outputAsHex) {
-    String bucketString = fact.bucket().toString();
+    String bucketString = fact.getBucket().toString();
     if (outputAsHex) {
-      byte[] bucketBytes = NumericConversions.toUnsignedByteArray(fact.bucket());
+      byte[] bucketBytes = NumericConversions.toUnsignedByteArray(fact.getBucket());
       bucketString = "0x" + BaseEncoding.base16().encode(bucketBytes);
     }
-    return bucketString + "," + fact.metric();
+    return bucketString + "," + fact.getMetric();
   }
 
   static final class AvroResultsDeserializerRunnerArgs {

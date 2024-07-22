@@ -120,9 +120,9 @@ public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
   private GenericRecord aggregatedFactToGenericRecord(AggregatedFact aggregatedFact) {
     GenericRecord genericRecord = new GenericData.Record(schemaSupplier.get());
     ByteBuffer bucketBytes =
-        ByteBuffer.wrap(NumericConversions.toUnsignedByteArray(aggregatedFact.bucket()));
+        ByteBuffer.wrap(NumericConversions.toUnsignedByteArray(aggregatedFact.getBucket()));
     genericRecord.put("bucket", bucketBytes);
-    genericRecord.put("metric", aggregatedFact.metric());
+    genericRecord.put("metric", aggregatedFact.getMetric());
     return genericRecord;
   }
 

@@ -16,41 +16,41 @@
 
 package com.google.aggregate.adtech.worker.model;
 
-import com.google.auto.value.AutoValue;
 import java.math.BigInteger;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /** Single aggregated result (for one key) */
-@AutoValue
-public abstract class AggregatedFact {
+public class AggregatedFact {
 
-  public abstract BigInteger bucket();
+  private final BigInteger bucket;
 
-  public abstract long metric();
+  private long metric;
 
   /** Set it optional because it is for debug result use. */
-  public abstract Optional<Long> unnoisedMetric();
+  private Optional<Long> unnoisedMetric;
 
   /** Set it optional because it is for debug result use only. */
-  public abstract Optional<List> debugAnnotations();
+  private Optional<List> debugAnnotations;
 
-  public static Builder builder() {
-    return new AutoValue_AggregatedFact.Builder();
+  private AggregatedFact(
+      BigInteger bucket,
+      long metric,
+      Optional<Long> unnoisedMetric,
+      Optional<List> debugBucketAnnotations) {
+    this.bucket = bucket;
+    this.metric = metric;
+    this.unnoisedMetric = unnoisedMetric;
+    this.debugAnnotations = debugBucketAnnotations;
   }
 
   public static AggregatedFact create(BigInteger bucket, long metric) {
-    AggregatedFact.Builder builder = AggregatedFact.builder().setBucket(bucket).setMetric(metric);
-    return builder.build();
+    return new AggregatedFact(bucket, metric, Optional.empty(), Optional.empty());
   }
 
   public static AggregatedFact create(BigInteger bucket, long metric, Long unnoisedMetric) {
-    AggregatedFact.Builder builder =
-        AggregatedFact.builder()
-            .setBucket(bucket)
-            .setMetric(metric)
-            .setUnnoisedMetric(unnoisedMetric);
-    return builder.build();
+    return new AggregatedFact(bucket, metric, Optional.of(unnoisedMetric), Optional.empty());
   }
 
   public static AggregatedFact create(
@@ -58,26 +58,59 @@ public abstract class AggregatedFact {
       long metric,
       Long unnoisedMetric,
       List<DebugBucketAnnotation> debugAnnotations) {
-    AggregatedFact.Builder builder =
-        AggregatedFact.builder()
-            .setBucket(bucket)
-            .setMetric(metric)
-            .setUnnoisedMetric(unnoisedMetric)
-            .setDebugAnnotations(debugAnnotations);
-    return builder.build();
+    return new AggregatedFact(
+        bucket, metric, Optional.of(unnoisedMetric), Optional.of(debugAnnotations));
   }
 
-  @AutoValue.Builder
-  public abstract static class Builder {
+  public BigInteger getBucket() {
+    return bucket;
+  }
 
-    public abstract Builder setBucket(BigInteger value);
+  public long getMetric() {
+    return metric;
+  }
 
-    public abstract Builder setMetric(long value);
+  public void setMetric(long metric) {
+    this.metric = metric;
+  }
 
-    public abstract Builder setUnnoisedMetric(Long value);
+  public Optional<Long> getUnnoisedMetric() {
+    return unnoisedMetric;
+  }
 
-    public abstract Builder setDebugAnnotations(List value);
+  public void setUnnoisedMetric(Optional<Long> unnoisedMetric) {
+    this.unnoisedMetric = unnoisedMetric;
+  }
 
-    public abstract AggregatedFact build();
+  public Optional<List> getDebugAnnotations() {
+    return debugAnnotations;
+  }
+
+  public void setDebugAnnotations(List<DebugBucketAnnotation> debugBucketAnnotations) {
+    this.debugAnnotations = Optional.of(debugBucketAnnotations);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(
+        this.bucket.hashCode(),
+        this.metric,
+        this.unnoisedMetric.hashCode(),
+        this.debugAnnotations.hashCode());
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    } else if (!(o instanceof AggregatedFact)) {
+      return false;
+    } else {
+      AggregatedFact that = (AggregatedFact) o;
+      return this.bucket.equals(that.getBucket())
+          && this.metric == that.getMetric()
+          && this.unnoisedMetric.equals(that.getUnnoisedMetric())
+          && this.debugAnnotations.equals(that.getDebugAnnotations());
+    }
   }
 }

@@ -12,5 +12,11 @@ base64 decoder to get cbor, for example:
   base64 -d report_1_cleartext_payloads.json > report1.cbor
 ```
 
+Alternative, to ignore garbage while decoding use the following command:
+
+```sh
+  base64 -di report_1_cleartext_payloads.json > report1.cbor
+```
+
 CborPayloadSerdesTest reads the cbor files from reportx.cbor files, deserializes the cbor payload
 and compares it with manually constructed test payload.

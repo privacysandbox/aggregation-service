@@ -71,7 +71,7 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
         Streams.stream(aggregatedFacts)
             .filter(
                 aggregatedFactItem ->
-                    (DoubleMath.fuzzyCompare(aggregatedFactItem.metric(), threshold, TOLERANCE)
+                    (DoubleMath.fuzzyCompare(aggregatedFactItem.getMetric(), threshold, TOLERANCE)
                         >= 0))
             .collect(toImmutableList());
 
@@ -79,6 +79,11 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
         requestScopedPrivacyParamsSupplier.get(), thresholdedFacts);
   }
 
+  /*
+   * Noises AggregatedFact#metric using Google's DP library. AggregatedFact#metric is interpreted as
+   * unnoised data and copied to the AggregatedFact#unnoisedMetric field, and the noised value is
+   * set in the AggregatedFact#metric field.
+   */
   @Override
   public NoisedAggregationResult noise(
       Iterable<AggregatedFact> aggregatedFact, Optional<Double> debugPrivacyEpsilon) {
@@ -119,10 +124,10 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
   }
 
   private AggregatedFact noiseSingleFact(AggregatedFact aggregatedFact, NoiseApplier noiseApplier) {
-    return AggregatedFact.create(
-        aggregatedFact.bucket(),
-        noiseApplier.noiseMetric(aggregatedFact.metric()),
-        aggregatedFact.metric());
+    long unnoisedMetric = aggregatedFact.getMetric();
+    aggregatedFact.setUnnoisedMetric(Optional.of(unnoisedMetric));
+    aggregatedFact.setMetric(noiseApplier.noiseMetric(unnoisedMetric));
+    return aggregatedFact;
   }
 
   private Supplier<PrivacyParameters> getScopedPrivacyParamSupplier(

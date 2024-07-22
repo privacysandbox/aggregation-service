@@ -53,8 +53,6 @@ DEFAULT_ENCLAVE_ARGS = [
     "--result_logger",
     "LOCAL_TO_CLOUD",
     # coord-staging environment
-    "--private_key_service_base_url",
-    "https://il9t0ajpsa.execute-api.us-west-2.amazonaws.com/stage/v1alpha",
     "--result_working_directory_path",
     "/",
     "--decryption_key_service",

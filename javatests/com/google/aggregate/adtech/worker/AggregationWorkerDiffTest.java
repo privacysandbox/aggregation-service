@@ -157,7 +157,7 @@ public class AggregationWorkerDiffTest {
 
     // Create AggregatedFact with only two fields: bucket and metric
     Stream<AggregatedFact> testFactsTwoFields =
-        testFacts.stream().map(fact -> AggregatedFact.create(fact.bucket(), fact.metric()));
+        testFacts.stream().map(fact -> AggregatedFact.create(fact.getBucket(), fact.getMetric()));
     return ResultDiffer.diffResults(testFactsTwoFields, goldenFacts.stream());
   }
 

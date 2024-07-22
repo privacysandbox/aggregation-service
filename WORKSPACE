@@ -24,7 +24,7 @@ PROTOBUF_CORE_VERSION = "3.25.2"
 
 PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
 
-COORDINATOR_VERSION = "v1.8.0-rc01"  # version updated on 2024-05-20
+COORDINATOR_VERSION = "v1.9.0-rc03"  # version updated on 2024-07-17
 
 JACKSON_VERSION = "2.16.1"
 
@@ -79,6 +79,7 @@ git_repository(
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/shared_libraries:coordinator.patch",
+        "//build_defs/shared_libraries:rules_pkg_build_fix.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",
@@ -163,6 +164,7 @@ maven_install(
         "io.github.resilience4j:resilience4j-retry:1.7.1",
         "junit:junit:4.13.2",
         "org.apache.avro:avro:1.11.3",
+        "org.apache.commons:commons-compress:1.26.2",
         "org.apache.commons:commons-math3:3.6.1",
         "org.apache.httpcomponents:httpcore:4.4.16",
         "org.apache.httpcomponents:httpclient:4.5.14",

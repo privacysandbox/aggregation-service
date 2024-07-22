@@ -50,7 +50,7 @@ public enum ErrorCounter {
           "Report's shared_info.scheduled_report_time is too old, reports cannot be older than %s"
               + " days.",
           SharedInfo.MAX_REPORT_AGE.toDays())),
-  SERVICE_ERROR("Internal error occurred during operation."),
+  INTERNAL_ERROR("Internal error occurred during operation."),
   UNSUPPORTED_OPERATION(
       String.format(
           "Report's operation is unsupported. Supported operations are %s.",

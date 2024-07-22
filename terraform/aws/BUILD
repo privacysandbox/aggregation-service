@@ -74,3 +74,11 @@ s3_jar_release(
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
+
+s3_jar_release(
+    name = "privacy_budget_unit_extraction_tool_release",
+    artifact_base_name = "PrivacyBudgetUnitExtraction_{VERSION}.jar",
+    jar_target = "//java/com/google/aggregate/tools/privacybudgetutil/aws:AwsPrivacyBudgetUnitExtractionDeploy",
+    release_bucket = ":bucket_flag",
+    release_key = ":bucket_path_flag",
+)

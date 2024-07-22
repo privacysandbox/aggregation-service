@@ -140,7 +140,7 @@ public final class DiffRunner {
       ImmutableList<AggregatedFact> resultAggregatedFacts =
           localAggregationWorker.waitForAggregation();
       return resultAggregatedFacts.stream()
-          .map(fact -> AggregatedFact.create(fact.bucket(), fact.metric()))
+          .map(fact -> AggregatedFact.create(fact.getBucket(), fact.getMetric()))
           .collect(toImmutableList());
 
     } catch (ResultLogException | TimeoutException e) {

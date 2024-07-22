@@ -50,3 +50,11 @@ gcs_jar_release(
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
+
+gcs_jar_release(
+    name = "privacy_budget_unit_extraction_tool_release",
+    artifact_base_name = "PrivacyBudgetUnitExtractionTool_{VERSION}.jar",
+    jar_target = "//java/com/google/aggregate/tools/privacybudgetutil/gcp:GcpPrivacyBudgetUnitExtractionDeploy",
+    release_bucket = ":bucket_flag",
+    release_key = ":bucket_path_flag",
+)
