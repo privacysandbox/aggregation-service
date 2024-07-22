@@ -166,15 +166,6 @@ java_library(
 )
 
 java_library(
-    name = "fake_private_key_fetching_service",
-    srcs = ["FakePrivateKeyFetchingService.java"],
-    javacopts = ["-Xep:Var"],
-    deps = [
-        "//java/external:clients_cryptoclient",
-    ],
-)
-
-java_library(
     name = "local_aggregation_worker_runner",
     srcs = ["LocalAggregationWorkerRunner.java"],
     javacopts = ["-Xep:Var"],

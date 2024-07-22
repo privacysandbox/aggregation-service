@@ -271,11 +271,11 @@ public abstract class OutputDomainProcessor {
       noisedOverlappingAndDomainResults
           .noisedAggregatedFacts()
           .forEach(
-              (f) -> {
-                if (overlappingKeys.contains(f.bucket())) {
-                  overlappingFacts.add(f);
+              (aggregatedFact) -> {
+                if (overlappingKeys.contains(aggregatedFact.getBucket())) {
+                  overlappingFacts.add(aggregatedFact);
                 } else {
-                  domainOnlyFacts.add(f);
+                  domainOnlyFacts.add(aggregatedFact);
                 }
               });
 

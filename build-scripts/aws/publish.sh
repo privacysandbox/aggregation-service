@@ -36,3 +36,7 @@ bazel run //terraform/aws:aws_frontend_cleanup_handler_lambda_release \
 bazel run //terraform/aws:local_testing_tool_release \
 --//terraform/aws:bucket_flag=$JARS_PUBLISH_BUCKET --//terraform/aws:bucket_path_flag=$JARS_PUBLISH_BUCKET_PATH \
 -- --version=$VERSION
+
+bazel run //terraform/aws:privacy_budget_unit_extraction_tool_release \
+--//terraform/aws:bucket_flag=$JARS_PUBLISH_BUCKET --//terraform/aws:bucket_path_flag=$JARS_PUBLISH_BUCKET_PATH \
+-- --version=$VERSION

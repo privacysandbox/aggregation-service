@@ -103,13 +103,6 @@ public class AggregationWorkerArgs {
   private PrivacyBudgetingSelector privacyBudgeting = PrivacyBudgetingSelector.UNLIMITED;
 
   @Parameter(
-      names = "--private_key_service_base_url",
-      description =
-          "Full URL (including protocol and api version path fragment) of the private key vending"
-              + " service. Do not include trailing slash")
-  private String privateKeyServiceUrl = "";
-
-  @Parameter(
       names = "--primary_encryption_key_service_base_url",
       description =
           "Full URL (including protocol and api version path fragment) of the primary (Party A)"
@@ -399,7 +392,7 @@ public class AggregationWorkerArgs {
   @Parameter(
       names = "--attribution_reporting_debug_api_enabled",
       description = "Flag to enable support for Attribution Reporting Debug API.")
-  private boolean attributionReportingDebugApiEnabled = false;
+  private boolean attributionReportingDebugApiEnabled = true;
 
   @Parameter(
       names = "--parallel_fact_noising_enabled",

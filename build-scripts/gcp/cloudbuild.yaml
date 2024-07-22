@@ -25,6 +25,9 @@ steps:
     bazel run //terraform/gcp:local_testing_tool_release \
       --//terraform/gcp:bucket_flag=$_JARS_PUBLISH_BUCKET --//terraform/gcp:bucket_path_flag=$_JARS_PUBLISH_BUCKET_PATH \
       -- --version=$_VERSION
+    bazel run //terraform/gcp:privacy_budget_unit_extraction_tool_release \
+      --//terraform/gcp:bucket_flag=$_JARS_PUBLISH_BUCKET --//terraform/gcp:bucket_path_flag=$_JARS_PUBLISH_BUCKET_PATH \
+      -- --version=$_VERSION
   automapSubstitutions: true
 
 options:

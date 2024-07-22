@@ -58,9 +58,9 @@ public abstract class NoisedAggregationResult {
             .map(
                 aggregatedFact ->
                     AggregatedFact.create(
-                        aggregatedFact.bucket(),
-                        aggregatedFact.metric(),
-                        aggregatedFact.unnoisedMetric().get(),
+                        aggregatedFact.getBucket(),
+                        aggregatedFact.getMetric(),
+                        aggregatedFact.getUnnoisedMetric().get(),
                         debugAnnotations))
             .collect(toImmutableList()));
   }

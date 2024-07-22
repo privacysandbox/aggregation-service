@@ -473,7 +473,7 @@ public class LocalRunnerTest {
         convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
     List<AggregatedFact> nonZeroFacts =
         output.stream()
-            .filter((aggregatedFact) -> aggregatedFact.metric() != 0)
+            .filter((aggregatedFact) -> aggregatedFact.getMetric() != 0)
             .collect(Collectors.toList());
 
     assertThat(nonZeroFacts).hasSize(0);
@@ -504,7 +504,7 @@ public class LocalRunnerTest {
     Path outputJson = outputDirectoryPath.resolve("output.json");
     List<AggregatedFact> output =
         convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
-    Stream<Long> allMetrics = output.stream().map(aggregatedFact -> aggregatedFact.metric());
+    Stream<Long> allMetrics = output.stream().map(aggregatedFact -> aggregatedFact.getMetric());
     Stats statsAccumulator = Stats.of(allMetrics.collect(Collectors.toList()));
 
     assertThat(statsAccumulator.count()).isEqualTo(10000);
@@ -539,7 +539,7 @@ public class LocalRunnerTest {
     Path outputJson = outputDirectoryPath.resolve("output.json");
     List<AggregatedFact> output =
         convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
-    Stream<Long> allMetrics = output.stream().map(aggregatedFact -> aggregatedFact.metric());
+    Stream<Long> allMetrics = output.stream().map(aggregatedFact -> aggregatedFact.getMetric());
     Stats statsAccumulator = Stats.of(allMetrics.collect(Collectors.toList()));
 
     assertThat(statsAccumulator.count()).isEqualTo(10000);
@@ -572,7 +572,7 @@ public class LocalRunnerTest {
     Path outputJson = outputDirectoryPath.resolve("output.json");
     List<AggregatedFact> output =
         convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
-    Stream<Long> allMetrics = output.stream().map(aggregatedFact -> aggregatedFact.metric());
+    Stream<Long> allMetrics = output.stream().map(aggregatedFact -> aggregatedFact.getMetric());
     Stats statsAccumulator = Stats.of(allMetrics.collect(Collectors.toList()));
 
     assertThat(statsAccumulator.count()).isEqualTo(10000);
@@ -700,7 +700,7 @@ public class LocalRunnerTest {
     Path outputJson = outputDirectoryPath.resolve("output.json");
     List<AggregatedFact> output =
         convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
-    Stream<Long> allMetrics = output.stream().map(aggregatedFact -> aggregatedFact.metric());
+    Stream<Long> allMetrics = output.stream().map(aggregatedFact -> aggregatedFact.getMetric());
     Stats statsAccumulator = Stats.of(allMetrics.collect(Collectors.toList()));
 
     assertThat(statsAccumulator.count()).isEqualTo(10000);
@@ -737,7 +737,7 @@ public class LocalRunnerTest {
         convertToAggregatedFact(objectMapper.readTree(Files.newInputStream(outputJson)));
     List<AggregatedFact> nonZeroFacts =
         output.stream()
-            .filter((aggregatedFact) -> aggregatedFact.metric() != 0)
+            .filter((aggregatedFact) -> aggregatedFact.getMetric() != 0)
             .collect(Collectors.toList());
 
     assertThat(nonZeroFacts).isEmpty();

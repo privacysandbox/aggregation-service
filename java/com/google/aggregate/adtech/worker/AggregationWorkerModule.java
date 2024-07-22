@@ -86,7 +86,6 @@ import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorAEncrypt
 import com.google.scp.operator.cpio.cryptoclient.Annotations.CoordinatorBEncryptionKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.DecrypterCacheEntryTtlSec;
 import com.google.scp.operator.cpio.cryptoclient.Annotations.ExceptionCacheEntryTtlSec;
-import com.google.scp.operator.cpio.cryptoclient.HttpPrivateKeyFetchingService.PrivateKeyServiceBaseUrl;
 import com.google.scp.operator.cpio.cryptoclient.aws.Annotations.KmsEndpointOverride;
 import com.google.scp.operator.cpio.cryptoclient.local.LocalFileDecryptionKeyServiceModule.DecryptionKeyFilePath;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceAuthEndpoint;
@@ -259,9 +258,6 @@ public final class AggregationWorkerModule extends AbstractModule {
     bind(RecordReaderFactory.class).to(args.getEncryptedRecordReader().getReaderFactoryClass());
 
     // Dependencies for decryption and deserialization.
-    bind(String.class)
-        .annotatedWith(PrivateKeyServiceBaseUrl.class)
-        .toInstance(args.getPrivateKeyServiceBaseUrl());
     bind(String.class)
         .annotatedWith(CoordinatorAEncryptionKeyServiceBaseUrl.class)
         .toInstance(args.getCoordinatorAEncryptionKeyServiceBaseUrl());

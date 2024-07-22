@@ -28,7 +28,9 @@ import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
 import com.google.aggregate.protocol.avro.AvroDebugResultsRecord;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
+import com.google.common.primitives.UnsignedLong;
 import com.google.protobuf.util.JsonFormat;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClient;
@@ -48,6 +50,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -154,7 +157,8 @@ public class AwsWorkerContinuousTestHelper {
                 outputDomainBucketName,
                 outputDomainPrefix,
                 /* reportErrorThresholdPercentage= */ 100,
-                /* inputReportCount= */ Optional.empty()))
+                /* inputReportCount= */ Optional.empty(),
+                /* filteringIds= */ Optional.empty()))
         .build();
   }
 
@@ -179,7 +183,37 @@ public class AwsWorkerContinuousTestHelper {
                 outputDomainBucketName,
                 outputDomainPrefix,
                 /* reportErrorThresholdPercentage= */ 100,
-                /* inputReportCount= */ Optional.empty()))
+                /* inputReportCount= */ Optional.empty(),
+                /* filteringIds= */ Optional.empty()))
+        .build();
+  }
+
+  public static CreateJobRequest createJobRequest(
+      String inputDataBlobBucket,
+      String inputDataBlobPrefix,
+      String outputDataBlobBucket,
+      String outputDataBlobPrefix,
+      Boolean debugRun,
+      String jobId,
+      Optional<String> outputDomainBucketName,
+      Optional<String> outputDomainPrefix,
+      int reportErrorThresholdPercentage,
+      Optional<Long> inputReportCount,
+      Set<UnsignedLong> filteringIds) {
+    return createDefaultJobRequestBuilder(
+            inputDataBlobBucket,
+            inputDataBlobPrefix,
+            outputDataBlobBucket,
+            outputDataBlobPrefix,
+            jobId)
+        .putAllJobParameters(
+            getJobParams(
+                debugRun,
+                outputDomainBucketName,
+                outputDomainPrefix,
+                reportErrorThresholdPercentage,
+                inputReportCount,
+                Optional.of(filteringIds)))
         .build();
   }
 
@@ -206,7 +240,8 @@ public class AwsWorkerContinuousTestHelper {
                 outputDomainBucketName,
                 outputDomainPrefix,
                 reportErrorThresholdPercentage,
-                inputReportCount))
+                inputReportCount,
+                /* filteringIds= */ Optional.empty()))
         .build();
   }
 
@@ -238,7 +273,8 @@ public class AwsWorkerContinuousTestHelper {
       Optional<String> outputDomainBucketName,
       Optional<String> outputDomainPrefix,
       int reportErrorThresholdPercentage,
-      Optional<Long> inputReportCountOptional) {
+      Optional<Long> inputReportCountOptional,
+      Optional<Set<UnsignedLong>> filteringIdsOptional) {
     ImmutableMap.Builder<String, String> jobParams = ImmutableMap.builder();
     jobParams.put("attribution_report_to", getAttributionReportTo());
 
@@ -253,13 +289,23 @@ public class AwsWorkerContinuousTestHelper {
     if (outputDomainPrefix.isPresent() && outputDomainBucketName.isPresent()) {
       jobParams.put("output_domain_blob_prefix", outputDomainPrefix.get());
       jobParams.put("output_domain_bucket_name", outputDomainBucketName.get());
-      return jobParams.build();
-    } else if (outputDomainPrefix.isEmpty() && outputDomainBucketName.isEmpty()) {
-      return jobParams.build();
-    } else {
+    } else if (!(outputDomainPrefix.isEmpty() && outputDomainBucketName.isEmpty())) {
       throw new IllegalStateException(
           "outputDomainPrefix and outputDomainBucketName must both be provided or both be empty.");
     }
+
+    if (filteringIdsOptional.isPresent()) {
+      Set<UnsignedLong> filteringIds = filteringIdsOptional.get();
+      jobParams.put(
+          JobUtils.JOB_PARAM_FILTERING_IDS,
+          String.join(
+              ",",
+              filteringIds.stream()
+                  .map(id -> id.toString())
+                  .collect(ImmutableSet.toImmutableSet())));
+    }
+
+    return jobParams.build();
   }
 
   public static JsonNode submitJobAndWaitForResult(
@@ -360,19 +406,19 @@ public class AwsWorkerContinuousTestHelper {
     return callGetJobAPI(uri);
   }
 
+  /** Returns a list of AggregatedFact from the file matching the bucket and key. */
   public static ImmutableList<AggregatedFact> readResultsFromS3(
       S3BlobStorageClient s3BlobStorageClient,
       AvroResultsFileReader avroResultsFileReader,
-      String outputBucket,
-      String outputPrefix)
-      throws Exception {
+      String bucket,
+      String key)
+      throws BlobStorageClientException, IOException {
 
     Path tempResultFile = Files.createTempFile(/* prefix= */ "results", /* suffix= */ "avro");
 
     try (InputStream resultStream =
             s3BlobStorageClient.getBlob(
-                DataLocation.ofBlobStoreDataLocation(
-                    BlobStoreDataLocation.create(outputBucket, outputPrefix)));
+                DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(bucket, key)));
         OutputStream outputStream = Files.newOutputStream(tempResultFile)) {
       ByteStreams.copy(resultStream, outputStream);
       outputStream.flush();
@@ -381,6 +427,26 @@ public class AwsWorkerContinuousTestHelper {
     ImmutableList<AggregatedFact> facts = avroResultsFileReader.readAvroResultsFile(tempResultFile);
     Files.deleteIfExists(tempResultFile);
     return facts;
+  }
+
+  /** Returns a list of AggregatedFacts from a list of files matching the bucket and prefix. */
+  public static ImmutableList<AggregatedFact> readResultsFromMultipleFiles(
+      S3BlobStorageClient s3BlobStorageClient,
+      AvroResultsFileReader avroResultsFileReader,
+      String bucket,
+      String prefix)
+      throws BlobStorageClientException, IOException {
+    BlobStoreDataLocation blobsPrefixLocation = BlobStoreDataLocation.create(bucket, prefix);
+    DataLocation prefixLocation = DataLocation.ofBlobStoreDataLocation(blobsPrefixLocation);
+    ImmutableList<String> shardBlobs = s3BlobStorageClient.listBlobs(prefixLocation);
+
+    ImmutableList.Builder<AggregatedFact> aggregatedFactBuilder = ImmutableList.builder();
+    for (String shard : shardBlobs) {
+      aggregatedFactBuilder.addAll(
+          readResultsFromS3(
+              s3BlobStorageClient, avroResultsFileReader, blobsPrefixLocation.bucket(), shard));
+    }
+    return aggregatedFactBuilder.build();
   }
 
   private static AvroDebugResultsReader getReader(

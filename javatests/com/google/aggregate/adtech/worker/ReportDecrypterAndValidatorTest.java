@@ -126,7 +126,7 @@ public class ReportDecrypterAndValidatorTest {
 
     assertThat(decryptionValidationResult.report()).isEmpty();
     assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
-        .containsExactly(ErrorCounter.SERVICE_ERROR);
+        .containsExactly(ErrorCounter.INTERNAL_ERROR);
   }
 
   @Test
@@ -159,7 +159,7 @@ public class ReportDecrypterAndValidatorTest {
 
     assertThat(decryptionValidationResult.report()).isEmpty();
     assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
-        .containsExactly(ErrorCounter.SERVICE_ERROR);
+        .containsExactly(ErrorCounter.INTERNAL_ERROR);
   }
 
   public static final class TestEnv extends AbstractModule {

@@ -154,7 +154,7 @@ public final class AggregationEngine implements Consumer<Report> {
   public ImmutableMap<BigInteger, AggregatedFact> makeAggregation() {
     return aggregationMap.entrySet().stream()
         .map(factAggr -> AggregatedFact.create(factAggr.getKey(), factAggr.getValue().longValue()))
-        .collect(toImmutableMap(AggregatedFact::bucket, Function.identity()));
+        .collect(toImmutableMap(AggregatedFact::getBucket, Function.identity()));
   }
 
   /** Gets a set of distinct privacy budget units observed during the aggregation */

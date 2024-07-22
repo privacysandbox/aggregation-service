@@ -24,6 +24,7 @@ java_library(
         "JobUtils.java",
         "NumericConversions.java",
         "OutputShardFileHelper.java",
+        "ReportingOriginUtils.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [

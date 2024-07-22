@@ -78,12 +78,17 @@ POST
     // aggregation due to an error, will fail the job.
     // Values can be from 0 to 100. If left empty, default value of 10%
     // will be used,
-    "report_error_threshold_percentage": <double value represented as string>
+    "report_error_threshold_percentage": <double value represented as string>,
 
     // [Optional] Total number of reports provided as input data for this job.
     // This value, in conjunction with "report_error_threshold_percentage" will
     // enable early failure of the job when reports are excluded due to errors.
-    "input_report_count": <long value represented as string>
+    "input_report_count": <long value represented as string>,
+
+    // [Optional] A list of unsigned filtering IDs separated by comma. All the
+    // contribtions other than the matching filtering ID will be filtered out.
+    // e.g. "filtering_ids":"12345,34455,12". Default value is "0".
+    "filtering_ids":<string>,
 
     // [Optional] When executing a debug run, noised and unnoised debug summary
     // report and annotations are added to indicate which keys are present in the
@@ -237,7 +242,11 @@ Not found: 404 Not Found
     // [Optional] Total number of reports provided as input data for this job.
     // This value, in conjunction with "report_error_threshold_percentage" will
     // enable early failure of the job when reports are excluded due to errors.
-    "input_report_count": <long value represented as string>
+    "input_report_count": <long value represented as string>,
+    // [Optional] A list of unsigned filtering IDs separated by comma. All the
+    // contribtions other than the matching filtering ID will be filtered out.
+    // e.g. "filtering_ids":"12345,34455,12". Default value is "0".
+    "filtering_ids":<string>,
   },
   // The time when worker starts processing request in the latest processing
   // attempt
@@ -397,15 +406,8 @@ If the invalid reports in a job exceed the `report_error_threshold_percentage` (
 [createJob](#createjob-endpoint) request job parameters above), the job will fail with
 REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD error.
 
-Invalid aggregatable report error counters corresponding to various validations -
-
-| shared_info field     | ErrorCode                       | Error Reason                                   |
-| --------------------- | ------------------------------- | ---------------------------------------------- |
-| api                   | UNSUPPORTED_REPORT_API_TYPE     | api is unsupported                             |
-| report_id             | INVALID_REPORT_ID               | report_id is empty                             |
-| reporting_origin      | ATTRIBUTION_REPORT_TO_MALFORMED | syntactically invalid domain                   |
-| scheduled_report_time | ORIGINAL_REPORT_TIME_TOO_OLD    | older than 90 days at the time of aggregation. |
-| version               | UNSUPPORTED_SHAREDINFO_VERSION  | unsupported report shared_info.version         |
+A summary of all report error counters along with their mitigations can be found in
+[Aggregation Service Report Error Codes and Mitigations](/docs/error-codes-and-mitigation.md#aggregation-service-report-error-codes-and-mitigations).
 
 If report `shared_info.version` is higher than supported major version, the aggregation job will
 fail without consuming privacy budget with `result_info.return_code` UNSUPPORTED_REPORT_VERSION.

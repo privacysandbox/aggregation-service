@@ -117,7 +117,7 @@ public final class ResultDiffer {
 
   private static ImmutableMap<BigInteger, AggregatedFact> keyAggregatedFacts(
       Stream<AggregatedFact> facts) {
-    return facts.collect(toImmutableMap(AggregatedFact::bucket, Function.identity()));
+    return facts.collect(toImmutableMap(AggregatedFact::getBucket, Function.identity()));
   }
 
   private static final class Env extends AbstractModule {}

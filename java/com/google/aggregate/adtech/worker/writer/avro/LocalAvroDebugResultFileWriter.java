@@ -56,10 +56,10 @@ public final class LocalAvroDebugResultFileWriter implements LocalResultFileWrit
           results.map(
               (fact ->
                   AvroDebugResultsRecord.create(
-                      fact.bucket(),
-                      fact.metric(),
-                      fact.unnoisedMetric().get(),
-                      fact.debugAnnotations().get())));
+                      fact.getBucket(),
+                      fact.getMetric(),
+                      fact.getUnnoisedMetric().get(),
+                      fact.getDebugAnnotations().get())));
       avroDebugResultsWriter.writeRecords(metaData, resultsRecords.collect(toImmutableList()));
     } catch (IOException e) {
       throw new FileWriteException("Failed to write local Avro debug file", e);

@@ -348,6 +348,7 @@ java_library(
     srcs = ["AwsWorkerContinuousTestHelper.java"],
     javacopts = ["-Xep:Var"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
         "//java/com/google/aggregate/adtech/worker/util",

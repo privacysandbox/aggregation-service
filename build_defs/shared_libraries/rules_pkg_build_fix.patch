@@ -1,0 +1,227 @@
+diff --git a/BUILD b/BUILD
+index 12cf08abb..9e25a6747 100644
+--- a/BUILD
++++ b/BUILD
+@@ -12,7 +12,6 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+
+-load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
+ load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
+ load("@rules_pkg//:mappings.bzl", "pkg_files")
+ load("@rules_pkg//:pkg.bzl", "pkg_tar")
+@@ -30,53 +29,6 @@ buildifier(
+     mode = "fix",
+ )
+
+-# pkg_tar no longer allows directories to be specified.
+-# Must use copy_directory to create Tree Artifacts.
+-# https://github.com/bazelbuild/rules_pkg/issues/611
+-#
+-# The srcs directory is prefixed to avoid the error conflicting with
+-# other build rules:
+-# "One of the output paths ... is a prefix of the other.
+-# These actions cannot be simultaneously present;
+-# please rename one of the output files or build just one of them"
+-# It will be stripped by pkg_tar remap_paths.
+-
+-copy_directory(
+-    name = "build_defs_dir",
+-    src = "build_defs",
+-    out = "srcs/build_defs",
+-)
+-
+-copy_directory(
+-    name = "cc_dir",
+-    src = "cc",
+-    out = "srcs/cc",
+-)
+-
+-copy_directory(
+-    name = "java_dir",
+-    src = "java",
+-    out = "srcs/java",
+-)
+-
+-copy_directory(
+-    name = "javatests_dir",
+-    src = "javatests",
+-    out = "srcs/javatests",
+-)
+-
+-copy_directory(
+-    name = "licenses_dir",
+-    src = "licenses",
+-    out = "srcs/licenses",
+-)
+-
+-copy_directory(
+-    name = "operator_dir",
+-    src = "operator",
+-    out = "srcs/operator",
+-)
+-
+ # This rule is used to copy the source code from other bazel rules.
+ # This can be used for reproducible builds.
+ # Only cc targets are needed at this point, so only the files needed to build
+@@ -88,18 +40,15 @@ pkg_tar(
+         ".bazelversion",
+         "BUILD",
+         "WORKSPACE",
+-        ":build_defs_dir",
+-        ":cc_dir",
+-        ":java_dir",
+-        ":javatests_dir",
+-        ":licenses_dir",
+-        ":operator_dir",
++        "build_defs",
++        "cc",
++        "java",
++        "javatests",
++        "licenses",
++        "operator",
+     ] + glob(["*.bzl"]),
+     mode = "0777",
+     package_dir = "scp",
+-    remap_paths = {
+-        "srcs/": "",
+-    },
+ )
+
+ pkg_files(
+diff --git a/build_defs/aws/kmstool/kmstool.BUILD b/build_defs/aws/kmstool/kmstool.BUILD
+index 022ca6791..5a5d95a2e 100644
+--- a/build_defs/aws/kmstool/kmstool.BUILD
++++ b/build_defs/aws/kmstool/kmstool.BUILD
+@@ -1,62 +1,19 @@
+-load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
+ load("@rules_pkg//:pkg.bzl", "pkg_tar")
+
+ package(default_visibility = ["//visibility:public"])
+
+ exports_files(glob(["*"]))
+
+-copy_directory(
+-    name = "bin_dir",
+-    src = "bin",
+-    out = "bin",
+-)
+-
+-copy_directory(
+-    name = "cmake_dir",
+-    src = "cmake",
+-    out = "cmake",
+-)
+-
+-copy_directory(
+-    name = "containers_dir",
+-    src = "containers",
+-    out = "containers",
+-)
+-
+-copy_directory(
+-    name = "docs_dir",
+-    src = "docs",
+-    out = "docs",
+-)
+-
+-copy_directory(
+-    name = "include_dir",
+-    src = "include",
+-    out = "include",
+-)
+-
+-copy_directory(
+-    name = "source_dir",
+-    src = "source",
+-    out = "source",
+-)
+-
+-copy_directory(
+-    name = "tests_dir",
+-    src = "tests",
+-    out = "tests",
+-)
+-
+ pkg_tar(
+     name = "source_code_tar",
+     srcs = [
+-        ":bin_dir",
+-        ":cmake_dir",
+-        ":containers_dir",
+-        ":docs_dir",
+-        ":include_dir",
+-        ":source_dir",
+-        ":tests_dir",
++        "bin",
++        "cmake",
++        "containers",
++        "docs",
++        "include",
++        "source",
++        "tests",
+     ] + glob(["*"]),
+     mode = "0777",
+     package_dir = "aws_nitro_enclaves_sdk_c",
+diff --git a/operator/terraform/aws/environments/demo/BUILD b/operator/terraform/aws/environments/demo/BUILD
+index 82726daf5..fdde467c2 100644
+--- a/operator/terraform/aws/environments/demo/BUILD
++++ b/operator/terraform/aws/environments/demo/BUILD
+@@ -64,20 +64,20 @@ pkg_files(
+ # copied.
+ pkg_mklink(
+     name = "operator_service_link",
+-    link_name = "demo/operator_service.tf",
+-    target = "../shared/operator_service.tf",
++    src = "../shared/operator_service.tf",
++    dest = "demo/operator_service.tf",
+ )
+
+ pkg_mklink(
+     name = "operator_service_vars_link",
+-    link_name = "demo/operator_service_variables.tf",
+-    target = "../shared/operator_service_variables.tf",
++    src = "../shared/operator_service_variables.tf",
++    dest = "demo/operator_service_variables.tf",
+ )
+
+ pkg_mklink(
+     name = "ami_params_link",
+-    link_name = "demo/ami_params.auto.tfvars",
+-    target = "../shared/ami_params.auto.tfvars",
++    src = "../shared/ami_params.auto.tfvars",
++    dest = "demo/ami_params.auto.tfvars",
+ )
+
+ pkg_filegroup(
+diff --git a/operator/terraform/gcp/environments/demo/BUILD b/operator/terraform/gcp/environments/demo/BUILD
+index 5f5d9f54d..ee109ecf9 100644
+--- a/operator/terraform/gcp/environments/demo/BUILD
++++ b/operator/terraform/gcp/environments/demo/BUILD
+@@ -20,20 +20,20 @@ package(default_visibility = ["//visibility:public"])
+ # copied.
+ pkg_mklink(
+     name = "job_service_link",
+-    link_name = "demo/job_service.tf",
+-    target = "../shared/job_service.tf",
++    src = "../shared/job_service.tf",
++    dest = "demo/job_service.tf",
+ )
+
+ pkg_mklink(
+     name = "job_service_vars_link",
+-    link_name = "demo/job_service_variables.tf",
+-    target = "../shared/job_service_variables.tf",
++    src = "../shared/job_service_variables.tf",
++    dest = "demo/job_service_variables.tf",
+ )
+
+ pkg_mklink(
+     name = "job_service_outputs_link",
+-    link_name = "demo/job_service_outputs.tf",
+-    target = "../shared/job_service_outputs.tf",
++    src = "../shared/job_service_outputs.tf",
++    dest = "demo/job_service_outputs.tf",
+ )
+
+ pkg_files(

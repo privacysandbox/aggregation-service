@@ -595,14 +595,14 @@ public class ConcurrentAggregationProcessorTest {
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
     Map<BigInteger, AggregatedFact> resultFacts =
         resultLogger.getMaterializedAggregationResults().getMaterializedAggregations().stream()
-            .collect(Collectors.toMap(AggregatedFact::bucket, Function.identity()));
+            .collect(Collectors.toMap(AggregatedFact::getBucket, Function.identity()));
     assertThat(resultFacts).hasSize(3);
 
     assertThat(resultLogger.getMaterializedDebugAggregationResults().getMaterializedAggregations())
         .hasSize(3);
     Map<BigInteger, AggregatedFact> debugFacts =
         resultLogger.getMaterializedDebugAggregationResults().getMaterializedAggregations().stream()
-            .collect(Collectors.toMap(AggregatedFact::bucket, Function.identity()));
+            .collect(Collectors.toMap(AggregatedFact::getBucket, Function.identity()));
     assertThat(debugFacts).hasSize(3);
 
     // Key 1 is in the report only, key 2 overlaps both sets, and key 3 is in the domain only.
@@ -651,12 +651,12 @@ public class ConcurrentAggregationProcessorTest {
 
     Map<BigInteger, AggregatedFact> resultFacts =
         resultLogger.getMaterializedAggregationResults().getMaterializedAggregations().stream()
-            .collect(Collectors.toMap(AggregatedFact::bucket, Function.identity()));
+            .collect(Collectors.toMap(AggregatedFact::getBucket, Function.identity()));
     assertThat(resultFacts).hasSize(2);
 
     Map<BigInteger, AggregatedFact> debugFacts =
         resultLogger.getMaterializedDebugAggregationResults().getMaterializedAggregations().stream()
-            .collect(Collectors.toMap(AggregatedFact::bucket, Function.identity()));
+            .collect(Collectors.toMap(AggregatedFact::getBucket, Function.identity()));
     assertThat(debugFacts).hasSize(3);
 
     // Key 2 is in both domain and reports; key 3 is in the domain only.
@@ -671,8 +671,8 @@ public class ConcurrentAggregationProcessorTest {
     // Key 1 is in the report only but should be present in the debug facts.
     assertThat(resultFacts).doesNotContainKey(createBucketFromInt(1));
     assertThat(debugFacts).containsKey(createBucketFromInt(1));
-    assertThat(debugFacts.get(createBucketFromInt(1)).debugAnnotations()).isPresent();
-    assertThat(debugFacts.get(createBucketFromInt(1)).debugAnnotations().get())
+    assertThat(debugFacts.get(createBucketFromInt(1)).getDebugAnnotations()).isPresent();
+    assertThat(debugFacts.get(createBucketFromInt(1)).getDebugAnnotations().get())
         .containsExactly(DebugBucketAnnotation.IN_REPORTS);
   }
 
@@ -1123,8 +1123,8 @@ public class ConcurrentAggregationProcessorTest {
                             .addAllErrorCounts(
                                 ImmutableList.of(
                                     ErrorCount.newBuilder()
-                                        .setCategory(ErrorCounter.SERVICE_ERROR.name())
-                                        .setDescription(ErrorCounter.SERVICE_ERROR.getDescription())
+                                        .setCategory(ErrorCounter.INTERNAL_ERROR.name())
+                                        .setDescription(ErrorCounter.INTERNAL_ERROR.getDescription())
                                         .setCount(4L)
                                         .build(),
                                     ErrorCount.newBuilder()
@@ -1756,6 +1756,33 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
+  public void aggregate_withPrivacyBudgeting_invalidReportingOriginException_failJob() {
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+
+    Map<String, String> jobParameters = new HashMap<>(ctx.requestInfo().getJobParametersMap());
+    jobParameters.put(JOB_PARAM_ATTRIBUTION_REPORT_TO, "https://subdomain.coordinator.test");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParameters))
+                    .build())
+            .build();
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.get().process(ctx));
+    assertThat(ex.getCode()).isEqualTo(INVALID_JOB);
+    assertThat(ex.getMessage())
+        .isEqualTo(
+            "The attribution_report_to parameter specified in the CreateJob request is not under a"
+                + " known public suffix.");
+  }
+
+  @Test
   public void aggregate_withPrivacyBudgeting_oneBudgetMissing() {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
@@ -1894,18 +1921,18 @@ public class ConcurrentAggregationProcessorTest {
     assertThat(resultFacts).containsKey(key);
     assertThat(debugFacts).containsKey(key);
     compareDebugFact(resultFacts.get(key), debugFacts.get(key));
-    assertThat(debugFacts.get(key).debugAnnotations()).isPresent();
-    assertThat(debugFacts.get(key).debugAnnotations().get())
+    assertThat(debugFacts.get(key).getDebugAnnotations()).isPresent();
+    assertThat(debugFacts.get(key).getDebugAnnotations().get())
         .containsExactlyElementsIn(expectedAnnotation);
   }
 
   private void compareDebugFact(AggregatedFact resultFact, AggregatedFact debugFact) {
-    assertEquals(resultFact.bucket(), debugFact.bucket());
-    assertEquals(resultFact.metric(), debugFact.metric());
+    assertEquals(resultFact.getBucket(), debugFact.getBucket());
+    assertEquals(resultFact.getMetric(), debugFact.getMetric());
 
-    assertThat(resultFact.unnoisedMetric()).isPresent();
-    assertThat(debugFact.unnoisedMetric()).isPresent();
-    assertEquals(resultFact.unnoisedMetric().get(), debugFact.unnoisedMetric().get());
+    assertThat(resultFact.getUnnoisedMetric()).isPresent();
+    assertThat(debugFact.getUnnoisedMetric()).isPresent();
+    assertEquals(resultFact.getUnnoisedMetric().get(), debugFact.getUnnoisedMetric().get());
   }
 
   private void writeOutputDomainTextFile(Path outputDomainPath, String... keys) throws IOException {

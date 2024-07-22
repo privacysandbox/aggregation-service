@@ -278,7 +278,7 @@ public final class GcpWorkerContinuousSmokeTest {
     // The unnoisedMetric of aggregatedDebugFacts should be 0 for all keys because
     // all reports are filtered out.
     // Noised metric in both debug reports and summary reports should be noise value instead of 0.
-    aggregatedDebugFacts.forEach(fact -> assertThat(fact.unnoisedMetric().get()).isEqualTo(0));
+    aggregatedDebugFacts.forEach(fact -> assertThat(fact.getUnnoisedMetric().get()).isEqualTo(0));
   }
 
   /**
@@ -306,28 +306,14 @@ public final class GcpWorkerContinuousSmokeTest {
             Optional.of(domainDataPrefix));
     JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
-    // TODO: b/322832198 - Update assertions once Debug Reporting API is launched.
-    // The threshold is 100%, so we get SUCCESS_WITH_ERRORS.
-    assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
-    assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("count")
-                .asInt())
-        .isEqualTo(10000);
-    assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("category")
-                .asText())
-        .isEqualTo(ErrorCounter.UNSUPPORTED_REPORT_API_TYPE.name());
+    checkJobExecutionResult(result, SUCCESS.name(), 0);
+    ImmutableList<AggregatedFact> aggregatedFacts =
+            readResultsFromCloud(
+                    gcsBlobStorageClient,
+                    avroResultsFileReader,
+                    getTestDataBucket(),
+                    outputDataPrefix + OUTPUT_DATA_PREFIX_NAME);
+    assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
   }
 
   /*

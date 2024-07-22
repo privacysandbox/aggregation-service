@@ -57,6 +57,30 @@ public class CborPayloadSerdesTest {
   }
 
   @Test
+  public void testDeserializeFromCborBytes_debugReport1() throws Exception {
+    Payload expectedPayload =
+            Payload.builder()
+                    .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
+                    .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x3)).setValue(4).build())
+                    .build();
+
+    readCborBytesFromFileAndAssert(
+            Path.of(System.getenv("CBOR_DEBUG_REPORT_1_LOCATION")), expectedPayload);
+  }
+
+  @Test
+  public void testDeserializeFromCborBytes_debugReport2() throws Exception {
+    Payload expectedPayload =
+            Payload.builder()
+                    .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
+                    .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x0)).setValue(0).build())
+                    .build();
+
+    readCborBytesFromFileAndAssert(
+            Path.of(System.getenv("CBOR_DEBUG_REPORT_2_LOCATION")), expectedPayload);
+  }
+
+  @Test
   public void testDeserializeFromCborBytes_report1() throws Exception {
     Payload expectedPayload =
         Payload.builder()

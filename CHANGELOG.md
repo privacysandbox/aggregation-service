@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.0](https://github.com/privacysandbox/aggregation-service/compare/v2.5.0...v2.6.0) (2024-07-19)
+
+-   Enabled support for
+    [Aggregate Debug Reporting API](https://github.com/WICG/attribution-reporting-api/blob/main/aggregate_debug_reporting.md).
+-   Reduced memory usage by making `AggregatedFacts` mutable and removing redundant object creation.
+-   Updated dependencies to address security vulnerabilities.
+-   Upgraded control plane shared library dependency to
+    [v1.9.0-rc03](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.9.0-rc03)
+
+## [2.5.1](https://github.com/privacysandbox/aggregation-service/compare/v2.5.0...v2.5.1) (2024-07-19)
+
+-   Updated dependencies to address security vulnerabilities.
+
 ## [2.5.0](https://github.com/privacysandbox/aggregation-service/compare/v2.4.2...v2.5.0) (2024-05-22)
 
 ### Changes
@@ -24,6 +37,12 @@
 -   Updated documentation for batching strategies, aggregatable reports and OpenTelemetry usage.
 -   Upgraded control plane shared library dependency to
     [v1.8.0-rc01](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.8.0-rc01)
+
+## [2.4.4](https://github.com/privacysandbox/aggregation-service/compare/v2.4.3...v2.4.4) (2024-07-19)
+
+### Changes
+
+-   Updated dependencies to address security vulnerabilities.
 
 ## [2.4.3](https://github.com/privacysandbox/aggregation-service/compare/v2.4.2...v2.4.3) (2024-05-20)
 
@@ -59,6 +78,12 @@
     for default labels.
 -   Used RxJava for domain reading, reducing overall job execution time and memory consumption.
 -   Upgraded Bazel version to 6.5.0.
+
+## [2.3.4](https://github.com/privacysandbox/aggregation-service/compare/v2.3.3...v2.3.4) (2024-07-19)
+
+### Changes
+
+-   Updated dependencies to address security vulnerabilities.
 
 ## [2.3.3](https://github.com/privacysandbox/aggregation-service/compare/v2.3.2...v2.3.3) (2024-05-20)
 

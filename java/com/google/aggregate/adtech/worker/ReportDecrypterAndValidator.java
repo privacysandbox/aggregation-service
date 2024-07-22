@@ -109,7 +109,7 @@ public final class ReportDecrypterAndValidator {
         return ErrorCounter.DECRYPTION_KEY_NOT_FOUND;
       case INTERNAL:
       default:
-        return ErrorCounter.SERVICE_ERROR;
+        return ErrorCounter.INTERNAL_ERROR;
     }
   }
 }
