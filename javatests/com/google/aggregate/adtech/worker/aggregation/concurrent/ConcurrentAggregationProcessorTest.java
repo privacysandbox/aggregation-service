@@ -1756,6 +1756,33 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
+  public void aggregate_withPrivacyBudgeting_invalidReportingOriginException_failJob() {
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+
+    Map<String, String> jobParameters = new HashMap<>(ctx.requestInfo().getJobParametersMap());
+    jobParameters.put(JOB_PARAM_ATTRIBUTION_REPORT_TO, "https://subdomain.coordinator.test");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParameters))
+                    .build())
+            .build();
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.get().process(ctx));
+    assertThat(ex.getCode()).isEqualTo(INVALID_JOB);
+    assertThat(ex.getMessage())
+        .isEqualTo(
+            "The attribution_report_to parameter specified in the CreateJob request is not under a"
+                + " known public suffix.");
+  }
+
+  @Test
   public void aggregate_withPrivacyBudgeting_oneBudgetMissing() {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();

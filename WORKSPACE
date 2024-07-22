@@ -79,6 +79,7 @@ git_repository(
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/shared_libraries:coordinator.patch",
+        "//build_defs/shared_libraries:update_glibc_version.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",

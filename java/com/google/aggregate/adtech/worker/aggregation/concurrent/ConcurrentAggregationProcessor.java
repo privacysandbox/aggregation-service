@@ -61,6 +61,8 @@ import com.google.aggregate.adtech.worker.util.DebugSupportHelper;
 import com.google.aggregate.adtech.worker.util.JobResultHelper;
 import com.google.aggregate.adtech.worker.util.JobUtils;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
+import com.google.aggregate.adtech.worker.util.ReportingOriginUtils;
+import com.google.aggregate.adtech.worker.util.ReportingOriginUtils.InvalidReportingOriginException;
 import com.google.aggregate.adtech.worker.validation.ValidationException;
 import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
@@ -451,12 +453,18 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     try {
       try (Timer t =
           oTelConfiguration.createDebugTimerStarted("pbs_latency", toJobKeyString(job.jobKey()))) {
+        final String reportingOrigin =
+            job.requestInfo().getJobParametersMap().get(JOB_PARAM_ATTRIBUTION_REPORT_TO);
+        final String claimedIdentity =
+            ReportingOriginUtils.convertReportingOriginToSite(reportingOrigin);
         missingPrivacyBudgetUnits =
             privacyBudgetingServiceBridge.consumePrivacyBudget(
-                budgetsToConsume, /* budgetsToConsume */
-                job.requestInfo() /* attributionReportTo */
-                    .getJobParametersMap()
-                    .get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
+                budgetsToConsume, /* budgetsToConsume */ claimedIdentity /* claimedIdentity */);
+      } catch (InvalidReportingOriginException e) {
+        throw new AggregationJobProcessException(
+            INVALID_JOB,
+            "The attribution_report_to parameter specified in the CreateJob request is not under a"
+                + " known public suffix.");
       }
     } catch (PrivacyBudgetingServiceBridgeException e) {
       if (e.getStatusCode() != null) {
