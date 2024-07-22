@@ -65,6 +65,7 @@ git_repository(
     ],
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
+        "//build_defs/shared_libraries:update_glibc_version.patch",
         "//build_defs/shared_libraries:coordinator.patch",
         "//build_defs/shared_libraries:gcs_storage_client.patch",
         "//build_defs/shared_libraries:dependency_update.patch",

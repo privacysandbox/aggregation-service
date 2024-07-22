@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.3.4](https://github.com/privacysandbox/aggregation-service/compare/v2.3.3...v2.3.4) (2024-07-19)
+
+### Changes
+
+-   Updated dependencies to address security vulnerabilities.
+
 ## [2.3.3](https://github.com/privacysandbox/aggregation-service/compare/v2.3.2...v2.3.3) (2024-05-20)
 
 ### Changes
@@ -24,7 +30,7 @@
     [build issue](https://github.com/privacysandbox/aggregation-service/issues/40) by pinning Docker
     version to 24.0.5.
 
-## [2.3.0](https://github.com/privacysandbox/aggregation-service/compare/v2.2.0...v2.3.0) (2024-01-012)
+## [2.3.0](https://github.com/privacysandbox/aggregation-service/compare/v2.2.0...v2.3.0) (2024-01-12)
 
 ### Changes
 
