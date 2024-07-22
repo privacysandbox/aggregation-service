@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.4.4](https://github.com/privacysandbox/aggregation-service/compare/v2.4.3...v2.4.4) (2024-07-19)
+
+### Changes
+
+-   Updated dependencies to address security vulnerabilities.
+
 ## [2.4.3](https://github.com/privacysandbox/aggregation-service/compare/v2.4.2...v2.4.3) (2024-05-20)
 
 ### Changes
