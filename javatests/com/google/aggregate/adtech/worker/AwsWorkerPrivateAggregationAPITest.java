@@ -53,10 +53,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 @RunWith(JUnit4.class)
 public class AwsWorkerPrivateAggregationAPITest {
 
-  @Rule
-  public final Acai acai = new Acai(TestEnv.class);
-  @Rule
-  public final TestName name = new TestName();
+  @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
@@ -64,10 +62,8 @@ public class AwsWorkerPrivateAggregationAPITest {
 
   private static final String TEST_DATA_S3_KEY_PREFIX = "generated-test-data";
 
-  @Inject
-  S3BlobStorageClient s3BlobStorageClient;
-  @Inject
-  AvroResultsFileReader avroResultsFileReader;
+  @Inject S3BlobStorageClient s3BlobStorageClient;
+  @Inject AvroResultsFileReader avroResultsFileReader;
 
   private static String getTestDataBucket() {
     if (System.getenv("TEST_DATA_BUCKET") != null) {
@@ -111,7 +107,7 @@ public class AwsWorkerPrivateAggregationAPITest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -123,7 +119,7 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     /* Debug job */
     CreateJobRequest createDebugJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKeyDebug,
             getTestDataBucket(),
@@ -204,7 +200,7 @@ public class AwsWorkerPrivateAggregationAPITest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -216,7 +212,7 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     /* Debug job */
     CreateJobRequest createDebugJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKeyDebug,
             getTestDataBucket(),
@@ -273,9 +269,7 @@ public class AwsWorkerPrivateAggregationAPITest {
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
       bind(S3AsyncClient.class)
-          .toInstance(
-              S3AsyncClient.builder()
-                  .region(AWS_S3_BUCKET_REGION).build());
+          .toInstance(S3AsyncClient.builder().region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

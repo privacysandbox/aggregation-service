@@ -51,6 +51,11 @@ public enum ErrorCounter {
               + " days.",
           SharedInfo.MAX_REPORT_AGE.toDays())),
   INTERNAL_ERROR("Internal error occurred during operation."),
+  REPORTING_SITE_MISMATCH(
+          "Report's shared_info.reporting_origin value does not belong to the reporting_site value set"
+                  + " in the Aggregation job parameters. Aggregation request job parameters must have"
+                  + " reporting_site set to the site which corresponds to the shared_info.reporting_origin"
+                  + " value."),
   UNSUPPORTED_OPERATION(
       String.format(
           "Report's operation is unsupported. Supported operations are %s.",

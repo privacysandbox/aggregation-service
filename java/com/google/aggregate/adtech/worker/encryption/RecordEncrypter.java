@@ -17,7 +17,6 @@
 package com.google.aggregate.adtech.worker.encryption;
 
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
-import com.google.aggregate.adtech.worker.model.Report;
 import com.google.common.io.ByteSource;
 
 /** Interface that does encryption for any provided encryption algorithm. */
@@ -28,16 +27,6 @@ public interface RecordEncrypter {
    */
   EncryptedReport encryptSingleReport(ByteSource report, String sharedInfo, String reportVersion)
       throws EncryptionException;
-
-  /**
-   * Encrypts a deserialized Report with keys provided by the publicKeyUri.
-   *
-   * @param report
-   * @param publicKeyUri
-   * @return EncryptedReport
-   * @throws EncryptionException
-   */
-  EncryptedReport encryptReport(Report report, String publicKeyUri) throws EncryptionException;
 
   final class EncryptionException extends Exception {
 

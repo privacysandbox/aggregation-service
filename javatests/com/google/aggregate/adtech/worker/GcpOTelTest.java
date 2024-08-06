@@ -106,7 +106,7 @@ public final class GcpOTelTest {
         String.format("%s/test-outputs/otel_test.avro.result", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputDataPrefix,
             getTestDataBucket(),

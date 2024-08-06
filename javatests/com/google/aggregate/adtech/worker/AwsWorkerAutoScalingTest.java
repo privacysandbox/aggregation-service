@@ -17,7 +17,6 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.createJobRequest;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJob;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.waitForJobCompletions;
 
@@ -110,7 +109,7 @@ public class AwsWorkerAutoScalingTest {
         String.format(
             "%s/test-outputs/%s/%s", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID, outputFile);
     CreateJobRequest createJobRequest =
-        createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             INPUT_DATA_PATH,
             getTestDataBucket(),

@@ -21,12 +21,10 @@ java_library(
     srcs = [
         "CloudEncryptionKeyModule.java",
         "CloudEncryptionKeyService.java",
-        "CloudReEncryptionKeyService.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/encryption/hybrid/key",
-        "//java/com/google/aggregate/adtech/worker/encryption/publickeyuri:encryption_key_config",
         "//java/com/google/aggregate/shared/mapper",
         "//java/external:apache_httpclient",
         "//java/external:apache_httpcore",

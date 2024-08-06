@@ -21,7 +21,6 @@ java_library(
     srcs = [
         "EncryptionKey.java",
         "EncryptionKeyService.java",
-        "ReEncryptionKeyService.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [

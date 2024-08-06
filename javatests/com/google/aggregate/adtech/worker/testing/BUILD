@@ -149,18 +149,3 @@ java_test(
         "//java/external:jimfs",
     ],
 )
-
-java_test(
-    name = "AvroReportsFileReaderTest",
-    srcs = ["AvroReportsFileReaderTest.java"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/testing:avro_reports_file_reader",
-        "//java/com/google/aggregate/adtech/worker/writer/avro",
-        "//java/external:acai",
-        "//java/external:google_truth",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:jimfs",
-    ],
-)

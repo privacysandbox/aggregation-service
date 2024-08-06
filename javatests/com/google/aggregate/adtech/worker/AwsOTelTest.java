@@ -116,7 +116,7 @@ public class AwsOTelTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             testDataBucket,
             inputKey,
             testDataBucket,
