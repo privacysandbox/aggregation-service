@@ -17,7 +17,6 @@
 package com.google.aggregate.adtech.worker.encryption;
 
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
-import com.google.aggregate.adtech.worker.model.Report;
 import com.google.common.io.ByteSource;
 
 public final class NoopRecordEncrypter implements RecordEncrypter {
@@ -25,12 +24,6 @@ public final class NoopRecordEncrypter implements RecordEncrypter {
   @Override
   public EncryptedReport encryptSingleReport(
       ByteSource report, String sharedInfo, String reportVersion) throws EncryptionException {
-    return null;
-  }
-
-  @Override
-  public EncryptedReport encryptReport(Report report, String publicKeyUri)
-      throws EncryptionException {
     return null;
   }
 }

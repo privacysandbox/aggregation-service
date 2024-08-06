@@ -35,24 +35,3 @@ java_test(
         "//protocol/proto:encryption_key_config_java_proto",
     ],
 )
-
-java_test(
-    name = "CloudReEncryptionKeyServiceTest",
-    srcs = ["CloudReEncryptionKeyServiceTest.java"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/encryption/hybrid/key",
-        "//java/com/google/aggregate/adtech/worker/encryption/hybrid/key/cloud",
-        "//java/com/google/aggregate/adtech/worker/encryption/publickeyuri:encryption_key_config",
-        "//java/external:acai",
-        "//java/external:apache_httpclient",
-        "//java/external:apache_httpcore",
-        "//java/external:api_shared_util",
-        "//java/external:aws_dynamodb",
-        "//java/external:google_truth",
-        "//java/external:guava",
-        "//java/external:guice",
-        "//java/external:mockito",
-        "//java/external:tink",
-        "//protocol/proto:encryption_key_config_java_proto",
-    ],
-)

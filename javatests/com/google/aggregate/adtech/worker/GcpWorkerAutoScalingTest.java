@@ -49,18 +49,16 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class GcpWorkerAutoScalingTest {
 
-  @Rule
-  public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final Acai acai = new Acai(TestEnv.class);
 
   private static final Duration SUBMIT_JOB_TIMEOUT = Duration.of(1, ChronoUnit.SECONDS);
-  private static final Duration SCALE_ACTION_COMPLETION_TIMEOUT = Duration.of(20,
-      ChronoUnit.MINUTES);
+  private static final Duration SCALE_ACTION_COMPLETION_TIMEOUT =
+      Duration.of(20, ChronoUnit.MINUTES);
   private static final Duration COMPLETION_TIMEOUT = Duration.of(15, ChronoUnit.MINUTES);
   private static final Integer MIN_INSTANCES = 1;
   public static final int CONCURRENT_JOBS = 5;
 
-  @Inject
-  InstancesClient gcpInstancesClient;
+  @Inject InstancesClient gcpInstancesClient;
 
   @Test
   public void autoscalingE2ETest() throws Exception {
@@ -74,13 +72,14 @@ public class GcpWorkerAutoScalingTest {
       String outputFile = String.format("100k_auto_scale_job_%d.avro.test", jobNum);
       String outputDataPrefix = String.format("%s/test-outputs/%s", KOKORO_BUILD_ID, outputFile);
 
-      CreateJobRequest jobRequest = SmokeTestBase.createJobRequest(
-          getTestDataBucket(),
-          inputDataPrefix,
-          getTestDataBucket(),
-          outputDataPrefix,
-          Optional.of(getTestDataBucket()),
-          Optional.of(domainDataPrefix));
+      CreateJobRequest jobRequest =
+          SmokeTestBase.createJobRequestWithAttributionReportTo(
+              getTestDataBucket(),
+              inputDataPrefix,
+              getTestDataBucket(),
+              outputDataPrefix,
+              Optional.of(getTestDataBucket()),
+              Optional.of(domainDataPrefix));
 
       SmokeTestBase.submitJob(jobRequest, SUBMIT_JOB_TIMEOUT, false);
 
@@ -104,7 +103,8 @@ public class GcpWorkerAutoScalingTest {
     while (!scaleSuccessful && Instant.now().isBefore(waitMax)) {
       instanceCount = getInstanceCount();
       System.out.println(
-          "Verifying instance count. Is scale out: " + isScaleOut
+          "Verifying instance count. Is scale out: "
+              + isScaleOut
               + ". Current instance count: "
               + instanceCount);
       if ((!isScaleOut && instanceCount == MIN_INSTANCES)
@@ -130,13 +130,15 @@ public class GcpWorkerAutoScalingTest {
   }
 
   private int getInstanceCount() {
-    AggregatedListPagedResponse pagedResponse = gcpInstancesClient.aggregatedList(
-        getTestProjectId());
+    AggregatedListPagedResponse pagedResponse =
+        gcpInstancesClient.aggregatedList(getTestProjectId());
 
     int instancesCount = 0;
     for (Entry<String, InstancesScopedList> entry : pagedResponse.iterateAll()) {
-      instancesCount += entry.getValue().getInstancesList().stream()
-          .filter(i -> i.getName().contains(getEnvironmentName())).count();
+      instancesCount +=
+          entry.getValue().getInstancesList().stream()
+              .filter(i -> i.getName().contains(getEnvironmentName()))
+              .count();
     }
     return instancesCount;
   }
@@ -165,8 +167,7 @@ public class GcpWorkerAutoScalingTest {
                   .getService());
 
       try {
-        bind(InstancesClient.class)
-            .toInstance(InstancesClient.create());
+        bind(InstancesClient.class).toInstance(InstancesClient.create());
       } catch (IOException e) {
         throw new RuntimeException("Unable to instantiate GCP Instances client: ", e);
       }

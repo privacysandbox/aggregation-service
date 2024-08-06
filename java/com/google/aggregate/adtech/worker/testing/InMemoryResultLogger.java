@@ -19,10 +19,8 @@ package com.google.aggregate.adtech.worker.testing;
 import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.jobclient.model.Job;
-import java.util.Optional;
 
 /**
  * {@link ResultLogger} implementation to materialized and store aggregation results in memory for
@@ -32,7 +30,6 @@ public final class InMemoryResultLogger implements ResultLogger {
 
   private MaterializedAggregationResults materializedAggregations;
   private MaterializedAggregationResults materializedDebugAggregations;
-  private Optional<ImmutableList<EncryptedReport>> materializedEncryptedReports = Optional.empty();
   private boolean shouldThrow;
   private volatile boolean hasLogged;
 
@@ -64,17 +61,6 @@ public final class InMemoryResultLogger implements ResultLogger {
     }
   }
 
-  @Override
-  public void logReports(ImmutableList<EncryptedReport> reports, Job unused, String shardNumber)
-      throws ResultLogException {
-    if (shouldThrow) {
-      throw new ResultLogException(
-          new IllegalStateException("Was set to throw while logging reports."));
-    }
-    materializedEncryptedReports = Optional.of(reports);
-    System.out.println("In memory encrypted reports:" + reports);
-  }
-
   /**
    * Gets materialized aggregation results as an ImmutableList of {@link AggregatedFact}
    *
@@ -104,21 +90,6 @@ public final class InMemoryResultLogger implements ResultLogger {
               "MaterializedAggregations is null. Maybe results did not get logged."));
     }
     return materializedDebugAggregations;
-  }
-
-  /**
-   * Gets materialized encrypted reports as an ImmutableList of {@link EncryptedReport}
-   *
-   * @throws ResultLogException if results were not logged prior to calling this method.
-   */
-  public ImmutableList<EncryptedReport> getMaterializedEncryptedReports()
-      throws ResultLogException {
-    if (materializedEncryptedReports.isEmpty()) {
-      throw new ResultLogException(
-          new IllegalStateException(
-              "MaterializedEncryptionReports is null. Maybe results did not get logged."));
-    }
-    return materializedEncryptedReports.get();
   }
 
   public void setShouldThrow(boolean shouldThrow) {

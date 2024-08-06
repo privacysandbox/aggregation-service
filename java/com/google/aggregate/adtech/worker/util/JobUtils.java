@@ -32,5 +32,9 @@ public final class JobUtils {
 
   public static final String JOB_PARAM_FILTERING_IDS_DELIMITER = ",";
 
+  public static final String JOB_PARAM_ATTRIBUTION_REPORT_TO = "attribution_report_to";
+
+  public static final String JOB_PARAM_REPORTING_SITE = "reporting_site";
+
   private JobUtils() {}
 }

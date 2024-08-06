@@ -18,7 +18,6 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.createJobRequest;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJob;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.RETRIES_EXHAUSTED;
@@ -82,7 +81,7 @@ public class AwsWorkerContinuousInvalidCredentialsTest {
 
     // TODO(b/228085828): Modify e2e tests to use output domain
     CreateJobRequest createJobRequest =
-        createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             TESTING_BUCKET,
             INPUT_DATA_PATH,
             TESTING_BUCKET,

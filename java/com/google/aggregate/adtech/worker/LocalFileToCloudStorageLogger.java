@@ -17,7 +17,6 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
-import static com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import static com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.getDataLocation;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
 import static java.lang.annotation.ElementType.FIELD;
@@ -31,10 +30,8 @@ import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUploa
 import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
-import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -45,7 +42,6 @@ import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.jobclient.model.Job;
-import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Files;
@@ -69,7 +65,6 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
   private final BlobStorageClient blobStorageClient;
   private final Path workingDirectory;
   private final ListeningExecutorService blockingThreadPool;
-  private static final String reencryptedReportFileNamePrefix = "reencrypted-";
 
   @Inject
   LocalFileToCloudStorageLogger(
@@ -165,26 +160,6 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
     }
   }
 
-  @Override
-  public void logReports(ImmutableList<EncryptedReport> reports, Job ctx, String shardNumber)
-      throws ResultLogException {
-    String localFileName =
-        toJobKeyString(ctx.jobKey())
-            + "-"
-            + reencryptedReportFileNamePrefix
-            + shardNumber
-            + ".avro";
-    Path localReportsFilePath =
-        workingDirectory
-            .getFileSystem()
-            .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
-    try {
-      writeReportsToCloud(reports.stream(), ctx, localReportsFilePath, localResultFileWriter);
-    } catch (FileWriteException | BlobStorageClientException | IOException e) {
-      throw new ResultLogException(e);
-    }
-  }
-
   @SuppressWarnings("UnstableApiUsage")
   private ListenableFuture<Void> writeFile(
       Stream<AggregatedFact> aggregatedFacts,
@@ -218,21 +193,6 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
           return Futures.immediateVoidFuture();
         },
         blockingThreadPool);
-  }
-
-  private void writeReportsToCloud(
-      Stream<EncryptedReport> reports, Job ctx, Path localFilepath, LocalResultFileWriter writer)
-      throws IOException, FileWriteException, BlobStorageClientException {
-    Files.createDirectories(workingDirectory);
-    writer.writeLocalReportFile(reports, localFilepath);
-
-    String outputDataBlobBucket = ctx.requestInfo().getOutputDataBucketName();
-    String outputDataBlobPrefix = localFilepath.getFileName().toString();
-
-    DataLocation resultLocation = getDataLocation(outputDataBlobBucket, outputDataBlobPrefix);
-
-    blobStorageClient.putBlob(resultLocation, localFilepath);
-    Files.deleteIfExists(localFilepath);
   }
 
   /**

@@ -68,6 +68,14 @@ POST
     // This should be same as the reporting_origin present in the reports' shared_info.
     "attribution_report_to": <string>,
 
+    // [Optional] Reporting Site.
+    // This should be the reporting site that is onboared to aggregation service.
+    // Note: All reports in the request should have reporting origins which
+    // belong to the reporting site mentioned in this parameter. This parameter
+    // and the "attribution_report_to" parameter are mutually exclusive, exactly
+    // one of the two parameters should be provided in the request.
+    "reporting_site": "<string>"
+
     // [Optional] Differential privacy epsilon value to be used
     // for this job. 0.0 < debug_privacy_epsilon <= 64.0. The
     // value can be varied so that tests with different epsilon
@@ -156,6 +164,10 @@ These are the validations that are done before the aggregation begins.
    ATTRIBUTION_REPORT_TO_MISMATCH error counter. Aggregatable report validations and error counters
    can be found in the
    [Input Aggregatable Report Validations](#input-aggregatable-report-validations) below
+4. Job request's `job_parameters` should contain exactly one of `attribution_report_to` and
+   `reporting_site`.
+5. If `job_parameters.reporting_site` is provided, `shared_info.reporting_origin` of all
+   aggregatable reports should belong to this reporting site.
 
 Return code:
 [INVALID_JOB](java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L38)
@@ -227,6 +239,8 @@ Not found: 404 Not Found
     "output_domain_bucket_name": <string>,
     // Reporting URL
     "attribution_report_to" : <string>,
+    // [Optional] Reporting site value from the CreateJob request, if provided.
+    "reporting_site": <string>
     // [Optional] differential privacy epsilon value to be used
     // for this job. 0.0 < debug_privacy_epsilon <= 64.0. The
     // value can be varied so that tests with different epsilon

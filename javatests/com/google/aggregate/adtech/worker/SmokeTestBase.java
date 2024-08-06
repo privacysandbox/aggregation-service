@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
+import com.google.aggregate.adtech.worker.util.JobUtils;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReader;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
 import com.google.aggregate.protocol.avro.AvroDebugResultsRecord;
@@ -58,13 +59,14 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 
-/**
- * Smoke test base class
- */
+/** Smoke test base class */
 public abstract class SmokeTestBase {
 
   public static final String ENV_ATTRIBUTION_REPORT_TO = System.getenv("ATTRIBUTION_REPORT_TO");
-  public static final String DEFAULT_ATTRIBUTION_REPORT_TO = "foo.com";
+  public static final String ENV_REPORTING_SITE = System.getenv("REPORTING_SITE");
+  public static final String DEFAULT_ATTRIBUTION_REPORT_TO = "https://subdomain.fakeurl.com";
+  public static final String DEFAULT_REPORTING_SITE = "https://fakeurl.com";
+
   public static final String FRONTEND_CLOUDFUNCTION_URL =
       System.getenv("FRONTEND_CLOUDFUNCTION_URL");
   public static final String KOKORO_BUILD_ID = System.getenv("KOKORO_BUILD_ID");
@@ -75,32 +77,37 @@ public abstract class SmokeTestBase {
   public static final String FRONTEND_API = System.getenv("FRONTEND_API");
   public static final String API_GATEWAY_STAGE = "stage";
   public static final String GCP_ACCESS_TOKEN = System.getenv("GCP_ACCESS_TOKEN");
-  public static final String DEFAULT_DEPLOY_SA = "deploy-sa@ps-msmt-aggserv-test.iam.gserviceaccount.com";
+  public static final String DEFAULT_DEPLOY_SA =
+      "deploy-sa@ps-msmt-aggserv-test.iam.gserviceaccount.com";
   public static final String DEFAULT_TEST_DATA_BUCKET = "test_reports_data";
   public static final String DEFAULT_PROJECT_ID = "ps-msmt-aggserv-test";
   public static final String DEFAULT_ENVIRONMENT_NAME = "continuous_mp";
 
   protected CreateJobRequest createJobRequest;
 
-  public static CreateJobRequest createJobRequest(
+  public static CreateJobRequest createJobRequestWithAttributionReportTo(
       String inputDataBlobBucket,
       String inputDataBlobPrefix,
       String outputDataBlobBucket,
       String outputDataBlobPrefix,
       String jobId,
       Optional<String> outputDomainBucketName,
-      Optional<String> outputDomainPrefix) {
+      Optional<String> outputDomainPrefix,
+      long totalReportsCount,
+      int reportErrorThreshold) {
     return createDefaultJobRequestBuilder(
-        inputDataBlobBucket,
-        inputDataBlobPrefix,
-        outputDataBlobBucket,
-        outputDataBlobPrefix,
-        jobId)
-        .putAllJobParameters(getJobParams(false, outputDomainBucketName, outputDomainPrefix, 100))
+            inputDataBlobBucket,
+            inputDataBlobPrefix,
+            outputDataBlobBucket,
+            outputDataBlobPrefix,
+            jobId)
+        .putAllJobParameters(
+            getJobParamsWithAttributionReportTo(
+                false, outputDomainBucketName, outputDomainPrefix, Optional.of(totalReportsCount), reportErrorThreshold))
         .build();
   }
 
-  public static CreateJobRequest createJobRequest(
+  public static CreateJobRequest createJobRequestWithAttributionReportTo(
       String inputDataBlobBucket,
       String inputDataBlobPrefix,
       String outputDataBlobBucket,
@@ -109,22 +116,65 @@ public abstract class SmokeTestBase {
       Optional<String> outputDomainBucketName,
       Optional<String> outputDomainPrefix) {
     return createDefaultJobRequestBuilder(
-        inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
+            inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
         .putAllJobParameters(
-            getJobParams(
+            getJobParamsWithAttributionReportTo(
                 debugRun,
                 outputDomainBucketName,
                 outputDomainPrefix,
-                /* reportErrorThreshold= */ 100))
+                /* inputReportCount= */ Optional.empty(),
+                /* reportErrorThreshold= */ 0))
         .build();
   }
 
-  public static CreateJobRequest createJobRequest(
+  public static CreateJobRequest createJobRequestWithAttributionReportTo(
       String inputDataBlobBucket,
       String inputDataBlobPrefix,
       String outputDataBlobBucket,
       String outputDataBlobPrefix,
       Boolean debugRun,
+      String jobId,
+      Optional<String> outputDomainBucketName,
+      Optional<String> outputDomainPrefix) {
+    return createDefaultJobRequestBuilder(
+            inputDataBlobBucket,
+            inputDataBlobPrefix,
+            outputDataBlobBucket,
+            outputDataBlobPrefix,
+            jobId)
+        .putAllJobParameters(
+            getJobParamsWithAttributionReportTo(
+                debugRun, outputDomainBucketName, outputDomainPrefix, Optional.empty(), 0))
+        .build();
+  }
+
+  public static CreateJobRequest createJobRequestWithAttributionReportTo(
+      String inputDataBlobBucket,
+      String inputDataBlobPrefix,
+      String outputDataBlobBucket,
+      String outputDataBlobPrefix,
+      Boolean debugRun,
+      Optional<String> outputDomainBucketName,
+      Optional<String> outputDomainPrefix,
+      long totalReportsCount,
+      int reportErrorThreshold) {
+    return createDefaultJobRequestBuilder(
+        inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
+        .putAllJobParameters(
+            getJobParamsWithAttributionReportTo(
+                debugRun,
+                outputDomainBucketName,
+                outputDomainPrefix,
+                Optional.of(totalReportsCount),
+                reportErrorThreshold))
+        .build();
+  }
+
+  public static CreateJobRequest createJobRequestWithAttributionReportTo(
+      String inputDataBlobBucket,
+      String inputDataBlobPrefix,
+      String outputDataBlobBucket,
+      String outputDataBlobPrefix,
       String jobId,
       Optional<String> outputDomainBucketName,
       Optional<String> outputDomainPrefix) {
@@ -135,7 +185,12 @@ public abstract class SmokeTestBase {
         outputDataBlobPrefix,
         jobId)
         .putAllJobParameters(
-            getJobParams(debugRun, outputDomainBucketName, outputDomainPrefix, 100))
+            getJobParamsWithAttributionReportTo(
+                false,
+                outputDomainBucketName,
+                outputDomainPrefix,
+                /* inputReportCount= */ Optional.empty(),
+                /* reportErrorThreshold= */ 0))
         .build();
   }
 
@@ -159,7 +214,7 @@ public abstract class SmokeTestBase {
         .putAllJobParameters(ImmutableMap.of());
   }
 
-  public static CreateJobRequest createJobRequest(
+  public static CreateJobRequest createJobRequestWithAttributionReportTo(
       String inputDataBlobBucket,
       String inputDataBlobPrefix,
       String outputDataBlobBucket,
@@ -167,9 +222,24 @@ public abstract class SmokeTestBase {
       Optional<String> outputDomainBucketName,
       Optional<String> outputDomainPrefix) {
     return createDefaultJobRequestBuilder(
-        inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
+            inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
         .putAllJobParameters(
-            getJobParams(
+            getJobParamsWithAttributionReportTo(
+                false, outputDomainBucketName, outputDomainPrefix, /* reportErrorThreshold= */ Optional.empty(), 0))
+        .build();
+  }
+
+  public static CreateJobRequest createJobRequestWithReportingSite(
+      String inputDataBlobBucket,
+      String inputDataBlobPrefix,
+      String outputDataBlobBucket,
+      String outputDataBlobPrefix,
+      Optional<String> outputDomainBucketName,
+      Optional<String> outputDomainPrefix) {
+    return createDefaultJobRequestBuilder(
+            inputDataBlobBucket, inputDataBlobPrefix, outputDataBlobBucket, outputDataBlobPrefix)
+        .putAllJobParameters(
+            getJobParamsWithReportingSite(
                 false, outputDomainBucketName, outputDomainPrefix, /* reportErrorThreshold= */ 100))
         .build();
   }
@@ -404,9 +474,9 @@ public abstract class SmokeTestBase {
       throws Exception {
     Path tempResultFile = Files.createTempFile(/* prefix= */ "results", /* suffix= */ "avro");
     try (InputStream resultStream =
-        blobStorageClient.getBlob(
-            DataLocation.ofBlobStoreDataLocation(
-                BlobStoreDataLocation.create(outputBucket, outputPrefix)));
+            blobStorageClient.getBlob(
+                DataLocation.ofBlobStoreDataLocation(
+                    BlobStoreDataLocation.create(outputBucket, outputPrefix)));
         OutputStream outputStream = Files.newOutputStream(tempResultFile)) {
       ByteStreams.copy(resultStream, outputStream);
       outputStream.flush();
@@ -419,18 +489,18 @@ public abstract class SmokeTestBase {
   }
 
   protected static <T extends BlobStorageClient>
-  ImmutableList<AggregatedFact> readDebugResultsFromCloud(
-      T blobStorageClient,
-      AvroDebugResultsReaderFactory readerFactory,
-      String outputBucket,
-      String outputPrefix)
-      throws Exception {
+      ImmutableList<AggregatedFact> readDebugResultsFromCloud(
+          T blobStorageClient,
+          AvroDebugResultsReaderFactory readerFactory,
+          String outputBucket,
+          String outputPrefix)
+          throws Exception {
     Stream<AvroDebugResultsRecord> writtenResults;
     Path tempResultFile = Files.createTempFile(/* prefix= */ "debug_results", /* suffix= */ "avro");
     try (InputStream resultStream =
-        blobStorageClient.getBlob(
-            DataLocation.ofBlobStoreDataLocation(
-                BlobStoreDataLocation.create(outputBucket, outputPrefix)));
+            blobStorageClient.getBlob(
+                DataLocation.ofBlobStoreDataLocation(
+                    BlobStoreDataLocation.create(outputBucket, outputPrefix)));
         OutputStream outputStream = Files.newOutputStream(tempResultFile)) {
       ByteStreams.copy(resultStream, outputStream);
       outputStream.flush();
@@ -465,10 +535,35 @@ public abstract class SmokeTestBase {
     }
   }
 
-  private static ImmutableMap<String, String> getJobParams(
+  private static ImmutableMap<String, String> getJobParamsWithReportingSite(
       Boolean debugRun,
       Optional<String> outputDomainBucketName,
       Optional<String> outputDomainPrefix,
+      int reportErrorThresholdPercentage) {
+    ImmutableMap.Builder<String, String> jobParams = ImmutableMap.builder();
+    jobParams.put("reporting_site", getReportingSite());
+    if (debugRun) {
+      jobParams.put("debug_run", "true");
+    }
+    jobParams.put(
+        "report_error_threshold_percentage", String.valueOf(reportErrorThresholdPercentage));
+    if (outputDomainPrefix.isPresent() && outputDomainBucketName.isPresent()) {
+      jobParams.put("output_domain_blob_prefix", outputDomainPrefix.get());
+      jobParams.put("output_domain_bucket_name", outputDomainBucketName.get());
+      return jobParams.build();
+    } else if (outputDomainPrefix.isEmpty() && outputDomainBucketName.isEmpty()) {
+      return jobParams.build();
+    } else {
+      throw new IllegalStateException(
+          "outputDomainPrefix and outputDomainBucketName must both be provided or both be empty.");
+    }
+  }
+
+  private static ImmutableMap<String, String> getJobParamsWithAttributionReportTo(
+      Boolean debugRun,
+      Optional<String> outputDomainBucketName,
+      Optional<String> outputDomainPrefix,
+      Optional<Long> inputReportCountOptional,
       int reportErrorThresholdPercentage) {
     ImmutableMap.Builder<String, String> jobParams = ImmutableMap.builder();
     jobParams.put("attribution_report_to", getAttributionReportTo());
@@ -476,6 +571,9 @@ public abstract class SmokeTestBase {
     if (debugRun) {
       jobParams.put("debug_run", "true");
     }
+    inputReportCountOptional.ifPresent(
+        inputReportCount ->
+            jobParams.put(JobUtils.JOB_PARAM_INPUT_REPORT_COUNT, String.valueOf(inputReportCount)));
     jobParams.put(
         "report_error_threshold_percentage", String.valueOf(reportErrorThresholdPercentage));
     if (outputDomainPrefix.isPresent() && outputDomainBucketName.isPresent()) {
@@ -497,6 +595,13 @@ public abstract class SmokeTestBase {
     return DEFAULT_ATTRIBUTION_REPORT_TO;
   }
 
+  private static String getReportingSite() {
+    if (ENV_REPORTING_SITE != null) {
+      return ENV_REPORTING_SITE;
+    }
+    return DEFAULT_REPORTING_SITE;
+  }
+
   protected static void checkJobExecutionResult(
       JsonNode result, String returnCode, int errorCount) {
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(returnCode);
@@ -505,13 +610,13 @@ public abstract class SmokeTestBase {
           .isTrue();
     } else {
       assertThat(
-          result
-              .get("result_info")
-              .get("error_summary")
-              .get("error_counts")
-              .get(0)
-              .get("count")
-              .asInt())
+              result
+                  .get("result_info")
+                  .get("error_summary")
+                  .get("error_counts")
+                  .get(0)
+                  .get("count")
+                  .asInt())
           .isEqualTo(errorCount);
     }
   }

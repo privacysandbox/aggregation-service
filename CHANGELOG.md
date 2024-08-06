@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.7.0](https://github.com/privacysandbox/aggregation-service/compare/v2.6.0...v2.7.0) (2024-08-01)
+
+-   Added support for aggregating reports belonging to multiple reporting origins under the same
+    reporting site in a single aggregation job.
+-   [GCP Only] Updated coordinator endpoints to new Google/Third-Party coordinator pair.
+
 ## [2.6.0](https://github.com/privacysandbox/aggregation-service/compare/v2.5.0...v2.6.0) (2024-07-19)
 
 -   Enabled support for

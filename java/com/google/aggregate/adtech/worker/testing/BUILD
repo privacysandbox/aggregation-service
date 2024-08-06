@@ -152,20 +152,6 @@ java_library(
 )
 
 java_library(
-    name = "avro_reports_file_reader",
-    srcs = ["AvroReportsFileReader.java"],
-    javacopts = ["-Xep:Var"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/util",
-        "//java/com/google/aggregate/protocol/avro:avro_reports_schema_supplier",
-        "//java/external:avro",
-        "//java/external:guava",
-        "//java/external:javax_inject",
-    ],
-)
-
-java_library(
     name = "local_aggregation_worker_runner",
     srcs = ["LocalAggregationWorkerRunner.java"],
     javacopts = ["-Xep:Var"],

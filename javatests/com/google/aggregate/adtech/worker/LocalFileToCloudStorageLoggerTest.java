@@ -18,7 +18,6 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
@@ -32,7 +31,6 @@ import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWo
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
-import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
 import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
@@ -41,11 +39,7 @@ import com.google.aggregate.adtech.worker.writer.avro.LocalAvroResultFileWriter;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReader;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
 import com.google.aggregate.protocol.avro.AvroDebugResultsRecord;
-import com.google.aggregate.protocol.avro.AvroReportRecord;
-import com.google.aggregate.protocol.avro.AvroReportsReader;
-import com.google.aggregate.protocol.avro.AvroReportsReaderFactory;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -66,7 +60,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -119,37 +112,12 @@ public class LocalFileToCloudStorageLoggerTest {
           AggregatedFact.create(BigInteger.valueOf(3789), 90L, 80L, annotationReportOnly),
           AggregatedFact.create(BigInteger.valueOf(4123), 100L, 70L, annotationReportOnly));
 
-  private static final ByteSource encryptedReport1Payload =
-      ByteSource.wrap(new byte[] {0x00, 0x01});
-  private static final ByteSource encryptedReport2Payload =
-      ByteSource.wrap(new byte[] {0x01, 0x02});
-  private static final String encryptedReport1KeyId = UUID.randomUUID().toString();
-  private static final String encryptedReport2KeyId = UUID.randomUUID().toString();
-  private static final String encryptedReport1SharedInfo = "foo";
-  private static final String encryptedReport2SharedInfo = "bar";
-  private static final EncryptedReport report1 =
-      EncryptedReport.builder()
-          .setPayload(encryptedReport1Payload)
-          .setKeyId(encryptedReport1KeyId)
-          .setSharedInfo(encryptedReport1SharedInfo)
-          .build();
-
-  private static final EncryptedReport report2 =
-      EncryptedReport.builder()
-          .setPayload(encryptedReport2Payload)
-          .setKeyId(encryptedReport2KeyId)
-          .setSharedInfo(encryptedReport2SharedInfo)
-          .build();
-
-  private static final ImmutableList<EncryptedReport> reportsList =
-      ImmutableList.of(report1, report2);
   // Under test
   @Inject private Provider<LocalFileToCloudStorageLogger> localFileToCloudStorageLogger;
 
   @Inject private FSBlobStorageClient blobStorageClient;
   @Inject private AvroResultsFileReader avroResultsFileReader;
   @Inject private AvroDebugResultsReaderFactory readerFactory;
-  @Inject private AvroReportsReaderFactory reportReaderFactory;
   @Inject private ParallelUploadFlagHelper uploadFlagHelper;
   @Inject private FileSystem testFS;
   @Inject @ResultWorkingDirectory private Path workingDirectory;
@@ -176,43 +144,6 @@ public class LocalFileToCloudStorageLoggerTest {
   public void logResultsTest_singleThreaded() throws Exception {
     uploadFlagHelper.setEnableParallelSummaryUpload(false);
     logResultsTest();
-  }
-
-  @Test
-  public void logReports_writesReports() throws Exception {
-    localFileToCloudStorageLogger.get().logReports(reportsList, ctx, "1");
-
-    Path reportsFilePath = blobStorageClient.getLastWrittenFile();
-    Stream<AvroReportRecord> writtenFile;
-    try (AvroReportsReader reader = getReportsReader(reportsFilePath)) {
-      writtenFile = reader.streamRecords();
-    }
-    Stream<EncryptedReport> writtenFileEncryptedReports =
-        writtenFile.map(
-            report ->
-                EncryptedReport.builder()
-                    .setKeyId(report.keyId())
-                    .setPayload(report.payload())
-                    .setSharedInfo(report.sharedInfo())
-                    .build());
-
-    List<EncryptedReport> encryptedReportsList =
-        writtenFileEncryptedReports.collect(toImmutableList());
-
-    // check reencrypted reports file name
-    assertThat(reportsFilePath.toString()).isEqualTo("/bucket/abc123-reencrypted-1.avro");
-    // Check the output reports
-    assertThat(encryptedReportsList.get(0).keyId()).isEqualTo(encryptedReport1KeyId);
-    assertTrue(encryptedReportsList.get(0).payload().contentEquals(encryptedReport1Payload));
-    assertThat(encryptedReportsList.get(0).sharedInfo()).isEqualTo(encryptedReport1SharedInfo);
-
-    assertThat(encryptedReportsList.get(1).keyId()).isEqualTo(encryptedReport2KeyId);
-    assertTrue(encryptedReportsList.get(1).payload().contentEquals(encryptedReport2Payload));
-    assertThat(encryptedReportsList.get(1).sharedInfo()).isEqualTo(encryptedReport2SharedInfo);
-  }
-
-  private AvroReportsReader getReportsReader(Path avroFile) throws Exception {
-    return reportReaderFactory.create(Files.newInputStream(avroFile));
   }
 
   private void logResultsTest() throws Exception {

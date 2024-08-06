@@ -23,7 +23,6 @@ import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.LibraryAnnotations.LocalOutputDirectory;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
 import com.google.common.collect.ImmutableList;
@@ -66,23 +65,6 @@ final class LocalResultLogger implements ResultLogger {
         ctx,
         localResultsFilePath,
         isDebugRun ? localDebugResultFileWriter : localResultFileWriter);
-  }
-
-  // TODO(b/315199032): Add local runner test
-  @Override
-  public void logReports(ImmutableList<EncryptedReport> reports, Job ctx, String shardNumber)
-      throws ResultLogException {
-    String localFileName = "reencrypted_report.avro";
-    Path localReportsFilePath =
-        workingDirectory
-            .getFileSystem()
-            .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
-    try {
-      Files.createDirectories(workingDirectory);
-      localResultFileWriter.writeLocalReportFile(reports.stream(), localReportsFilePath);
-    } catch (IOException | FileWriteException e) {
-      throw new ResultLogException(e);
-    }
   }
 
   private DataLocation writeFile(

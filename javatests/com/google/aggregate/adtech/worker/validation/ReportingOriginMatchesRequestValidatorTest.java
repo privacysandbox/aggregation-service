@@ -20,6 +20,8 @@ import static com.google.aggregate.adtech.worker.model.ErrorCounter.ATTRIBUTION_
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static com.google.aggregate.adtech.worker.model.ErrorCounter.ATTRIBUTION_REPORT_TO_MALFORMED;
+import static com.google.aggregate.adtech.worker.model.ErrorCounter.REPORTING_SITE_MISMATCH;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Payload;
@@ -59,6 +61,16 @@ public class ReportingOriginMatchesRequestValidatorTest {
     ctx = FakeJobGenerator.generateBuilder("").build();
   }
 
+  private Job createTestJob(ImmutableMap<String, String> jobParameters) {
+    return ctx.toBuilder()
+        .setRequestInfo(
+            ctx.requestInfo().toBuilder()
+                .clearJobParameters()
+                .putAllJobParameters(jobParameters)
+                .build())
+        .build();
+  }
+
   /**
    * Test that the validation passed when the report and the aggregation request ({@code Job}) have
    * matching attributionReportTo values.
@@ -69,14 +81,7 @@ public class ReportingOriginMatchesRequestValidatorTest {
         reportBuilder
             .setSharedInfo(sharedInfoBuilder.setReportingOrigin("foo.com").build())
             .build();
-    Job testCtx =
-        ctx.toBuilder()
-            .setRequestInfo(
-                ctx.requestInfo().toBuilder()
-                    .clearJobParameters()
-                    .putAllJobParameters(ImmutableMap.of("attribution_report_to", "foo.com"))
-                    .build())
-            .build();
+    Job testCtx = createTestJob(ImmutableMap.of("attribution_report_to", "foo.com"));
 
     Optional<ErrorMessage> validationError = validator.validate(report, testCtx);
 
@@ -93,18 +98,67 @@ public class ReportingOriginMatchesRequestValidatorTest {
         reportBuilder
             .setSharedInfo(sharedInfoBuilder.setReportingOrigin("foo.com").build())
             .build();
-    Job testCtx =
-        ctx.toBuilder()
-            .setRequestInfo(
-                ctx.requestInfo().toBuilder()
-                    .clearJobParameters()
-                    .putAllJobParameters(ImmutableMap.of("attribution_report_to", "bar.com"))
-                    .build())
-            .build();
+    Job testCtx = createTestJob(ImmutableMap.of("attribution_report_to", "bar.com"));
 
     Optional<ErrorMessage> validationError = validator.validate(report, testCtx);
 
     assertThat(validationError).isPresent();
     assertThat(validationError.get().category()).isEqualTo(ATTRIBUTION_REPORT_TO_MISMATCH);
+  }
+
+  /**
+   * Test that the validation passed when the report's reporting origin belongs to the site provided
+   * in the aggregation request ({@code Job}).
+   */
+  @Test
+  public void siteProvided_reportOriginBelongsToSite_success() {
+    Report report1 =
+        reportBuilder
+            .setSharedInfo(sharedInfoBuilder.setReportingOrigin("https://origin1.foo.com").build())
+            .build();
+    Report report2 =
+        reportBuilder
+            .setSharedInfo(sharedInfoBuilder.setReportingOrigin("https://origin2.foo.com").build())
+            .build();
+    Job testCtx = createTestJob(ImmutableMap.of("reporting_site", "https://foo.com"));
+
+    Optional<ErrorMessage> validationError1 = validator.validate(report1, testCtx);
+    Optional<ErrorMessage> validationError2 = validator.validate(report2, testCtx);
+
+    assertThat(validationError1).isEmpty();
+    assertThat(validationError2).isEmpty();
+  }
+
+  /**
+   * Test that the validation fails when the report's reporting origin belongs to a different site
+   * than the one provided in the aggregation request ({@code Job}).
+   */
+  @Test
+  public void siteProvided_reportOriginDoesNotBelongsToSite_failure() {
+    Report report =
+        reportBuilder
+            .setSharedInfo(sharedInfoBuilder.setReportingOrigin("https://origin.foo.com").build())
+            .build();
+    Job testCtx = createTestJob(ImmutableMap.of("reporting_site", "https://foo1.com"));
+
+    Optional<ErrorMessage> validationError = validator.validate(report, testCtx);
+
+    assertThat(validationError).isPresent();
+    assertThat(validationError.get().category()).isEqualTo(REPORTING_SITE_MISMATCH);
+  }
+
+  /** Tests validation failure when the report's reporting origin is malformed. */
+  @Test
+  public void siteProvided_reportOriginInvalid_failure() {
+    Report report =
+        reportBuilder
+            .setSharedInfo(sharedInfoBuilder.setReportingOrigin("origin.foo.com").build())
+            .build();
+    Job testCtx = createTestJob(ImmutableMap.of("reporting_site", "https://foo1.com"));
+
+    Optional<ErrorMessage> validationError = validator.validate(report, testCtx);
+
+    assertThat(validationError).isPresent();
+    assertThat(validationError.get().category()).isEqualTo(ATTRIBUTION_REPORT_TO_MALFORMED);
   }
 }

@@ -18,7 +18,6 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.createJobRequest;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getAndWriteStopwatchesFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.common.truth.Truth.assertThat;
@@ -48,10 +47,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 @RunWith(JUnit4.class)
 public class AwsWorkerContinuousPerfTest {
 
-  @Rule
-  public final Acai acai = new Acai(TestEnv.class);
-  @Rule
-  public final TestName name = new TestName();
+  @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration completionTimeout = Duration.of(60, ChronoUnit.MINUTES);
   private static final String TESTING_BUCKET = "aggregation-service-testing";
@@ -88,8 +85,7 @@ public class AwsWorkerContinuousPerfTest {
   private static final String OUTPUT_DOMAIN_PREFIX =
       "testdata/1m_staging_2022_08_08_sharded_domain/shard";
 
-  @Inject
-  S3BlobStorageClient s3BlobStorageClient;
+  @Inject S3BlobStorageClient s3BlobStorageClient;
 
   @Test
   public void e2ePerfTest() throws Exception {
@@ -104,7 +100,7 @@ public class AwsWorkerContinuousPerfTest {
             "e2e_test_outputs/%s/%s", KOKORO_BUILD_ID, "createJobE2EperfTest-reports1m.avro");
 
     CreateJobRequest createJobRequest =
-        createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             TESTING_BUCKET,
             INPUT_REPORTS_PREFIX,
             TESTING_BUCKET,
@@ -138,9 +134,7 @@ public class AwsWorkerContinuousPerfTest {
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
       bind(S3AsyncClient.class)
-          .toInstance(
-              S3AsyncClient.builder()
-                  .region(AWS_S3_BUCKET_REGION).build());
+          .toInstance(S3AsyncClient.builder().region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

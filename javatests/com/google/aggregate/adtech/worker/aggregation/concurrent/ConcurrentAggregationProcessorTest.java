@@ -28,6 +28,7 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.UNS
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_ATTRIBUTION_REPORT_TO;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_PRIVACY_EPSILON;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_RUN;
+import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_REPORTING_SITE;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.NUM_REPORTS_WITH_ERRORS;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
@@ -99,6 +100,7 @@ import com.google.aggregate.adtech.worker.testing.FakeReportGenerator;
 import com.google.aggregate.adtech.worker.testing.FakeValidator;
 import com.google.aggregate.adtech.worker.testing.InMemoryResultLogger;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
+import com.google.aggregate.adtech.worker.util.ReportingOriginUtils;
 import com.google.aggregate.adtech.worker.validation.ReportValidator;
 import com.google.aggregate.adtech.worker.validation.ReportVersionValidator;
 import com.google.aggregate.perf.StopwatchExporter;
@@ -153,9 +155,10 @@ import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
-import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import com.google.scp.operator.protos.shared.backend.ErrorCountProto.ErrorCount;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
+import com.google.scp.operator.protos.shared.backend.JobKeyProto.JobKey;
+import com.google.scp.operator.protos.shared.backend.JobStatusProto.JobStatus;
 import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
 import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
 import com.google.scp.shared.proto.ProtoUtil;
@@ -169,6 +172,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Arrays;
@@ -191,6 +195,10 @@ import org.junit.runner.RunWith;
 public class ConcurrentAggregationProcessorTest {
 
   private static final Instant FIXED_TIME = Instant.parse("2021-01-01T00:00:00Z");
+  private static final Instant REQUEST_RECEIVED_AT = Instant.parse("2019-10-01T08:25:24.00Z");
+  private static final Instant REQUEST_PROCESSING_STARTED_AT =
+      Instant.parse("2019-10-01T08:29:24.00Z");
+  private static final Instant REQUEST_UPDATED_AT = Instant.parse("2019-10-01T08:29:24.00Z");
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
   @Rule public final TemporaryFolder testWorkingDir = new TemporaryFolder();
@@ -289,7 +297,7 @@ public class ConcurrentAggregationProcessorTest {
     Files.createDirectory(reportsDirectory);
     Files.createDirectory(invalidReportsDirectory);
 
-    ctx = FakeJobGenerator.generateBuilder("foo").build();
+    ctx = generateJob("foo", Optional.of("https://example.foo.com"), Optional.empty());
     ctx =
         ctx.toBuilder()
             .setRequestInfo(
@@ -304,7 +312,7 @@ public class ConcurrentAggregationProcessorTest {
     expectedJobResult = makeExpectedJobResult();
 
     // Job context for job with invalid version input report.
-    ctxInvalidReport = FakeJobGenerator.generateBuilder("bar").build();
+    ctxInvalidReport = generateJob("bar", Optional.of("https://example.foo.com"), Optional.empty());
     ctxInvalidReport =
         ctxInvalidReport.toBuilder()
             .setRequestInfo(
@@ -387,6 +395,23 @@ public class ConcurrentAggregationProcessorTest {
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
         .containsExactly(
             AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 5, 8L));
+  }
+
+  @Test
+  public void aggregate_reportingSiteProvided() throws Exception {
+    ctx = generateJob("foo", Optional.empty(), Optional.of("https://foo.com"));
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                getRequestInfoWithInputDataBucketName(ctx.requestInfo(), reportsDirectory))
+            .build();
+    JobResult jobResultProcessor = processor.get().process(ctx);
+
+    assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactly(
+            AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 2, 2L),
+            AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 8, 8L));
   }
 
   @Test
@@ -1640,7 +1665,7 @@ public class ConcurrentAggregationProcessorTest {
     String keyId = UUID.randomUUID().toString();
     Report report =
         FakeReportGenerator.generateWithParam(
-            1, /* reportVersion */ LATEST_VERSION, "https://foo.com");
+            1, /* reportVersion */ LATEST_VERSION, "https://example.foo.com");
     // Encrypt with a different sharedInfo than what is provided with the report so that decryption
     // fails
     String sharedInfoForEncryption = "foobarbaz";
@@ -1719,8 +1744,11 @@ public class ConcurrentAggregationProcessorTest {
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L));
     // Check that the right attributionReportTo and debugPrivacyBudgetLimit were sent to the bridge
+    String claimedIdentity =
+        ReportingOriginUtils.convertReportingOriginToSite(
+            ctx.requestInfo().getJobParametersMap().get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
     assertThat(fakePrivacyBudgetingServiceBridge.getLastAttributionReportToSent())
-        .hasValue(ctx.requestInfo().getJobParametersMap().get(JOB_PARAM_ATTRIBUTION_REPORT_TO));
+        .hasValue(claimedIdentity);
   }
 
   @Test
@@ -1773,13 +1801,12 @@ public class ConcurrentAggregationProcessorTest {
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
 
-    AggregationJobProcessException ex =
-        assertThrows(AggregationJobProcessException.class, () -> processor.get().process(ctx));
-    assertThat(ex.getCode()).isEqualTo(INVALID_JOB);
+    IllegalStateException ex =
+        assertThrows(IllegalStateException.class, () -> processor.get().process(ctx));
     assertThat(ex.getMessage())
         .isEqualTo(
-            "The attribution_report_to parameter specified in the CreateJob request is not under a"
-                + " known public suffix.");
+            "Invalid reporting origin found while consuming budget, this should not happen as job"
+                + " validations ensure the reporting origin is always valid.");
   }
 
   @Test
@@ -1787,7 +1814,7 @@ public class ConcurrentAggregationProcessorTest {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "foo.com"), 1);
+        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "https://example.foo.com"), 1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -1858,7 +1885,7 @@ public class ConcurrentAggregationProcessorTest {
     // Privacy Budget failure via thrown exception
     fakePrivacyBudgetingServiceBridge.setShouldThrow();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "foo.com"), 1);
+        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "https://example.foo.com"), 1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -1888,7 +1915,7 @@ public class ConcurrentAggregationProcessorTest {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "foo.com"), 1);
+        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "https://example.foo.com"), 1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -1978,7 +2005,11 @@ public class ConcurrentAggregationProcessorTest {
         privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput).get();
     PrivacyBudgetUnit privacyBudgetUnit =
         PrivacyBudgetUnit.create(
-            privacyBudgetKeyGenerator.generatePrivacyBudgetKey(privacyBudgetKeyInput),
+            privacyBudgetKeyGenerator.generatePrivacyBudgetKey(
+                PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
+                    .setFilteringId(filteringId)
+                    .setSharedInfo(sharedInfo)
+                    .build()),
             Instant.ofEpochMilli(0),
             sharedInfo.reportingOrigin());
     return privacyBudgetUnit;
@@ -2096,6 +2127,45 @@ public class ConcurrentAggregationProcessorTest {
     }
   }
 
+  public static Job generateJob(
+      String id, Optional<String> attributionReportTo, Optional<String> reportingSite) {
+    if (attributionReportTo.isEmpty() && reportingSite.isEmpty()) {
+      throw new RuntimeException(
+          "At least one of attributionReportTo and reportingSite should be provided");
+    }
+    RequestInfo.Builder requestInfoBuilder =
+        RequestInfo.newBuilder()
+            .setJobRequestId(id)
+            .setInputDataBlobPrefix("dataHandle")
+            .setInputDataBucketName("bucket")
+            .setOutputDataBlobPrefix("dataHandle")
+            .setOutputDataBucketName("bucket")
+            .setPostbackUrl("http://postback.com");
+    RequestInfo requestInfo;
+    if (attributionReportTo.isPresent()) {
+      requestInfo =
+          requestInfoBuilder
+              .putAllJobParameters(
+                  ImmutableMap.of(JOB_PARAM_ATTRIBUTION_REPORT_TO, attributionReportTo.get()))
+              .build();
+    } else {
+      requestInfo =
+          requestInfoBuilder
+              .putAllJobParameters(ImmutableMap.of(JOB_PARAM_REPORTING_SITE, reportingSite.get()))
+              .build();
+    }
+    return Job.builder()
+        .setJobKey(JobKey.newBuilder().setJobRequestId(id).build())
+        .setJobProcessingTimeout(Duration.ofSeconds(3600))
+        .setRequestInfo(requestInfo)
+        .setCreateTime(REQUEST_RECEIVED_AT)
+        .setUpdateTime(REQUEST_UPDATED_AT)
+        .setProcessingStartTime(Optional.of(REQUEST_PROCESSING_STARTED_AT))
+        .setJobStatus(JobStatus.IN_PROGRESS)
+        .setNumAttempts(0)
+        .build();
+  }
+
   private static final class TestEnv extends AbstractModule {
 
     OutputDomainProcessorHelper helper = new OutputDomainProcessorHelper();
@@ -2186,13 +2256,13 @@ public class ConcurrentAggregationProcessorTest {
         @DomainOptional Boolean domainOptional) {
       return helper.isAvroOutputDomainProcessor()
           ? new AvroOutputDomainProcessor(
-              blockingThreadPool,
-              nonBlockingThreadPool,
-              blobStorageClient,
-              avroOutputDomainReaderFactory,
-              stopwatchRegistry,
-              domainOptional,
-              enableThresholding)
+          blockingThreadPool,
+          nonBlockingThreadPool,
+          blobStorageClient,
+          avroOutputDomainReaderFactory,
+          stopwatchRegistry,
+          domainOptional,
+          enableThresholding)
           : new TextOutputDomainProcessor(
               blockingThreadPool,
               nonBlockingThreadPool,

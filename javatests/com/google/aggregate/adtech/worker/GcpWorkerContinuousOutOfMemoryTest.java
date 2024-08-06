@@ -77,7 +77,7 @@ public class GcpWorkerContinuousOutOfMemoryTest {
             "%s/test-outputs/OOM_test_output_1.avro.result", SmokeTestBase.KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest1 =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -101,7 +101,7 @@ public class GcpWorkerContinuousOutOfMemoryTest {
             "%s/test-outputs/OOM_test_output_2.avro.result", SmokeTestBase.KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest2 =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),

@@ -21,7 +21,6 @@ java_test(
     srcs = ["LocalAvroResultFileWriterTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/testing:avro_reports_file_reader",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
         "//java/com/google/aggregate/adtech/worker/writer",
         "//java/com/google/aggregate/adtech/worker/writer/avro",

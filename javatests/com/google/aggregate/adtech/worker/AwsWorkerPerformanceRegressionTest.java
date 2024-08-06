@@ -98,7 +98,7 @@ public class AwsWorkerPerformanceRegressionTest {
               "test-data/%s/test-outputs/500k_report_%s_500k_domain_output.avro",
               KOKORO_BUILD_ID, i);
       CreateJobRequest createJobRequest =
-          AwsWorkerContinuousTestHelper.createJobRequest(
+          AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
               getTestDataBucket(),
               inputKey,
               getTestDataBucket(),
@@ -141,7 +141,7 @@ public class AwsWorkerPerformanceRegressionTest {
               "test-data/%s/test-outputs/500k_report_%s_500k_domain_warmup_output.avro",
               KOKORO_BUILD_ID, i);
       CreateJobRequest createJobRequest =
-          AwsWorkerContinuousTestHelper.createJobRequest(
+          AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
               getTestDataBucket(),
               inputKey,
               getTestDataBucket(),
@@ -194,7 +194,7 @@ public class AwsWorkerPerformanceRegressionTest {
               "test-data/%s/test-outputs/500k_report_%s_500k_domain_transient_output.avro",
               KOKORO_BUILD_ID, i);
       CreateJobRequest createJobRequest =
-          AwsWorkerContinuousTestHelper.createJobRequest(
+          AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
               getTestDataBucket(),
               inputKey,
               getTestDataBucket(),

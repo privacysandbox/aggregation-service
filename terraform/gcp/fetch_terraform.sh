@@ -80,8 +80,8 @@ frontend_service_jar = "../../jars/FrontendServiceHttpCloudFunction_${VERSION}.j
 worker_scale_in_jar  = "../../jars/WorkerScaleInCloudFunction_${VERSION}.jar"
 
 # Coordinator service accounts to impersonate for authorization and authentication
-coordinator_a_impersonate_service_account = "a-opallowedusr@ps-msmt-coord-prd-gg-svcacc.iam.gserviceaccount.com"
-coordinator_b_impersonate_service_account = "b-opallowedusr@ps-msmt-coord-prd-gg-svcacc.iam.gserviceaccount.com"
+coordinator_a_impersonate_service_account = "a-opallowedusr@ps-msmt-coord-prd-g3p-svcacc.iam.gserviceaccount.com"
+coordinator_b_impersonate_service_account = "b-opallowedusr@ps-prod-msmt-type2-e541.iam.gserviceaccount.com"
 
 EOT
 
