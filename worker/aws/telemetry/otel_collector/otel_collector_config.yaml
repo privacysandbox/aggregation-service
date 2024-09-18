@@ -37,11 +37,19 @@ processors:
       include:
         match_type: strict
         metric_names: ${file:metrics.yaml}
+  filter/logs:
+    logs:
+      include:
+        severity_number:
+          min: ${MIN_LOG_LEVEL}
   batch/traces:
     timeout: 1s
     send_batch_size: 1
   batch/metrics:
     timeout: 60s
+  batch/logging:
+    timeout: 60s
+    send_batch_size: 1
 
 exporters:
   awsxray:
@@ -50,6 +58,9 @@ exporters:
     namespace: ${ENV_NAME}
     resource_to_telemetry_conversion:
       enabled: true
+  awscloudwatchlogs:
+    log_group_name: "/aws/aggregate-service/logs"
+    log_stream_name: ${ENV_NAME}
 
 service:
   pipelines:
@@ -62,3 +73,7 @@ service:
       receivers: [otlp]
       processors: [batch/metrics,filter/metrics]
       exporters: [awsemf]
+    logs:
+      receivers: [otlp]
+      processors: [batch/logging, filter/logs]
+      exporters: [awscloudwatchlogs]

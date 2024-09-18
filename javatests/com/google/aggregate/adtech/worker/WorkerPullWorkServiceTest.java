@@ -32,6 +32,7 @@ import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
+import com.google.aggregate.adtech.worker.Annotations.InstanceId;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
@@ -46,6 +47,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
+import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
 import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
 import com.google.scp.operator.cpio.jobclient.JobClient;
 import com.google.scp.operator.cpio.jobclient.model.Job;
@@ -289,6 +291,9 @@ public class WorkerPullWorkServiceTest {
 
       // Otel collector
       install(new OtlpJsonLoggingOTelConfigurationModule());
+      bind(boolean.class).annotatedWith(EnableOTelLogs.class).toInstance(false);
+      bind(String.class).annotatedWith(InstanceId.class).toInstance("");
+
       bind(Boolean.class).annotatedWith(EnableStackTraceInResponse.class).toInstance(true);
       bind(Integer.class).annotatedWith(MaxDepthOfStackTrace.class).toInstance(3);
     }

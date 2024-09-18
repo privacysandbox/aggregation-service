@@ -135,5 +135,11 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface CustomForkJoinThreadPool {}
 
+  /** Annotation for cloud instance id. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface InstanceId {}
+
   private Annotations() {}
 }

@@ -30,6 +30,7 @@ import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUploa
 import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
+import com.google.aggregate.adtech.worker.Annotations.InstanceId;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
@@ -59,6 +60,7 @@ import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
+import com.google.cloud.MetadataConfig;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -67,6 +69,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
 import com.google.privacysandbox.otel.Annotations.GrpcOtelCollectorEndpoint;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.Annotations.GcsEndpointUrl;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorARoleArn;
@@ -347,8 +350,8 @@ public final class AggregationWorkerModule extends AbstractModule {
 
     // Parameter to set exception cache. This is a test only flag.
     bind(Long.class)
-            .annotatedWith(ExceptionCacheEntryTtlSec.class)
-            .toInstance(args.getExceptionCacheEntryTtlSec());
+        .annotatedWith(ExceptionCacheEntryTtlSec.class)
+        .toInstance(args.getExceptionCacheEntryTtlSec());
 
     // Response related flags
     bind(boolean.class)
@@ -366,6 +369,7 @@ public final class AggregationWorkerModule extends AbstractModule {
 
     // Otel exporter
     install(args.getOTelExporterSelector().getOTelConfigurationModule());
+    bind(boolean.class).annotatedWith(EnableOTelLogs.class).toInstance(args.isOTelLogsEnabled());
   }
 
   @Provides
@@ -421,5 +425,11 @@ public final class AggregationWorkerModule extends AbstractModule {
   @CustomForkJoinThreadPool
   ListeningExecutorService provideCustomForkJoinThreadPool() {
     return MoreExecutors.listeningDecorator(new ForkJoinPool(args.getNonBlockingThreadPoolSize()));
+  }
+
+  @Provides
+  @InstanceId
+  String provideInstanceID() {
+    return MetadataConfig.getInstanceId();
   }
 }

@@ -18,13 +18,17 @@ package com.google.privacysandbox.otel;
 
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
 import com.google.privacysandbox.otel.Annotations.GrpcOtelCollectorEndpoint;
-import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.contrib.awsxray.AwsXrayIdGenerator;
+import io.opentelemetry.exporter.otlp.logs.OtlpGrpcLogRecordExporter;
 import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
 import io.opentelemetry.exporter.otlp.trace.OtlpGrpcSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.OpenTelemetrySdkBuilder;
 import io.opentelemetry.sdk.common.Clock;
+import io.opentelemetry.sdk.logs.SdkLoggerProvider;
+import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.export.MetricReader;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
@@ -43,6 +47,7 @@ public final class OtlpGrpcOtelConfigurationModule extends OTelConfigurationModu
   @Singleton
   OTelConfiguration provideOtelConfig(
       @GrpcOtelCollectorEndpoint String collectorEndpoint,
+      @EnableOTelLogs Boolean enableOTelLogs,
       Duration duration,
       Resource resource,
       Clock clock) {
@@ -68,11 +73,24 @@ public final class OtlpGrpcOtelConfigurationModule extends OTelConfigurationModu
             .setClock(clock)
             .registerMetricReader(metricReader)
             .build();
-    OpenTelemetry oTel =
+
+    OpenTelemetrySdkBuilder oTel =
         OpenTelemetrySdk.builder()
             .setMeterProvider(sdkMeterProvider)
-            .setTracerProvider(sdkTracerProvider)
-            .build();
-    return new OTelConfigurationImpl(oTel);
+            .setTracerProvider(sdkTracerProvider);
+    if (enableOTelLogs) {
+      SdkLoggerProvider sdkLoggerProvider =
+          SdkLoggerProvider.builder()
+              .setResource(resource)
+              .addLogRecordProcessor(
+                  BatchLogRecordProcessor.builder(
+                          OtlpGrpcLogRecordExporter.builder()
+                              .setEndpoint(collectorEndpoint)
+                              .build())
+                      .build())
+              .build();
+      oTel.setLoggerProvider(sdkLoggerProvider);
+    }
+    return new OTelConfigurationImpl(oTel.build());
   }
 }

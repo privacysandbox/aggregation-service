@@ -322,6 +322,11 @@ public class AggregationWorkerArgs {
   private String grpcCollectorEndpoint = "http://localhost:4317";
 
   @Parameter(
+      names = "--otel_logs_enabled",
+      description = "Flag to enable the otel to export the logs.")
+  private boolean otelLogsEnabled = false;
+
+  @Parameter(
       names = "--return_stack_trace",
       description =
           "Flag to allow stackTrace to be added to the resultInfo if there are any exceptions.")
@@ -348,14 +353,14 @@ public class AggregationWorkerArgs {
   private long outputShardFileSizeBytes = 100_000_000L; // 100MB
 
   @Parameter(
-      names = "--test_encoded_keyset_handle",
+      names = "--encoded_keyset_handle",
       description =
           "Optional base64 encoded string that represents the keyset handle to retrieve an Aead."
               + " This is for coordinatorA if multi-party.")
   private String testEncodedKeysetHandle = "";
 
   @Parameter(
-      names = "--test_coordinator_b_encoded_keyset_handle",
+      names = "--coordinator_b_encoded_keyset_handle",
       description =
           "Optional base64 encoded string that represents the keyset handle to retrieve an Aead for"
               + " coordinatorB.")
@@ -611,6 +616,10 @@ public class AggregationWorkerArgs {
 
   String getGrpcCollectorEndpoint() {
     return grpcCollectorEndpoint;
+  }
+
+  boolean isOTelLogsEnabled() {
+    return otelLogsEnabled;
   }
 
   public boolean isEnableReturningStackTraceInResponse() {

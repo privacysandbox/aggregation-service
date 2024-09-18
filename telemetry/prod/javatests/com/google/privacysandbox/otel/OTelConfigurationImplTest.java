@@ -25,14 +25,19 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
 import io.opentelemetry.sdk.common.Clock;
+import io.opentelemetry.sdk.logs.SdkLoggerProvider;
+import io.opentelemetry.sdk.logs.data.LogRecordData;
+import io.opentelemetry.sdk.logs.export.SimpleLogRecordProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.data.DoublePointData;
 import io.opentelemetry.sdk.metrics.data.LongPointData;
 import io.opentelemetry.sdk.metrics.data.MetricData;
 import io.opentelemetry.sdk.resources.Resource;
+import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter;
 import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
@@ -56,6 +61,7 @@ public final class OTelConfigurationImplTest {
   private final Resource RESOURCE = Resource.getDefault();
   private InMemorySpanExporter spanExporter;
   private InMemoryMetricReader metricReader;
+  private InMemoryLogRecordExporter logRecordExporter;
   private OTelConfiguration oTelConfigurationImpl;
   private OpenTelemetry openTelemetry;
 
@@ -82,11 +88,20 @@ public final class OTelConfigurationImplTest {
             .registerMetricReader(metricReader)
             .build();
 
+    // Setup log provider
+    logRecordExporter = InMemoryLogRecordExporter.create();
+    SdkLoggerProvider sdkLogProvider =
+        SdkLoggerProvider.builder()
+            .addLogRecordProcessor(SimpleLogRecordProcessor.create(logRecordExporter))
+            .setResource(RESOURCE)
+            .build();
+
     // Setup OpenTelemetry object
     openTelemetry =
         OpenTelemetrySdk.builder()
             .setTracerProvider(sdkTracerProvider)
             .setMeterProvider(sdkMeterProvider)
+            .setLoggerProvider(sdkLogProvider)
             .build();
 
     oTelConfigurationImpl = new OTelConfigurationImpl(openTelemetry);
@@ -166,7 +181,8 @@ public final class OTelConfigurationImplTest {
           spy(
               new OTelConfigurationImplHelper(
                   openTelemetry.getMeter(OTelConfigurationImpl.class.getName()),
-                  openTelemetry.getTracer(OTelConfigurationImpl.class.getName())));
+                  openTelemetry.getTracer(OTelConfigurationImpl.class.getName()),
+                  openTelemetry.getLogsBridge().get(OTelConfigurationImpl.class.getName())));
       when(helper.getUsedMemoryRatio()).thenReturn(getMemoryValues.get(i));
       OTelConfigurationImpl mockOTelConfigurationImpl = new OTelConfigurationImpl(helper);
       mockOTelConfigurationImpl.createProdMemoryUtilizationRatioGauge();
@@ -364,5 +380,29 @@ public final class OTelConfigurationImplTest {
     // It should end with 0s because it is in seconds and converts to nanoseconds.
     assertThat((long) startEpoch.get(0) % 1000000000).isEqualTo(0);
     assertThat((long) endEpoch.get(0) % 1000000000).isEqualTo(0);
+  }
+
+  @Test
+  public void createProdLogs() {
+    oTelConfigurationImpl.writeProdLog("test", Severity.INFO);
+
+    List<LogRecordData> logItems = logRecordExporter.getFinishedLogRecordItems();
+
+    // Only one log is written.
+    assertThat(logItems.size()).isEqualTo(1);
+    assertThat(logItems.get(0).getSeverity()).isEqualTo(Severity.INFO);
+    // It should end with 0s because it is in seconds and converts to nanoseconds.
+    assertThat(logItems.get(0).getObservedTimestampEpochNanos() % 1000000000).isEqualTo(0);
+    assertThat(logItems.get(0).getBody().asString()).isEqualTo("test");
+  }
+
+  @Test
+  public void createDebugLogs() {
+    oTelConfigurationImpl.writeDebugLog("test", Severity.INFO);
+
+    List<LogRecordData> logItems = logRecordExporter.getFinishedLogRecordItems();
+
+    // No logs should be generated because this is prod and no debug logs should be written.
+    assertThat(logItems.size()).isEqualTo(0);
   }
 }

@@ -63,7 +63,7 @@ public class GcpWorkerAutoScalingTest {
   @Test
   public void autoscalingE2ETest() throws Exception {
     String inputDataPrefix =
-        String.format("%s/test-inputs/100k_auto_scale_test_input.avro", KOKORO_BUILD_ID);
+        String.format("%s/test-inputs/100k_auto_scale_test_input/", KOKORO_BUILD_ID);
     String domainDataPrefix =
         String.format("%s/test-inputs/100k_auto_scale_test_domain.avro", KOKORO_BUILD_ID);
 

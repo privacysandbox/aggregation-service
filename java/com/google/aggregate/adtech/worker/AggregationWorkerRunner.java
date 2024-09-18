@@ -32,7 +32,6 @@ final class AggregationWorkerRunner {
 
   public static void main(String[] args) {
     logger.info("Worker Args: \n" + String.join("\n", args));
-    logger.info("Worker Max Heap Size (MiB): " + Runtime.getRuntime().maxMemory() / (1024 * 1024));
 
     AggregationWorkerArgs cliArgs = new AggregationWorkerArgs();
     JCommander.newBuilder().allowParameterOverwriting(true).addObject(cliArgs).build().parse(args);
@@ -48,23 +47,27 @@ final class AggregationWorkerRunner {
             logger.error("Failure in the Aggregation Worker. Exiting the enclave process.");
             System.exit(1);
           }
+
           @Override
-          public void healthy(){
+          public void healthy() {
             logger.info("The aggregation worker is healthy.");
           }
-        }, MoreExecutors.directExecutor());
-    Runtime.getRuntime().addShutdownHook(new Thread() {
-      public void run() {
-        // Give the service some time to stop to ensure that we are responsive to shutdown
-        // requests.
-        try {
-          workerServiceManager.stopAsync().awaitStopped(Duration.ofMinutes(1));
-        } catch (TimeoutException timeout) {
-          // Stopping timed out
-          logger.error("Unable to stop the worker service: " + timeout);
-        }
-      }
-    });
+        },
+        MoreExecutors.directExecutor());
+    Runtime.getRuntime()
+        .addShutdownHook(
+            new Thread() {
+              public void run() {
+                // Give the service some time to stop to ensure that we are responsive to shutdown
+                // requests.
+                try {
+                  workerServiceManager.stopAsync().awaitStopped(Duration.ofMinutes(1));
+                } catch (TimeoutException timeout) {
+                  // Stopping timed out
+                  logger.error("Unable to stop the worker service: " + timeout);
+                }
+              }
+            });
     workerServiceManager.startAsync();
   }
 }

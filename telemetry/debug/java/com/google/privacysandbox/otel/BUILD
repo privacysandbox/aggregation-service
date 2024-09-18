@@ -31,6 +31,7 @@ java_library(
         "//java/external:opentelemetry_exporter_otlp",
         "//java/external:opentelemetry_sdk",
         "//java/external:opentelemetry_sdk_common",
+        "//java/external:opentelemetry_sdk_logs",
         "//java/external:opentelemetry_sdk_metrics",
         "//java/external:opentelemetry_sdk_testing",
         "//java/external:opentelemetry_sdk_trace",

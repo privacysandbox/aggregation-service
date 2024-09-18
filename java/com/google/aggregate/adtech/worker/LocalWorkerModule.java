@@ -29,6 +29,7 @@ import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
+import com.google.aggregate.adtech.worker.Annotations.InstanceId;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
@@ -67,6 +68,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
+import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
 import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerPath;
@@ -114,6 +116,7 @@ public final class LocalWorkerModule extends AbstractModule {
     }
     install(new WorkerModule());
     install(new OtlpJsonLoggingOTelConfigurationModule());
+    bind(boolean.class).annotatedWith(EnableOTelLogs.class).toInstance(false);
     bind(PrivacyBudgetingServiceBridge.class).to(PrivacyBudgetingSelector.UNLIMITED.getBridge());
     install(new PrivacyBudgetKeyGeneratorModule());
     bind(StopwatchExporter.class).to(NoOpStopwatchExporter.class);
@@ -235,5 +238,11 @@ public final class LocalWorkerModule extends AbstractModule {
   ListeningExecutorService provideCustomForkJoinThreadPool() {
     return MoreExecutors.listeningDecorator(
         new ForkJoinPool(localWorkerArgs.getNonBlockingThreadPoolSize()));
+  }
+
+  @Provides
+  @InstanceId
+  String provideInstanceID() {
+    return "local";
   }
 }

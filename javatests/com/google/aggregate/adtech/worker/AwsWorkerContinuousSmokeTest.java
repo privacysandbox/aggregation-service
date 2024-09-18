@@ -121,7 +121,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createJobE2ETest() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_1.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-inputs/10k_test_input_1/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/10k_test_domain_1.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -148,8 +148,6 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             getOutputFileName(outputKey));
 
-    // TODO(b/228874552) assert that the output contains more values than just the output domain
-    // values
     assertThat(aggregatedFacts.size()).isGreaterThan(10);
   }
 
@@ -161,7 +159,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createJobE2ETestWithReportingSite() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_reporting_site.avro",
+            "%s/%s/test-inputs/10k_test_input_reporting_site/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -312,7 +310,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createNotDebugJobE2EReportDebugEnabledTest() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_attribution_report_test_input_debug.avro",
+            "%s/%s/test-inputs/10k_attribution_report_test_input_debug/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -359,7 +357,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createDebugJobE2EReportDebugModeEnabledTest() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_attribution_report_test_input_debug_enabled_nondebug_run.avro",
+            "%s/%s/test-inputs/10k_attribution_report_test_input_debug_enabled_nondebug_run/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -411,7 +409,7 @@ public class AwsWorkerContinuousSmokeTest {
       throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-inputs/10k_test_input_2/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/10k_test_domain_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -481,7 +479,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createJobE2EAggregateReportingDebugTest() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_attribution_debug.avro",
+            "%s/%s/test-inputs/10k_test_input_attribution_debug/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -527,7 +525,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_3.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-inputs/10k_test_input_3/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/10k_test_domain_3.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -575,7 +573,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_fledge.avro",
+            "%s/%s/test-inputs/10k_test_input_fledge/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -624,7 +622,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_shared_storage.avro",
+            "%s/%s/test-inputs/10k_test_input_shared_storage/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -662,7 +660,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createDebugJobE2ETestPrivacyBudgetExhausted() throws Exception {
     String inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_attribution_report_test_input_debug.avro",
+            "%s/%s/test-inputs/10k_attribution_report_test_input_debug/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     String domainKey =
         String.format(
@@ -714,7 +712,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/30k_test_input.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-inputs/30k_test_input/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/30k_test_domain.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -759,7 +757,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createJobE2ETestWithInvalidReports() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_invalid_key.avro",
+            "%s/%s/test-inputs/10k_test_input_invalid_key/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(

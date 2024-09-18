@@ -16,6 +16,11 @@
 
 package com.google.aggregate.adtech.worker.util;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.UnsignedLong;
+import com.google.errorprone.annotations.Var;
+import com.google.scp.operator.cpio.jobclient.model.Job;
+
 /** Static utilities relating to Job. */
 public final class JobUtils {
 
@@ -35,6 +40,25 @@ public final class JobUtils {
   public static final String JOB_PARAM_ATTRIBUTION_REPORT_TO = "attribution_report_to";
 
   public static final String JOB_PARAM_REPORTING_SITE = "reporting_site";
+
+  /**
+   * Returns the filtering IDs from the job.
+   *
+   * <p>If the filtering IDs are not set, returns a set containing only 0.
+   */
+  public static ImmutableSet<UnsignedLong> getFilteringIdsFromJob(Job job) {
+    @Var
+    ImmutableSet<UnsignedLong> filteringIds =
+        NumericConversions.getUnsignedLongsFromString(
+            job.requestInfo().getJobParametersMap().get(JOB_PARAM_FILTERING_IDS),
+            JOB_PARAM_FILTERING_IDS_DELIMITER);
+
+    if (filteringIds.isEmpty()) {
+      filteringIds = ImmutableSet.of(UnsignedLong.ZERO);
+    }
+
+    return filteringIds;
+  }
 
   private JobUtils() {}
 }

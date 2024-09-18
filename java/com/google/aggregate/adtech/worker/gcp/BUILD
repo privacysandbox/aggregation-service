@@ -70,6 +70,7 @@ java_library(
         "//java/external:clients_jobclient_model",
         "//java/external:clients_lifecycleclient_local",
         "//java/external:clients_metricclient_gcp",
+        "//java/external:gcp_core",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jackson_databind",

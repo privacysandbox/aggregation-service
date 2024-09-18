@@ -79,7 +79,6 @@ public class AggregationEngineFactory {
   /**
    * Creates AggregationEngine object.
    * @deprecated Deprecated in favor of the {@code create(filteringIds)}.
-   * <p>TODO(b/292494729): Remove this method with Privacy Budget Labels implementation.
    */
   public AggregationEngine create() {
     return create(ImmutableSet.of());

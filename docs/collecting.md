@@ -26,6 +26,17 @@ for examples.
     - Reporting URL:
       `http://adtech.localhost/.well-known/attribution-reporting/debug/report-aggregate-attribution`
 
+The Private Aggregation API is used to support reports triggered within a Protected Audience or
+Shared Storage context. The predefined endpoints for those two use cases are defined
+[here](https://github.com/patcg-individual-drafts/private-aggregation-api/blob/main/README.md#reports).
+
+1.  Protected Audience
+    -   Reporting URL:
+        `http://adtech.localhost/.well-known/private-aggregation/report-protected-audience`
+1.  Shared Storage
+    -   Reporting URL:
+        `http://adtech.localhost/.well-known/private-aggregation/report-shared-storage`
+
 _The `.well-known/...` paths are predefined paths which can not be customized. To collect reports,
 you need to run an endpoint that can respond to POST requests on the above paths._
 

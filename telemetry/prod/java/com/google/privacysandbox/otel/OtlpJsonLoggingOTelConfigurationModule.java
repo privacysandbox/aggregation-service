@@ -18,11 +18,15 @@ package com.google.privacysandbox.otel;
 
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import io.opentelemetry.api.OpenTelemetry;
+import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
+import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingLogRecordExporter;
 import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingMetricExporter;
 import io.opentelemetry.exporter.logging.otlp.OtlpJsonLoggingSpanExporter;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.OpenTelemetrySdkBuilder;
 import io.opentelemetry.sdk.common.Clock;
+import io.opentelemetry.sdk.logs.SdkLoggerProvider;
+import io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
 import io.opentelemetry.sdk.resources.Resource;
@@ -34,7 +38,8 @@ import java.time.Duration;
 public final class OtlpJsonLoggingOTelConfigurationModule extends OTelConfigurationModule {
   @Provides
   @Singleton
-  OTelConfiguration provideOtelConfig(Duration duration, Resource resource, Clock clock) {
+  OTelConfiguration provideOtelConfig(
+      @EnableOTelLogs Boolean enableOTelLogs, Duration duration, Resource resource, Clock clock) {
     PeriodicMetricReader periodicMetricReader =
         PeriodicMetricReader.builder(OtlpJsonLoggingMetricExporter.create())
             .setInterval(duration)
@@ -53,11 +58,20 @@ public final class OtlpJsonLoggingOTelConfigurationModule extends OTelConfigurat
             .setClock(clock)
             .registerMetricReader(periodicMetricReader)
             .build();
-    OpenTelemetry oTel =
+    OpenTelemetrySdkBuilder oTel =
         OpenTelemetrySdk.builder()
             .setMeterProvider(sdkMeterProvider)
-            .setTracerProvider(sdkTracerProvider)
-            .build();
-    return new OTelConfigurationImpl(oTel);
+            .setTracerProvider(sdkTracerProvider);
+    if (enableOTelLogs) {
+      SdkLoggerProvider sdkLoggerProvider =
+          SdkLoggerProvider.builder()
+              .setResource(resource)
+              .addLogRecordProcessor(
+                  BatchLogRecordProcessor.builder(OtlpJsonLoggingLogRecordExporter.create())
+                      .build())
+              .build();
+      oTel.setLoggerProvider(sdkLoggerProvider);
+    }
+    return new OTelConfigurationImpl(oTel.build());
   }
 }

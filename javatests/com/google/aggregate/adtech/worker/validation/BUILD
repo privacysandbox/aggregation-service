@@ -117,11 +117,16 @@ java_test(
     srcs = ["ReportPrivacyBudgetKeyFieldsValidatorTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/adtech/worker/validation",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
+        "//java/external:acai",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
         "//java/external:google_truth8",
+        "//java/external:guava",
+        "//java/external:guice",
     ],
 )
 

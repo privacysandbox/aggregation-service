@@ -122,6 +122,7 @@ PROD_ENCLAVE_ARGS = [
     "--streaming_output_domain_processing_enabled",
     "--parallel_fact_noising_enabled",
     "--labeled_privacy_budget_keys_enabled",
+    "--otel_logs_enabled",
 ]
 # Check the documentation for the worker_aws_deployment macro for details on
 # what is available in this package.

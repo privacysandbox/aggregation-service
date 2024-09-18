@@ -104,7 +104,6 @@ public class AggregationWorkerHermeticTest {
 
   @Before
   public void setUp() throws Exception {
-    // TODO[b/275585065]: Avoid using GlobalOpenTelemetry directly.
     OTelConfiguration.resetForTest();
     Path testWorkingDirPath = testWorkingDir.getRoot().toPath();
     stopwatchFile = testWorkingDirPath.resolve("stopwatches.txt");
@@ -498,7 +497,6 @@ public class AggregationWorkerHermeticTest {
     assertThat(factList).containsExactly(expectedFact);
   }
 
-  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingCustomizedAvroReport() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =
@@ -550,7 +548,6 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
-  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingSameKeyAvroReports() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =
@@ -628,7 +625,6 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
-  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingAllEmptyBytesReports() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =
@@ -676,7 +672,6 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
-  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingAvroReportsWithOneKeyEmpty() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =
@@ -726,7 +721,6 @@ public class AggregationWorkerHermeticTest {
                 .build());
   }
 
-  // TODO(b/260642993): Fix sharedInfo and encryption/decryption issues
   @Test
   public void localTestUsingAvroReportsWithSpecialBytes() throws Exception {
     ImmutableList<AvroReportRecord> avroReportRecords =

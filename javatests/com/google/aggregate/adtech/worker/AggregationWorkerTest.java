@@ -25,6 +25,7 @@ import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
+import com.google.aggregate.adtech.worker.Annotations.InstanceId;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
@@ -43,6 +44,7 @@ import com.google.common.util.concurrent.ServiceManager;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
 import com.google.privacysandbox.otel.OTelConfiguration;
 import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
 import com.google.scp.operator.cpio.jobclient.JobClient;
@@ -197,6 +199,9 @@ public class AggregationWorkerTest {
     protected void configure() {
       install(new WorkerModule());
       install(new OtlpJsonLoggingOTelConfigurationModule());
+      bind(boolean.class).annotatedWith(EnableOTelLogs.class).toInstance(false);
+      bind(String.class).annotatedWith(InstanceId.class).toInstance("");
+
       bind(ConstantJobClient.class).in(Singleton.class);
       bind(OneTimePullBackoff.class).in(Singleton.class);
       bind(NoopJobProcessor.class).in(Singleton.class);

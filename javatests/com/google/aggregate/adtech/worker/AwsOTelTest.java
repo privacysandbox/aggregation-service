@@ -31,6 +31,10 @@ import com.amazonaws.services.cloudwatch.model.Metric;
 import com.amazonaws.services.cloudwatch.model.MetricDataQuery;
 import com.amazonaws.services.cloudwatch.model.MetricDataResult;
 import com.amazonaws.services.cloudwatch.model.MetricStat;
+import com.amazonaws.services.logs.AWSLogs;
+import com.amazonaws.services.logs.AWSLogsClientBuilder;
+import com.amazonaws.services.logs.model.GetLogEventsRequest;
+import com.amazonaws.services.logs.model.GetLogEventsResult;
 import com.amazonaws.services.xray.AWSXRay;
 import com.amazonaws.services.xray.AWSXRayClientBuilder;
 import com.amazonaws.services.xray.model.GetTraceSummariesRequest;
@@ -202,6 +206,34 @@ public class AwsOTelTest {
 
     assertThat(prodTraceCount.get()).isEqualTo(1);
     assertThat(debugTraceCount.get()).isEqualTo(0);
+  }
+
+  @Test
+  public void e2eLogsTest() {
+    Date currentTime = new Date(System.currentTimeMillis());
+    Date searchStartTime =
+        new Date(System.currentTimeMillis() - 900 * 1000); // Check last 15 minutes
+    AWSLogs logsClient = AWSLogsClientBuilder.standard().withRegion("us-east-1").build();
+    GetLogEventsRequest getLogEventsRequest =
+        new GetLogEventsRequest()
+            .withStartTime(searchStartTime.getTime())
+            .withEndTime(currentTime.getTime())
+            .withLogGroupName("/aws/aggregate-service/logs")
+            .withLogStreamName(ENVIRONMENT_NAME);
+
+    GetLogEventsResult result = logsClient.getLogEvents(getLogEventsRequest);
+    StringBuilder allLogs = new StringBuilder();
+    result
+        .getEvents()
+        .forEach(
+            outputLogEvent -> {
+              allLogs.append(outputLogEvent.getMessage());
+            });
+
+    assertThat(result.getEvents().size()).isGreaterThan(1);
+    // Check if the log level is "INFO". The severity number of INFO is 9.
+    assertThat(allLogs.toString()).contains("\"severity_number\":9");
+    assertThat(allLogs.toString()).contains("Successfully pull a job");
   }
 
   private GetMetricDataRequest generateGetMetricDataRequest(String metricName) {

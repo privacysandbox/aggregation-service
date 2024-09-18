@@ -25,6 +25,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/validation:privacy_budget_key_validator",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator_module",
         "//java/external:guava",
         "//java/external:guice",

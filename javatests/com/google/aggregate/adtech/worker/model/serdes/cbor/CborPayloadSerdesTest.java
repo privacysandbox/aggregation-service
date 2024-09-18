@@ -19,6 +19,8 @@ package com.google.aggregate.adtech.worker.model.serdes.cbor;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.Fact;
 import com.google.aggregate.adtech.worker.model.Payload;
@@ -26,10 +28,14 @@ import com.google.common.io.ByteSource;
 import com.google.common.primitives.UnsignedLong;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
+import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
@@ -57,27 +63,79 @@ public class CborPayloadSerdesTest {
   }
 
   @Test
+  public void testDeserializeGoldenReports() throws Exception {
+    // Get the space-separated paths to Chromium's golden reports for
+    // Attribution Reporting and Private Aggregation.
+    String paths_from_env_private_aggregation =
+        System.getenv("CHROMIUM_LATEST_GOLDENS_PRIVATE_AGGREGATION");
+    String paths_from_env_attribution_reporting =
+        System.getenv("CHROMIUM_LATEST_GOLDENS_ATTRIBUTION_REPORTING");
+
+    assertThat(paths_from_env_private_aggregation).isNotNull();
+    assertThat(paths_from_env_attribution_reporting).isNotNull();
+
+    List<String> golden_paths = new ArrayList<>();
+    golden_paths.addAll(Arrays.asList(paths_from_env_private_aggregation.split(" ")));
+    golden_paths.addAll(Arrays.asList(paths_from_env_attribution_reporting.split(" ")));
+
+    for (String golden_path : golden_paths) {
+      Path path = Path.of(golden_path);
+      File file = path.toFile();
+
+      assertThat(file.exists()).isTrue();
+
+      String jsonString = Files.readString(path);
+      JsonNode parsed = new ObjectMapper().readTree(jsonString);
+
+      // These JSON files contain an array of base64 CBOR strings.
+      if (file.getName().endsWith("_cleartext_payloads.json")) {
+        for (var it = parsed.iterator(); it.hasNext(); ) {
+          JsonNode payload_obj = it.next();
+          byte[] payload_bytes = payload_obj.binaryValue();
+          Optional<Payload> parsed_payload =
+              cborPayloadSerdes.convert(ByteSource.wrap(payload_bytes));
+          assertThat(parsed_payload).isPresent();
+        }
+
+      } else {
+        for (var it = parsed.at("/aggregation_service_payloads").iterator(); it.hasNext(); ) {
+          JsonNode payload_obj = it.next();
+          // Make sure that we can parse the payload. Note that the "payload"
+          // field is encrypted; this is why the "*_cleartext_payloads.json"
+          // files exist.
+          if (payload_obj.has("/debug_cleartext_payload")) {
+            byte[] debug_payload = payload_obj.at("/debug_cleartext_payload").binaryValue();
+            Optional<Payload> parsed_debug_payload =
+                cborPayloadSerdes.convert(ByteSource.wrap(debug_payload));
+            assertThat(parsed_debug_payload).isPresent();
+          }
+        }
+      }
+    }
+  }
+
+  @Test
   public void testDeserializeFromCborBytes_debugReport1() throws Exception {
     Payload expectedPayload =
-            Payload.builder()
-                    .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
-                    .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x3)).setValue(4).build())
-                    .build();
+        Payload.builder()
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x3)).setValue(4).build())
+            .build();
 
     readCborBytesFromFileAndAssert(
-            Path.of(System.getenv("CBOR_DEBUG_REPORT_1_LOCATION")), expectedPayload);
+        Path.of(System.getenv("CBOR_DEBUG_REPORT_1_LOCATION")), expectedPayload);
   }
 
   @Test
   public void testDeserializeFromCborBytes_debugReport2() throws Exception {
     Payload expectedPayload =
-            Payload.builder()
-                    .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
-                    .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x0)).setValue(0).build())
-                    .build();
+        Payload.builder()
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x1)).setValue(2).build())
+            .addFact(Fact.builder().setBucket(BigInteger.valueOf(0x0)).setValue(0).build())
+            .build();
 
     readCborBytesFromFileAndAssert(
-            Path.of(System.getenv("CBOR_DEBUG_REPORT_2_LOCATION")), expectedPayload);
+        Path.of(System.getenv("CBOR_DEBUG_REPORT_2_LOCATION")), expectedPayload);
   }
 
   @Test

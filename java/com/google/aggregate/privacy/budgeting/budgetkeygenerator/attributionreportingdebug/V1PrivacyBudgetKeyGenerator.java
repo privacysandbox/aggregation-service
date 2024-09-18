@@ -23,14 +23,22 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 
+import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.isFieldNonEmpty;
+
 /**
  * Generates V1 PrivacyBudgetKey. This version of Budget Key is internal to the service. It is
  * mapped to the report versions in {@link PrivacyBudgetKeyGeneratorModule}.
- *
- * <p>TODO(b/321719045): Deprecate V1 version of Privacy Budget Key when the corresponding report
- * versions are phased out.
  */
 public class V1PrivacyBudgetKeyGenerator implements PrivacyBudgetKeyGenerator {
+
+  @Override
+  public boolean validatePrivacyBudgetKeyInput(PrivacyBudgetKeyInput privacyBudgetKeyInput) {
+    return isFieldNonEmpty(privacyBudgetKeyInput.sharedInfo().reportingOrigin())
+        && isFieldNonEmpty(privacyBudgetKeyInput.sharedInfo().destination())
+        && isFieldNonEmpty(privacyBudgetKeyInput.sharedInfo().version())
+        && isFieldNonEmpty(privacyBudgetKeyInput.sharedInfo().api())
+        && privacyBudgetKeyInput.sharedInfo().scheduledReportTime() != null;
+  }
 
   @Override
   public String generatePrivacyBudgetKey(PrivacyBudgetKeyInput privacyBudgetKeyInput) {

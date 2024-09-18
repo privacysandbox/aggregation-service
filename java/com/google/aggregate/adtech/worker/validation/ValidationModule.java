@@ -21,9 +21,6 @@ import com.google.inject.multibindings.Multibinder;
 
 /**
  * Guice modules that adds validations to perform on {@code Report}.
- *
- * <p>TODO(b/228405849) add back ReportingOriginIsDomainValidator when reporting origin format is
- * better understood
  */
 public final class ValidationModule extends AbstractModule {
 

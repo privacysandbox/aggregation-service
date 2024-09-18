@@ -32,6 +32,9 @@ import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ImpersonatedCredentials;
+import com.google.cloud.logging.v2.LoggingClient;
+import com.google.cloud.logging.v2.LoggingClient.ListLogEntriesPage;
+import com.google.cloud.logging.v2.LoggingClient.ListLogEntriesPagedResponse;
 import com.google.cloud.monitoring.v3.MetricServiceClient;
 import com.google.cloud.monitoring.v3.MetricServiceClient.ListTimeSeriesPagedResponse;
 import com.google.cloud.storage.Storage;
@@ -42,6 +45,8 @@ import com.google.devtools.cloudtrace.v1.ListTracesRequest;
 import com.google.devtools.cloudtrace.v1.Trace;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
+import com.google.logging.v2.ListLogEntriesRequest;
+import com.google.logging.v2.LogEntry;
 import com.google.monitoring.v3.ListTimeSeriesRequest;
 import com.google.monitoring.v3.ListTimeSeriesRequest.TimeSeriesView;
 import com.google.monitoring.v3.ProjectName;
@@ -52,8 +57,11 @@ import com.google.scp.operator.cpio.blobstorageclient.gcp.GcsBlobStorageClient;
 import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
@@ -198,6 +206,47 @@ public final class GcpOTelTest {
 
     assertThat(prodTraceCount).isEqualTo(1);
     assertThat(debugTraceCount).isEqualTo(0);
+  }
+
+  @Test
+  public void e2eLogsTest() throws IOException {
+    // Search the log for the last 15 mins
+    String startTime = Instant.now().minus(15, ChronoUnit.MINUTES).toString();
+    String filter =
+        "projects/"
+            + projectName.getProject()
+            + "/logs/%2Fgcp%2Faggregate-service%2Flogs%2F"
+            + ENVIRONMENT_NAME
+            + " AND "
+            + "timestamp >="
+            + "\""
+            + startTime
+            + "\"";
+    StringBuilder allLogs = new StringBuilder();
+    List<String> logSeverities = new ArrayList();
+
+    try (LoggingClient loggingClient = LoggingClient.create()) {
+      ListLogEntriesRequest request =
+          ListLogEntriesRequest.newBuilder()
+              .addResourceNames("projects/" + projectName.getProject())
+              .setFilter(filter)
+              .setPageSize(1000)
+              .build();
+      final ListLogEntriesPagedResponse response = loggingClient.listLogEntries(request);
+      ListLogEntriesPage page = response.getPage();
+      while (page != null) {
+        for (LogEntry logEntry : page.iterateAll()) {
+          System.out.println(logEntry.getLogName());
+          logSeverities.add(logEntry.getSeverity().toString());
+          allLogs.append(logEntry.getTextPayload());
+        }
+        page = page.getNextPage();
+      }
+    }
+
+    // Check if the log level is "INFO".
+    assertThat(logSeverities.contains("INFO"));
+    assertThat(allLogs.toString()).contains("Successfully pull a job");
   }
 
   private ListTimeSeriesPagedResponse listAllMetrics(String metricType) throws IOException {

@@ -35,7 +35,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
 
-/** TODO(b/226499868): Add test for the LocalResultLogger for Standalone worker library */
 final class LocalResultLogger implements ResultLogger {
 
   private final LocalResultFileWriter localResultFileWriter;

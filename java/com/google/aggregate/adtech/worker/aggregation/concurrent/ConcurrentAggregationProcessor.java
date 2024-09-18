@@ -115,16 +115,11 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   public static final String JOB_PARAM_REPORTING_SITE = "reporting_site";
 
   private static final int NUM_CPUS = Runtime.getRuntime().availableProcessors();
-  // In aggregation service, reading is much faster than decryption, and most of the time, it waits
-  // for decryption to complete to continue reading. Therefore, set the number of read concurrent
-  // thread to NUM_CPUS / 4.
-  private static final int NUM_READ_THREADS = (int) Math.ceil((double) NUM_CPUS / 4);
+  private static final int NUM_READ_THREADS = NUM_CPUS;
   // Decryption is a CPU-bound operation so put more CPU resources here.
   private static final int NUM_PROCESS_THREADS = NUM_CPUS;
 
   // Buffer size for reading data on the same thread
-  // TODO(b/279061816): Research on optimal value for MAX_REPORTS_READ_BUFFER_SIZE and
-  // MAX_REPORTS_PROCESS_BUFFER_SIZE
   private final int MAX_REPORTS_READ_BUFFER_SIZE = 1000;
   // Buffer size for decrypting and aggregating data on the same thread
   private final int MAX_REPORTS_PROCESS_BUFFER_SIZE = 1000;
@@ -151,8 +146,6 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   private final boolean enablePrivacyBudgetKeyFiltering;
   private final OTelConfiguration oTelConfiguration;
   private final double defaultReportErrorThresholdPercentage;
-
-  // TODO(b/338219415): Reuse this flag to enable full streaming approach.
   private final Boolean streamingOutputDomainProcessing;
 
   @Inject
@@ -194,8 +187,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   }
 
   /**
-   * Processor responsible for performing aggregation. TODO: evaluate throwing unchecked exceptions
-   * here.
+   * Processor responsible for performing aggregation.
    */
   @Override
   public JobResult process(Job job)
@@ -271,8 +263,6 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
                 JobUtils.JOB_PARAM_FILTERING_IDS_DELIMITER);
       }
       AggregationEngine aggregationEngine = aggregationEngineFactory.create(filteringIds);
-      // TODO(b/218924983) Estimate report counts to enable failing early on report errors reaching
-      // threshold.
       ErrorSummaryAggregator errorAggregator =
           ErrorSummaryAggregator.createErrorSummaryAggregator(
               getInputReportCountFromJobParams(jobParams), reportErrorThresholdPercentage);
@@ -344,7 +334,6 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       throw new AggregationJobProcessException(
           INTERNAL_ERROR, "Internal Service Exception when processing reports.", e);
     } catch (ConcurrentShardReadException e) {
-      // TODO(b/197999001) report exception in some monitoring counter
       throw new AggregationJobProcessException(
           INPUT_DATA_READ_FAILED, "Exception while reading reports input data.");
     } catch (ValidationException e) {

@@ -65,7 +65,7 @@ public class AwsWorkerAutoScalingTest {
   // and almost no job waits in queue, which would not trigger auto-scaling.
   private static final String INPUT_DATA_PATH =
       String.format(
-          "%s/%s/test-inputs/100k_auto_scale_test_input.avro",
+          "%s/%s/test-inputs/100k_auto_scale_test_input/",
           TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
   private static final String INPUT_DOMAIN_PATH =
       String.format(
@@ -93,7 +93,6 @@ public class AwsWorkerAutoScalingTest {
     }
 
     // Check for scale-out to match the concurrentJobs
-    // TODO(b/251508750) Make job queue time deterministic.
     waitForScaleAction(true);
 
     // Wait for all jobs to complete

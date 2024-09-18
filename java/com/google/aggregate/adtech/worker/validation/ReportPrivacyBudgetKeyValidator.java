@@ -17,28 +17,65 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.REQUIRED_SHAREDINFO_FIELD_INVALID;
+import static com.google.aggregate.adtech.worker.util.JobUtils.getFilteringIdsFromJob;
 import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.isFieldNonEmpty;
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorFactory;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.UnsignedLong;
+import com.google.errorprone.annotations.Var;
+import com.google.inject.Inject;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import java.util.Optional;
 
 /** Validates that the Report's SharedInfo can generate valid Privacy Budget Key. */
 public final class ReportPrivacyBudgetKeyValidator implements ReportValidator {
 
+  private final PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory;
+
   @Override
-  public Optional<ErrorMessage> validate(Report report, Job unused) {
+  public Optional<ErrorMessage> validate(Report report, Job job) {
     if (isFieldNonEmpty(report.sharedInfo().api())) {
-      Optional<PrivacyBudgetKeyValidator> validator =
-          PrivacyBudgetKeyValidatorFactory.getPrivacyBudgetKeyValidator(
-              report.sharedInfo().api().get(), report.sharedInfo().version());
-      if (validator.isEmpty()) {
-        return createErrorMessage(REQUIRED_SHAREDINFO_FIELD_INVALID);
+      ImmutableSet<UnsignedLong> filteringIds = getFilteringIdsFromJob(job);
+
+      for (UnsignedLong filteringId : filteringIds) {
+        @Var Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator;
+        try {
+          privacyBudgetKeyGenerator =
+              privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(
+                  PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
+                      .setSharedInfo(report.sharedInfo())
+                      .setFilteringId(filteringId)
+                      .build());
+        } catch (IllegalArgumentException e) {
+          privacyBudgetKeyGenerator = Optional.empty();
+        }
+
+        if (privacyBudgetKeyGenerator.isEmpty()
+            || !privacyBudgetKeyGenerator
+                .get()
+                .validatePrivacyBudgetKeyInput(
+                    PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
+                        .setSharedInfo(report.sharedInfo())
+                        .setFilteringId(filteringId)
+                        .build())) {
+          return createErrorMessage(REQUIRED_SHAREDINFO_FIELD_INVALID);
+        }
       }
-      return validator.get().validatePrivacyBudgetKey(report.sharedInfo());
+
+      return Optional.empty();
     }
+
     return createErrorMessage(REQUIRED_SHAREDINFO_FIELD_INVALID);
+  }
+
+  @Inject
+  private ReportPrivacyBudgetKeyValidator(
+      PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory) {
+    this.privacyBudgetKeyGeneratorFactory = privacyBudgetKeyGeneratorFactory;
   }
 }

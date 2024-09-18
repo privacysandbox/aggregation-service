@@ -32,7 +32,6 @@ import java.util.concurrent.TimeoutException;
  * in tests and on demand dev tools.
  */
 public final class LocalAggregationWorkerRunner {
-  // TODO(b/203693602): Refactor the Hermetic test with this runner.
 
   private AggregationWorker worker;
   private ServiceManager serviceManager;

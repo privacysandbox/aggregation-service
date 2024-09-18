@@ -113,9 +113,6 @@ public class AwsWorkerContinuousPerfTest {
 
     assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
 
-    // TODO(b/241940276) Retrieve domain stopwatch files from S3 and written locally to be picked
-    // up by perfgate.
-    // Read Stopwatches from S3 and write to file.
     getAndWriteStopwatchesFromS3(
         s3BlobStorageClient,
         /* bucket= */ TESTING_BUCKET,

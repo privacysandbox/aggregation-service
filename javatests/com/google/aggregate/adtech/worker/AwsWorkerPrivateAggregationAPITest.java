@@ -79,10 +79,9 @@ public class AwsWorkerPrivateAggregationAPITest {
    */
   @Test
   public void createJobE2EProtectedAudienceTest() throws Exception {
-    // TODO(b/278573071) : Enable private aggregation tests in release tests
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_protected_audience.avro",
+            "%s/%s/test-inputs/10k_test_input_protected_audience/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -95,7 +94,7 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     var inputKeyDebug =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_protected_audience_debug.avro",
+            "%s/%s/test-inputs/10k_test_input_protected_audience_debug/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKeyDebug =
         String.format(
@@ -172,10 +171,9 @@ public class AwsWorkerPrivateAggregationAPITest {
    */
   @Test
   public void createJobE2ESharedStorageTest() throws Exception {
-    // TODO(b/278573071) : Enable private aggregation tests in release tests
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_shared_storage.avro",
+            "%s/%s/test-inputs/10k_test_input_shared_storage/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -188,7 +186,7 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     var inputKeyDebug =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_shared_storage_debug.avro",
+            "%s/%s/test-inputs/10k_test_input_shared_storage_debug/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKeyDebug =
         String.format(

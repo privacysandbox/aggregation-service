@@ -145,6 +145,7 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
+import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
 import com.google.privacysandbox.otel.OtlpJsonLoggingOTelConfigurationModule;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
@@ -2219,6 +2220,8 @@ public class ConcurrentAggregationProcessorTest {
 
       // Otel collector
       install(new OtlpJsonLoggingOTelConfigurationModule());
+      bind(boolean.class).annotatedWith(EnableOTelLogs.class).toInstance(false);
+
       bind(Boolean.class).annotatedWith(EnableStackTraceInResponse.class).toInstance(true);
       bind(Integer.class).annotatedWith(MaxDepthOfStackTrace.class).toInstance(3);
       bind(double.class).annotatedWith(ReportErrorThresholdPercentage.class).toInstance(10.0);

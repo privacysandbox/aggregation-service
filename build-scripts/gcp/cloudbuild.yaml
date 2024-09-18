@@ -15,7 +15,7 @@
 steps:
 - name: '$_BUILD_IMAGE_REPO_PATH/bazel-build-container:$_VERSION'
   script: |
-    bazel run worker/gcp:worker_mp_gcp_g3p_prod -- -dst "$_IMAGE_REPO_PATH/$_IMAGE_NAME:$_IMAGE_TAG"
+    bazel run worker/gcp:worker_mp_gcp_prod -- -dst "$_IMAGE_REPO_PATH/$_IMAGE_NAME:$_IMAGE_TAG"
     bazel run //terraform/gcp:frontend_service_http_cloud_function_release \
       --//terraform/gcp:bucket_flag=$_JARS_PUBLISH_BUCKET --//terraform/gcp:bucket_path_flag=$_JARS_PUBLISH_BUCKET_PATH \
       -- --version=$_VERSION

@@ -30,6 +30,7 @@ import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUploa
 import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
+import com.google.aggregate.adtech.worker.Annotations.InstanceId;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
@@ -69,6 +70,7 @@ import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.OptionalBinder;
+import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
 import com.google.privacysandbox.otel.Annotations.GrpcOtelCollectorEndpoint;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3EndpointOverrideBinding;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3UsePartialRequests;
@@ -121,6 +123,7 @@ import java.util.function.Supplier;
 import javax.inject.Singleton;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.regions.internal.util.EC2MetadataUtils;
 
 public final class AggregationWorkerModule extends AbstractModule {
 
@@ -324,8 +327,8 @@ public final class AggregationWorkerModule extends AbstractModule {
 
     // Parameter to set exception cache. This is a test only flag.
     bind(Long.class)
-            .annotatedWith(ExceptionCacheEntryTtlSec.class)
-            .toInstance(args.getExceptionCacheEntryTtlSec());
+        .annotatedWith(ExceptionCacheEntryTtlSec.class)
+        .toInstance(args.getExceptionCacheEntryTtlSec());
 
     // Dependencies for privacy budgeting.
     bind(PrivacyBudgetingServiceBridge.class).to(args.getPrivacyBudgeting().getBridge());
@@ -381,17 +384,19 @@ public final class AggregationWorkerModule extends AbstractModule {
 
     // Otel exporter.
     switch (args.getOTelExporterSelector()) {
-        // Specifying CollectorEndpoint is required for GRPC exporter because aggregation service
-        // would send metric to the CollectorEndpoint and thus collector/exporter could collect.
+      // Specifying CollectorEndpoint is required for GRPC exporter because aggregation service
+      // would send metric to the CollectorEndpoint and thus collector/exporter could collect.
       case GRPC:
         bind(String.class)
             .annotatedWith(GrpcOtelCollectorEndpoint.class)
             .toInstance(args.getGrpcCollectorEndpoint());
         break;
-      default:
+      // No need to bind anything for JSON.
+      case JSON:
         break;
     }
     install(args.getOTelExporterSelector().getOTelConfigurationModule());
+    bind(boolean.class).annotatedWith(EnableOTelLogs.class).toInstance(args.isOTelLogsEnabled());
 
     // Response related flags.
     bind(boolean.class)
@@ -457,7 +462,6 @@ public final class AggregationWorkerModule extends AbstractModule {
   @Singleton
   @NonBlockingThreadPool
   ListeningExecutorService provideNonBlockingThreadPool() {
-    // TODO(b/281572881): Investigate on optimal value for nonBlockingThreadPool size.
     return MoreExecutors.listeningDecorator(
         Executors.newFixedThreadPool(args.getNonBlockingThreadPoolSize()));
   }
@@ -466,7 +470,6 @@ public final class AggregationWorkerModule extends AbstractModule {
   @Singleton
   @BlockingThreadPool
   ListeningExecutorService provideBlockingThreadPool() {
-    // TODO(b/281572881): Investigate on optimal value for blockingThreadPool size.
     return MoreExecutors.listeningDecorator(
         Executors.newFixedThreadPool(args.getBlockingThreadPoolSize()));
   }
@@ -476,5 +479,14 @@ public final class AggregationWorkerModule extends AbstractModule {
   @CustomForkJoinThreadPool
   ListeningExecutorService provideCustomForkJoinThreadPool() {
     return MoreExecutors.listeningDecorator(new ForkJoinPool(args.getNonBlockingThreadPoolSize()));
+  }
+
+  @Provides
+  @InstanceId
+  String provideInstanceID() {
+    if (EC2MetadataUtils.getInstanceId() == null) {
+      return "";
+    }
+    return EC2MetadataUtils.getInstanceId();
   }
 }

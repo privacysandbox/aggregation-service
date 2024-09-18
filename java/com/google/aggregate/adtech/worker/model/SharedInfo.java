@@ -49,8 +49,6 @@ public abstract class SharedInfo {
   public static final String LATEST_VERSION = VERSION_1_0;
   public static final String MAJOR_VERSION_ZERO = "0";
   public static final String MAJOR_VERSION_ONE = "1";
-  // TODO(b/303480127): Remove isZero() from Version class in ReportVersionValidator when
-  // MAJOR_VERSION_ZERO is removed from SUPPORTED_MAJOR_VERSIONS.
   public static final ImmutableSet<String> SUPPORTED_MAJOR_VERSIONS =
       ImmutableSet.of(MAJOR_VERSION_ZERO, MAJOR_VERSION_ONE);
   public static final boolean DEFAULT_DEBUG_MODE = false;
@@ -78,8 +76,6 @@ public abstract class SharedInfo {
 
   public abstract Builder toBuilder();
 
-  // TODO(b/263901045) : consider moving version to api specific code.
-  // Version of the report
   @JsonProperty("version")
   public abstract String version();
 

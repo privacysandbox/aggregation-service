@@ -24,7 +24,7 @@ PROTOBUF_CORE_VERSION = "3.25.2"
 
 PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
 
-COORDINATOR_VERSION = "v1.9.0-rc03"  # version updated on 2024-07-17
+COORDINATOR_VERSION = "v1.10.0-rc07"  # version updated on 2024-09-12
 
 JACKSON_VERSION = "2.16.1"
 
@@ -80,6 +80,7 @@ git_repository(
     patches = [
         "//build_defs/shared_libraries:coordinator.patch",
         "//build_defs/shared_libraries:rules_pkg_build_fix.patch",
+        "//build_defs/shared_libraries:v1.10_serverless_connector.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",
@@ -97,6 +98,7 @@ OTEL_ARTIFACTS = [
     "io.opentelemetry:opentelemetry-sdk-common:" + OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk-metrics:" + OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk-testing:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-logs:" + OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk-trace:" + OTEL_VERSION,
     "io.opentelemetry.contrib:opentelemetry-aws-xray:" + OTEL_VERSION,
 ]
@@ -113,6 +115,7 @@ maven_install(
         "com.amazonaws:aws-java-sdk-kms:" + AWS_JAVA_SDK_VERSION,
         "com.amazonaws:aws-java-sdk-core:" + AWS_JAVA_SDK_VERSION,
         "com.amazonaws:aws-java-sdk-xray:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-logs:" + AWS_JAVA_SDK_VERSION,
         "com.amazonaws:aws-java-sdk-cloudwatch:" + AWS_JAVA_SDK_VERSION,
         "com.beust:jcommander:1.82",
         "com.google.cloud.functions.invoker:java-function-invoker:1.1.0",
@@ -138,6 +141,8 @@ maven_install(
         "com.google.cloud:google-cloud-storage:2.32.1",
         "com.google.cloud:google-cloud-spanner:6.56.0",
         "com.google.cloud:google-cloud-compute:1.44.0",
+        "com.google.cloud:google-cloud-logging:1.92.0",
+        "com.google.api.grpc:proto-google-cloud-logging-v2:0.109.0",
         "com.google.api.grpc:proto-google-cloud-compute-v1:1.44.0",
         "com.google.cloud.functions:functions-framework-api:1.1.0",
         "commons-logging:commons-logging:1.3.0",
