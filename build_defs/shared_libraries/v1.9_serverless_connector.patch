@@ -1,0 +1,12 @@
+diff --git a/operator/terraform/gcp/modules/vpc/serverless-connector.tf b/operator/terraform/gcp/modules/vpc/serverless-connector.tf
+index be2932bae..0c17a0da5 100644
+--- a/operator/terraform/gcp/modules/vpc/serverless-connector.tf
++++ b/operator/terraform/gcp/modules/vpc/serverless-connector.tf
+@@ -1,6 +1,7 @@
+ module "serverless-connector" {
+   count      = var.create_connectors ? 1 : 0
+   source     = "terraform-google-modules/network/google//modules/vpc-serverless-connector-beta"
++  version    = "<= 9.1.0"
+   project_id = var.project_id
+   vpc_connectors = [
+     for index, region in tolist(var.regions) : {
