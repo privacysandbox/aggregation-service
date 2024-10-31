@@ -101,7 +101,8 @@ POST
     // [Optional] When executing a debug run, noised and unnoised debug summary
     // report and annotations are added to indicate which keys are present in the
     // domain input and/or reports. Additionally, duplicates across batches are
-    // also not enforced. Note that the debug run only considers reports that have the flag
+    // also not enforced. Privacy budget will not be consumed when debug_run is
+    // enabled. Note that the debug run only considers reports that have the flag
     // "debug_mode": "enabled". Read /docs/debugging.md for details.
     "debug_run": <boolean value represented as string>
   }

@@ -160,13 +160,10 @@ The schema of debug summary reports is in the following [Avro](https://avro.apac
 
 ### Privacy Budget Service Errors
 
-When aggregation is performed in debug mode, the privacy budget is still consumed. If the budget is
-available and consumed successfully, the return code and message in the case of success are the same
-as in a non-debug run.
-
-Otherwise, a summary report will still be generated. A custom return code and a corresponding return
-message will be present in the getJob API response indicating if budget errors would occur for this
-aggregation in a non-debug run.
+When aggregation is performed in debug mode, the privacy budget is **not** consumed. Furthermore,
+budget will not be checked while running in debug mode -- even if budget is not available, the
+summary report will still be generated successfully. See the section below for the possible return
+codes in the getJob API response.
 
 #### Debug Mode Aggregation Outcomes
 
@@ -175,8 +172,3 @@ aggregation in a non-debug run.
 **Success with aggregation errors:** Returns code `SUCCESS_WITH_ERRORS` | Aggregation job
 successfully processed but some reports have errors.
 
-**PBS Exception:** Returns code `DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR` | Aggregation would have
-failed in non-debug mode due to a privacy budget error.
-
-**PBS Exhausted:** Returns code `DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED` | Aggregation would
-have failed in non-debug mode due to privacy budget exhaustion.
