@@ -26,6 +26,9 @@ public interface LocalResultFileWriter {
   /** Write the file to the local filesystem */
   void writeLocalFile(Stream<AggregatedFact> results, Path resultFile) throws FileWriteException;
 
+  /** Write the avro file bytes to the local filesystem */
+  void writeLocalFile(byte[] avroFileBytes, Path resultFilePath) throws FileWriteException;
+
   /** Returns the file extension for the file type written */
   String getFileExtension();
 

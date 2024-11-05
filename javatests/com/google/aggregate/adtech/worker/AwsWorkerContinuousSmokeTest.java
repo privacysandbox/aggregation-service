@@ -21,7 +21,7 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRI
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getOutputFileName;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readDebugResultsFromS3;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readDebugResultsFromMultipleFiles;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
@@ -88,7 +88,7 @@ public class AwsWorkerContinuousSmokeTest {
 
   @Inject S3BlobStorageClient s3BlobStorageClient;
   @Inject AvroResultsFileReader avroResultsFileReader;
-  @Inject private AvroDebugResultsReaderFactory readerFactory;
+  @Inject private AvroDebugResultsReaderFactory debugReaderFactory;
 
   @Before
   public void checkBuildEnv() {
@@ -365,7 +365,7 @@ public class AwsWorkerContinuousSmokeTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var outputKey =
         String.format(
-            "%s/%s/test-outputs/10k_attribution_report_test_output_DebugJob_debugEnabled.avro",
+            "%s/%s/test-outputs/10k_attribution_report_test_output_DebugJob_debugEnabled",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
@@ -393,11 +393,11 @@ public class AwsWorkerContinuousSmokeTest {
 
     // Read debug results avro from s3.
     ImmutableList<AggregatedFact> aggregatedDebugFacts =
-        readDebugResultsFromS3(
+        readDebugResultsFromMultipleFiles(
             s3BlobStorageClient,
-            readerFactory,
+            debugReaderFactory,
             getTestDataBucket(),
-            getOutputFileName(getDebugFilePrefix(outputKey)));
+            getDebugFilePrefix(outputKey));
 
     // Debug facts count should be greater than or equal to the summary facts count because some
     // keys are filtered out due to thresholding or not in domain.

@@ -32,4 +32,10 @@ public interface DecryptionCipher {
       super(cause);
     }
   }
+
+  class PayloadParsingException extends Exception {
+    public PayloadParsingException(Throwable cause) {
+      super(cause);
+    }
+  }
 }

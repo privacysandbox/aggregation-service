@@ -438,13 +438,6 @@ public final class AggregationWorkerArgs {
   private boolean streamingOutputDomainProcessingEnabled = false;
 
   @Parameter(
-      names = "--labeled_privacy_budget_keys_enabled",
-      description =
-          "Flag to allow filtering of labeled payload contributions. If enabled, only contributions"
-              + " corresponding to queried labels/ids are included in aggregation.")
-  private boolean labeledPrivacyBudgetKeysEnabled = false;
-
-  @Parameter(
       names = "--local_job_params_input_filtering_ids",
       description =
           "Filtering Id to be added in Job Params to filter the labeled payload contributions. To"
@@ -753,10 +746,6 @@ public final class AggregationWorkerArgs {
 
   public boolean isStreamingOutputDomainProcessingEnabled() {
     return streamingOutputDomainProcessingEnabled;
-  }
-
-  boolean isLabeledPrivacyBudgetKeysEnabled() {
-    return labeledPrivacyBudgetKeysEnabled;
   }
 
   String getFilteringIds() {

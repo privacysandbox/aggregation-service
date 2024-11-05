@@ -24,7 +24,7 @@ PROTOBUF_CORE_VERSION = "3.25.2"
 
 PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
 
-COORDINATOR_VERSION = "v1.10.0-rc07"  # version updated on 2024-09-12
+COORDINATOR_VERSION = "v1.12.0-rc01"  # version updated on 2024-10-23
 
 JACKSON_VERSION = "2.16.1"
 
@@ -32,13 +32,13 @@ AUTO_VALUE_VERSION = "1.7.4"
 
 AWS_SDK_VERSION = "2.21.16"
 
-AWS_JAVA_SDK_VERSION = "1.12.641"
+AWS_JAVA_SDK_VERSION = "1.12.772"
 
 GOOGLE_GAX_VERSION = "2.38.0"
 
 AUTO_SERVICE_VERSION = "1.1.1"
 
-OTEL_VERSION = "1.31.0"
+OTEL_VERSION = "1.38.0"
 
 load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
 
@@ -79,8 +79,9 @@ git_repository(
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/shared_libraries:coordinator.patch",
+        "//build_defs/shared_libraries:pbs_client.patch",
         "//build_defs/shared_libraries:rules_pkg_build_fix.patch",
-        "//build_defs/shared_libraries:v1.10_serverless_connector.patch",
+        "//build_defs/shared_libraries:v1.13-adtech-setup-premission.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",
@@ -101,6 +102,15 @@ OTEL_ARTIFACTS = [
     "io.opentelemetry:opentelemetry-sdk-logs:" + OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk-trace:" + OTEL_VERSION,
     "io.opentelemetry.contrib:opentelemetry-aws-xray:" + OTEL_VERSION,
+    "com.google.cloud.opentelemetry:exporter-metrics:0.31.0",
+    # Note from https://github.com/open-telemetry/semantic-conventions-java:
+    # Although this is for stable semantic conventions, the artifact still has the -alpha and comes with no
+    # compatibility guarantees. The goal is to mark this artifact stable.
+    "io.opentelemetry.semconv:opentelemetry-semconv:1.27.0-alpha",
+    # As of adding, https://repo1.maven.org/maven2/io/opentelemetry/contrib/opentelemetry-gcp-resources/ only shows
+    # that alpha version is available.
+    "io.opentelemetry.contrib:opentelemetry-gcp-resources:" + OTEL_VERSION + "-alpha",
+    "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:" + OTEL_VERSION,
 ]
 
 # IMPORTANT: If you added dependencies and/or updated dependency versions below, run
@@ -207,6 +217,7 @@ maven_install(
         "com.google.crypto.tink:tink:1.13.0",
         "com.google.crypto.tink:tink-gcpkms:1.9.0",
         "com.google.oauth-client:google-oauth-client:1.35.0",
+        "io.netty:netty-codec-http:4.1.114.Final",
     ] + OTEL_ARTIFACTS,
     maven_install_json = "//:maven_install.json",
     repositories = [
@@ -382,6 +393,14 @@ container_pull(
     repository = "distroless/static",
     # Using SHA-256 for reproducibility.
     # TODO: use digest instead of tag, currently it's not working.
+    tag = "latest",
+)
+
+# Debug image for Java used only for load testing.
+container_pull(
+    name = "java_base_debug",
+    registry = "docker.io",
+    repository = "bellsoft/liberica-openjdk-debian",
     tag = "latest",
 )
 

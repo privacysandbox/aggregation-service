@@ -25,7 +25,6 @@ java_library(
         "//java/com/google/aggregate/adtech/worker:return_code",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/util",
-        "//java/com/google/aggregate/adtech/worker/validation/v01",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",

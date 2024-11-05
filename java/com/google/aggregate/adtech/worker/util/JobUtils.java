@@ -41,12 +41,14 @@ public final class JobUtils {
 
   public static final String JOB_PARAM_REPORTING_SITE = "reporting_site";
 
+  private static final UnsignedLong FILTERING_ID_DEFAULT = UnsignedLong.ZERO;
+
   /**
    * Returns the filtering IDs from the job.
    *
    * <p>If the filtering IDs are not set, returns a set containing only 0.
    */
-  public static ImmutableSet<UnsignedLong> getFilteringIdsFromJob(Job job) {
+  public static ImmutableSet<UnsignedLong> getFilteringIdsFromJobOrDefault(Job job) {
     @Var
     ImmutableSet<UnsignedLong> filteringIds =
         NumericConversions.getUnsignedLongsFromString(
@@ -54,7 +56,7 @@ public final class JobUtils {
             JOB_PARAM_FILTERING_IDS_DELIMITER);
 
     if (filteringIds.isEmpty()) {
-      filteringIds = ImmutableSet.of(UnsignedLong.ZERO);
+      filteringIds = ImmutableSet.of(FILTERING_ID_DEFAULT);
     }
 
     return filteringIds;

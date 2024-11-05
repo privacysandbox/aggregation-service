@@ -17,7 +17,7 @@
 package com.google.aggregate.adtech.worker.validation;
 
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.REQUIRED_SHAREDINFO_FIELD_INVALID;
-import static com.google.aggregate.adtech.worker.util.JobUtils.getFilteringIdsFromJob;
+import static com.google.aggregate.adtech.worker.util.JobUtils.getFilteringIdsFromJobOrDefault;
 import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.isFieldNonEmpty;
 
@@ -40,7 +40,7 @@ public final class ReportPrivacyBudgetKeyValidator implements ReportValidator {
   @Override
   public Optional<ErrorMessage> validate(Report report, Job job) {
     if (isFieldNonEmpty(report.sharedInfo().api())) {
-      ImmutableSet<UnsignedLong> filteringIds = getFilteringIdsFromJob(job);
+      ImmutableSet<UnsignedLong> filteringIds = getFilteringIdsFromJobOrDefault(job);
 
       for (UnsignedLong filteringId : filteringIds) {
         @Var Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator;

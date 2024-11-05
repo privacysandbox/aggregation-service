@@ -72,7 +72,6 @@ worker_gcp_deployment(
         "--parallel_summary_upload_enabled",
         "--streaming_output_domain_processing_enabled",
         "--parallel_fact_noising_enabled",
-        "--labeled_privacy_budget_keys_enabled",
         "--otel_logs_enabled",
     ],
     entrypoint = [
@@ -81,6 +80,10 @@ worker_gcp_deployment(
         "-XX:MaxRAMPercentage=75.0",
         "-jar",
     ],
-    files = ["//java/com/google/aggregate/adtech/worker/gcp:WorkerRunner_prod_deploy.jar"],
+    files = [
+        "//:generate_version_file",
+        "//java/com/google/aggregate/adtech/worker/gcp:WorkerRunner_prod_deploy.jar",
+        "//licenses/THIRD_PARTY_NOTICES/gcp_worker_mp_gcp_prod:licenses_tar",
+    ],
     labels = {"tee.launch_policy.allow_cmd_override": "false"},
 )

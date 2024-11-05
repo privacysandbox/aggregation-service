@@ -31,14 +31,19 @@ import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWo
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
+import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
 import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.avro.LocalAvroDebugResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.avro.LocalAvroResultFileWriter;
+import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReader;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
 import com.google.aggregate.protocol.avro.AvroDebugResultsRecord;
+import com.google.aggregate.protocol.avro.AvroDebugResultsSchemaSupplier;
+import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
@@ -62,6 +67,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import org.junit.Assert;
@@ -121,6 +127,8 @@ public class LocalFileToCloudStorageLoggerTest {
   @Inject private ParallelUploadFlagHelper uploadFlagHelper;
   @Inject private FileSystem testFS;
   @Inject @ResultWorkingDirectory private Path workingDirectory;
+  @Inject private AvroResultsSerdes avroResultsSerdes;
+  @Inject private AvroDebugResultsSerdes avroDebugResultsSerdes;
 
   @Before
   public void beforeEach() throws Exception {
@@ -146,21 +154,45 @@ public class LocalFileToCloudStorageLoggerTest {
     logResultsTest();
   }
 
-  private void logResultsTest() throws Exception {
+  @Test
+  public void logResultBytesTest() throws Exception {
     OutputShardFileHelper.setOutputShardFileSizeBytes(100_000_000L);
 
-    // Write the results
-    localFileToCloudStorageLogger.get().logResults(results, ctx, /* isDebugRun= */ false);
+    localFileToCloudStorageLogger
+        .get()
+        .logResultsAvros(
+            ImmutableList.of(SummaryReportAvro.create(1, avroResultsSerdes.convert(results))),
+            ctx,
+            /* isDebugRun= */ false);
 
-    // Check that the results were written correctly
     ImmutableList<AggregatedFact> writtenResults =
         avroResultsFileReader.readAvroResultsFile(blobStorageClient.getLastWrittenFile());
-    // Check the output file name
     assertThat(blobStorageClient.getLastWrittenFile().toString())
         .isEqualTo("/bucket/dataHandle-1-of-1");
     assertThat(writtenResults).containsExactly(results.toArray());
-    // Check that no local file exists in the working directory
     assertThat(Files.list(workingDirectory).collect(toImmutableList())).isEmpty();
+  }
+
+  @Test
+  public void logResultsBytes_InvalidS3BucketThrowsException() throws Exception {
+    OutputShardFileHelper.setOutputShardFileSizeBytes(100_000_000L);
+
+    doThrow(new RuntimeException("mock exception"))
+        .when(blobStorageClient)
+        .putBlob(ArgumentMatchers.any(), ArgumentMatchers.any());
+
+    Assert.assertThrows(
+        ResultLogException.class,
+        () ->
+            localFileToCloudStorageLogger
+                .get()
+                .logResultsAvros(
+                    ImmutableList.of(
+                        SummaryReportAvro.create(1, avroResultsSerdes.convert(results))),
+                    ctx,
+                    /* isDebugRun= */ false));
+
+    reset(blobStorageClient);
   }
 
   @Test
@@ -184,14 +216,46 @@ public class LocalFileToCloudStorageLoggerTest {
   }
 
   @Test
-  public void logDebugResultsTest() throws Exception {
+  public void logDebugResultsBytesTest() throws Exception {
+    OutputShardFileHelper.setOutputShardFileSizeBytes(100_000_000L);
+
+    localFileToCloudStorageLogger
+        .get()
+        .logResultsAvros(
+            ImmutableList.of(
+                SummaryReportAvro.create(1, avroDebugResultsSerdes.convert(debugResults))),
+            ctx,
+            /* isDebugRun= */ true);
+
     Stream<AvroDebugResultsRecord> writtenResults;
+    try (AvroDebugResultsReader reader = getReader(blobStorageClient.getLastWrittenFile())) {
+      writtenResults = reader.streamRecords();
+    }
+    Stream<AggregatedFact> writtenResultsAggregatedFact =
+        writtenResults.map(
+            writtenResult ->
+                AggregatedFact.create(
+                    writtenResult.bucket(),
+                    writtenResult.metric(),
+                    writtenResult.unnoisedMetric(),
+                    writtenResult.debugAnnotations()));
+
+    assertThat(writtenResultsAggregatedFact.collect(toImmutableList()))
+        .containsExactly(debugResults.toArray());
+    assertThat(blobStorageClient.getLastWrittenFile().toString())
+        .isEqualTo("/bucket/debug/dataHandle-1-of-1");
+    assertThat(Files.list(workingDirectory).collect(toImmutableList())).isEmpty();
+  }
+
+  @Test
+  public void logDebugResultsTest() throws Exception {
     // Configure large shard size to get a single shard.
     OutputShardFileHelper.setOutputShardFileSizeBytes(100_000_000L);
 
     // Takes the aggregation debug results and logs them
     localFileToCloudStorageLogger.get().logResults(debugResults, ctx, /* isDebugRun= */ true);
 
+    Stream<AvroDebugResultsRecord> writtenResults;
     try (AvroDebugResultsReader reader = getReader(blobStorageClient.getLastWrittenFile())) {
       writtenResults = reader.streamRecords();
     }
@@ -213,10 +277,56 @@ public class LocalFileToCloudStorageLoggerTest {
     assertThat(Files.list(workingDirectory).collect(toImmutableList())).isEmpty();
   }
 
-  // logResults would yield 4 shards for 10 output key-value pairs.
+  @Test
+  public void logResultBytesWithMultiShards() throws Exception {
+    int totalResultsCount = results.size();
+
+    byte[] firstShard =
+        avroResultsSerdes.convert(
+            IntStream.range(0, totalResultsCount / 2)
+                .mapToObj(results::get)
+                .collect(ImmutableList.toImmutableList()));
+
+    byte[] secondShard =
+        avroResultsSerdes.convert(
+            IntStream.range(totalResultsCount / 2, totalResultsCount)
+                .mapToObj(results::get)
+                .collect(ImmutableList.toImmutableList()));
+
+    localFileToCloudStorageLogger
+        .get()
+        .logResultsAvros(
+            ImmutableList.of(
+                SummaryReportAvro.create(1, firstShard), SummaryReportAvro.create(2, secondShard)),
+            ctx,
+            /* isDebugRun= */ false);
+
+    ImmutableList<Path> resultFiles =
+        Files.list(blobStorageClient.getLastWrittenFile().getParent()).collect(toImmutableList());
+
+    ImmutableList<Path> expectedFiles =
+        ImmutableList.of(
+            Path.of("/bucket/dataHandle-1-of-2"), Path.of("/bucket/dataHandle-2-of-2"));
+
+    ArrayList<AggregatedFact> resultList = new ArrayList<>();
+    ArrayList<Integer> recordCountPerShard = new ArrayList<>();
+    for (Path path : resultFiles) {
+      ImmutableList<AggregatedFact> results = avroResultsFileReader.readAvroResultsFile(path);
+      recordCountPerShard.add(results.size());
+      resultList.addAll(results);
+    }
+
+    assertThat(resultFiles.toString()).isEqualTo(expectedFiles.toString());
+    assertThat(resultList).containsExactly(results.toArray());
+
+    assertThat(recordCountPerShard.size()).isEqualTo(2);
+    assertThat(recordCountPerShard.get(0)).isEqualTo(5);
+    assertThat(recordCountPerShard.get(1)).isEqualTo(5);
+  }
+
+  // logResults would yield 4 shards for 10 output key-value pairs.=
   @Test
   public void logResultsTestWithMultiShards() throws Exception {
-    ArrayList<AggregatedFact> resultList = new ArrayList<>();
     // Configure shard values to get multiple shards (3 records per shard)
     OutputShardFileHelper.setOutputShardFileSizeBytes(
         3 * OutputShardFileHelper.getOneRecordFileSizeBytes()
@@ -231,14 +341,15 @@ public class LocalFileToCloudStorageLoggerTest {
 
     // Write the results
     localFileToCloudStorageLogger.get().logResults(results, ctx, /* isDebugRun= */ false);
+
     ImmutableList<Path> resultFiles =
         Files.list(blobStorageClient.getLastWrittenFile().getParent()).collect(toImmutableList());
+
+    ArrayList<AggregatedFact> resultList = new ArrayList<>();
     for (Path path : resultFiles) {
       ImmutableList<AggregatedFact> results = avroResultsFileReader.readAvroResultsFile(path);
       recordCountPerShard.add(results.size());
-      for (AggregatedFact result : results) {
-        resultList.add(result);
-      }
+      resultList.addAll(results);
     }
 
     // Check that the results were written correctly
@@ -254,6 +365,66 @@ public class LocalFileToCloudStorageLoggerTest {
     assertThat(recordCountPerShard.get(1)).isEqualTo(3);
     assertThat(recordCountPerShard.get(2)).isEqualTo(3);
     assertThat(recordCountPerShard.get(3)).isEqualTo(1);
+  }
+
+  @Test
+  public void logDebugResultBytesWithMultiShards() throws Exception {
+    int totalDebugResultsCount = debugResults.size();
+
+    byte[] firstShard =
+        avroDebugResultsSerdes.convert(
+            IntStream.range(0, totalDebugResultsCount / 2)
+                .mapToObj(debugResults::get)
+                .collect(ImmutableList.toImmutableList()));
+
+    byte[] secondShard =
+        avroDebugResultsSerdes.convert(
+            IntStream.range(totalDebugResultsCount / 2, totalDebugResultsCount)
+                .mapToObj(debugResults::get)
+                .collect(ImmutableList.toImmutableList()));
+
+    localFileToCloudStorageLogger
+        .get()
+        .logResultsAvros(
+            ImmutableList.of(
+                SummaryReportAvro.create(1, firstShard), SummaryReportAvro.create(2, secondShard)),
+            ctx,
+            /* isDebugRun= */ true);
+
+    ImmutableList<Path> expectedFiles =
+        ImmutableList.of(
+            Path.of("/bucket/debug/dataHandle-1-of-2"), Path.of("/bucket/debug/dataHandle-2-of-2"));
+
+    ImmutableList<Path> resultFiles =
+        Files.list(blobStorageClient.getLastWrittenFile().getParent()).collect(toImmutableList());
+
+    ArrayList<AggregatedFact> resultList = new ArrayList<>();
+    ArrayList<Integer> recordCountPerShard = new ArrayList<>();
+    Stream<AvroDebugResultsRecord> writtenResults;
+    for (Path path : resultFiles) {
+      try (AvroDebugResultsReader reader = getReader(path)) {
+        writtenResults = reader.streamRecords();
+      }
+      List<AggregatedFact> results =
+          writtenResults
+              .map(
+                  writtenResult ->
+                      AggregatedFact.create(
+                          writtenResult.bucket(),
+                          writtenResult.metric(),
+                          writtenResult.unnoisedMetric(),
+                          writtenResult.debugAnnotations()))
+              .collect(Collectors.toList());
+      recordCountPerShard.add(results.size());
+      resultList.addAll(results);
+    }
+
+    assertThat(resultFiles.toString()).isEqualTo(expectedFiles.toString());
+    assertThat(resultList).containsExactly(debugResults.toArray());
+
+    assertThat(recordCountPerShard.size()).isEqualTo(2);
+    assertThat(recordCountPerShard.get(0)).isEqualTo(5);
+    assertThat(recordCountPerShard.get(1)).isEqualTo(5);
   }
 
   // logResults on debug run would yield 4 shards for 10 output key-value pairs.
@@ -308,6 +479,23 @@ public class LocalFileToCloudStorageLoggerTest {
     assertThat(recordCountPerShard.get(1)).isEqualTo(3);
     assertThat(recordCountPerShard.get(2)).isEqualTo(3);
     assertThat(recordCountPerShard.get(3)).isEqualTo(1);
+  }
+
+  private void logResultsTest() throws Exception {
+    OutputShardFileHelper.setOutputShardFileSizeBytes(100_000_000L);
+
+    // Write the results
+    localFileToCloudStorageLogger.get().logResults(results, ctx, /* isDebugRun= */ false);
+
+    // Check that the results were written correctly
+    ImmutableList<AggregatedFact> writtenResults =
+        avroResultsFileReader.readAvroResultsFile(blobStorageClient.getLastWrittenFile());
+    // Check the output file name
+    assertThat(blobStorageClient.getLastWrittenFile().toString())
+        .isEqualTo("/bucket/dataHandle-1-of-1");
+    assertThat(writtenResults).containsExactly(results.toArray());
+    // Check that no local file exists in the working directory
+    assertThat(Files.list(workingDirectory).collect(toImmutableList())).isEmpty();
   }
 
   private AvroDebugResultsReader getReader(Path avroFile) throws Exception {
@@ -371,6 +559,8 @@ public class LocalFileToCloudStorageLoggerTest {
       bind(FSBlobStorageClient.class).toInstance(fsClient);
       bind(BlobStorageClient.class).to(FSBlobStorageClient.class);
       bind(ParallelUploadFlagHelper.class).toInstance(uploadFlagHelper);
+      bind(AvroResultsSchemaSupplier.class).toInstance(new AvroResultsSchemaSupplier());
+      bind(AvroDebugResultsSchemaSupplier.class).toInstance(new AvroDebugResultsSchemaSupplier());
     }
 
     @Provides

@@ -1,0 +1,7 @@
+[doc|internal|fix|feat] <1-line CL description>.
+
+<Optional comprehensive description>
+
+Changelog: NA/<Add the log that can be copied to Changelog.md as-is.> #NA will typically apply for internal changes or intermediate changes of a multi-CL feature work.
+Bug: <BugId> or NA (only in rare cases)
+Launch ticket: <link to the ariane launch> or NA

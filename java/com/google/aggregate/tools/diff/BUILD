@@ -22,6 +22,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/testing:avro_debug_results_file_reader",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
         "//java/external:guava",
         "//java/external:guice",

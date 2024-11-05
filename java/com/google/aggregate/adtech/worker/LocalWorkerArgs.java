@@ -151,13 +151,6 @@ public class LocalWorkerArgs {
   private String filteringIds = null;
 
   @Parameter(
-      names = "--labeled_privacy_budget_keys_enabled",
-      description =
-          "Flag to allow filtering of labeled payload contributions. If enabled, only contributions"
-              + " corresponding to queried labels/ids are included in aggregation.")
-  private boolean labeledPrivacyBudgetKeysEnabled = false;
-
-  @Parameter(
       names = "--attribution_reporting_debug_api_enabled",
       description = "Flag to enable support for Attribution Reporting Debug API.")
   private boolean attributionReportingDebugApiEnabled = true;
@@ -253,10 +246,6 @@ public class LocalWorkerArgs {
 
   String getFilteringIds() {
     return filteringIds;
-  }
-
-  boolean isLabeledPrivacyBudgetKeysEnabled() {
-    return labeledPrivacyBudgetKeysEnabled;
   }
 
   boolean isAttributionReportingDebugApiEnabled() {

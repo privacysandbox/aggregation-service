@@ -20,6 +20,11 @@ filegroup(
 )
 
 filegroup(
+    name = "chromium_golden_reports_attribution_reporting_debug",
+    srcs = glob(["aggregatable_debug_report_goldens/latest/**"]),
+)
+
+filegroup(
     name = "chromium_golden_reports_private_aggregation",
     srcs = glob(["private_aggregation_report_goldens/latest/**"]),
 )

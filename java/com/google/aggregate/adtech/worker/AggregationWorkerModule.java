@@ -27,7 +27,6 @@ import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUpload;
-import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.InstanceId;
@@ -313,9 +312,6 @@ public final class AggregationWorkerModule extends AbstractModule {
     bind(boolean.class)
         .annotatedWith(EnableParallelSummaryUpload.class)
         .toInstance(args.isParallelSummaryUploadEnabled());
-    bind(boolean.class)
-        .annotatedWith(EnablePrivacyBudgetKeyFiltering.class)
-        .toInstance(args.isLabeledPrivacyBudgetKeysEnabled());
     bind(boolean.class)
         .annotatedWith(StreamingOutputDomainProcessing.class)
         .toInstance(args.isStreamingOutputDomainProcessingEnabled());

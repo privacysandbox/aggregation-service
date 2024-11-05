@@ -23,7 +23,7 @@ import static com.google.aggregate.adtech.worker.SmokeTestBase.checkJobExecution
 import static com.google.aggregate.adtech.worker.SmokeTestBase.getTestDataBucket;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.getTestProjectId;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.getTestServiceAccount;
-import static com.google.aggregate.adtech.worker.SmokeTestBase.readDebugResultsFromCloud;
+import static com.google.aggregate.adtech.worker.SmokeTestBase.readDebugResultsFromMultipleFiles;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.readResultsFromCloud;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.submitJobAndWaitForResult;
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
@@ -166,8 +166,7 @@ public final class GcpWorkerContinuousSmokeTest {
         String.format(
             "%s/test-inputs/10k_test_domain_debug_for_debug_disabled.avro", KOKORO_BUILD_ID);
     String outputDataPrefix =
-        String.format(
-            "%s/test-outputs/10k_test_input_debug_for_debug_disabled.avro.result", KOKORO_BUILD_ID);
+        String.format("%s/test-outputs/10k_test_input_debug_for_debug_disabled", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
         SmokeTestBase.createJobRequestWithAttributionReportTo(
@@ -193,11 +192,11 @@ public final class GcpWorkerContinuousSmokeTest {
 
     // Read debug results avro from GCS.
     ImmutableList<AggregatedFact> aggregatedDebugFacts =
-        readDebugResultsFromCloud(
+        readDebugResultsFromMultipleFiles(
             gcsBlobStorageClient,
             readerFactory,
             getTestDataBucket(),
-            getDebugFilePrefix(outputDataPrefix + OUTPUT_DATA_PREFIX_NAME));
+            getDebugFilePrefix(outputDataPrefix));
     // Debug facts count should be greater than or equal to the summary facts count because some
     // keys are filtered out due to thresholding or not in domain.
     assertThat(aggregatedDebugFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);

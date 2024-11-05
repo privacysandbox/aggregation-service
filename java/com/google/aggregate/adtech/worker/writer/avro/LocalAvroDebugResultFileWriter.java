@@ -43,6 +43,16 @@ public final class LocalAvroDebugResultFileWriter implements LocalResultFileWrit
     this.writerFactory = writerFactory;
   }
 
+  /** Write the debug results AVRO file byte[] at the {@code Path} given. */
+  @Override
+  public void writeLocalFile(byte[] avroFileBytes, Path resultFilePath) throws FileWriteException {
+    try {
+      Files.write(resultFilePath, avroFileBytes);
+    } catch (IOException e) {
+      throw new FileWriteException("Failed to write local Avro file", e);
+    }
+  }
+
   @Override
   public void writeLocalFile(Stream<AggregatedFact> results, Path resultFilePath)
       throws FileWriteException {

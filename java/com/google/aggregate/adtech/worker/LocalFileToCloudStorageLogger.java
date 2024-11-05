@@ -32,6 +32,7 @@ import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
+import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -83,6 +84,52 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
     } else {
       this.blockingThreadPool =
           MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
+    }
+  }
+
+  @Override
+  public void logResultsAvros(
+      ImmutableList<SummaryReportAvro> summaryReportAvros, Job ctx, boolean isDebugRun)
+      throws ResultLogException {
+    String fileExtension =
+        isDebugRun
+            ? localDebugResultFileWriter.getFileExtension()
+            : localResultFileWriter.getFileExtension();
+    int totalShards = summaryReportAvros.size();
+
+    ListenableFuture<List<Void>> fileLogResults =
+        Futures.allAsList(
+            summaryReportAvros.stream()
+                .map(
+                    summaryReportAvro -> {
+                      String localFileName =
+                          isDebugRun
+                              ? getLocalDebugFileName(
+                                  ctx, summaryReportAvro.shardId(), fileExtension)
+                              : getLocalFileName(ctx, summaryReportAvro.shardId(), fileExtension);
+                      Path localResultsFilePath =
+                          workingDirectory
+                              .getFileSystem()
+                              .getPath(
+                                  Paths.get(workingDirectory.toString(), localFileName).toString());
+
+                      return writeFileBytes(
+                          summaryReportAvro.reportBytes(),
+                          ctx,
+                          localResultsFilePath,
+                          isDebugRun ? localDebugResultFileWriter : localResultFileWriter,
+                          isDebugRun,
+                          summaryReportAvro.shardId(),
+                          totalShards);
+                    })
+                .collect(ImmutableList.toImmutableList()));
+
+    try {
+      fileLogResults.get();
+    } catch (InterruptedException | CancellationException e) {
+      throw new ResultLogException(e);
+    } catch (ExecutionException e) {
+      throw new ResultLogException(e.getCause());
     }
   }
 
@@ -158,6 +205,41 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
     } catch (ExecutionException e) {
       throw new ResultLogException(e.getCause());
     }
+  }
+
+  private ListenableFuture<Void> writeFileBytes(
+      byte[] summaryBytes,
+      Job ctx,
+      Path localFilepath,
+      LocalResultFileWriter writer,
+      Boolean isDebugFile,
+      int shardId,
+      int numShards) {
+
+    return Futures.submitAsync(
+        () -> {
+          Files.createDirectories(workingDirectory);
+          writer.writeLocalFile(summaryBytes, localFilepath);
+
+          String outputDataBlobBucket = ctx.requestInfo().getOutputDataBucketName();
+          String outputDataBlobPrefix =
+              OutputShardFileHelper.getOutputFileNameWithShardInfo(
+                  ctx.requestInfo().getOutputDataBlobPrefix(), shardId, numShards);
+
+          DataLocation resultLocation;
+          if (isDebugFile) {
+            resultLocation =
+                getDataLocation(outputDataBlobBucket, getDebugFilePrefix(outputDataBlobPrefix));
+          } else {
+            resultLocation = getDataLocation(outputDataBlobBucket, outputDataBlobPrefix);
+          }
+
+          blobStorageClient.putBlob(resultLocation, localFilepath);
+          Files.deleteIfExists(localFilepath);
+
+          return Futures.immediateVoidFuture();
+        },
+        blockingThreadPool);
   }
 
   @SuppressWarnings("UnstableApiUsage")

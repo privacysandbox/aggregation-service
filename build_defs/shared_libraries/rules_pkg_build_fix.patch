@@ -1,19 +1,19 @@
 diff --git a/BUILD b/BUILD
-index 12cf08abb..9e25a6747 100644
+index 6d2a91fe6..b0afc9a4f 100644
 --- a/BUILD
 +++ b/BUILD
-@@ -12,7 +12,6 @@
- # See the License for the specific language governing permissions and
+@@ -13,7 +13,6 @@
  # limitations under the License.
-
+ 
+ load("@bazel_gazelle//:def.bzl", "gazelle")
 -load("@bazel_skylib//rules:copy_directory.bzl", "copy_directory")
  load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
  load("@rules_pkg//:mappings.bzl", "pkg_files")
  load("@rules_pkg//:pkg.bzl", "pkg_tar")
-@@ -30,53 +29,6 @@ buildifier(
+@@ -55,53 +54,6 @@ buildifier(
      mode = "fix",
  )
-
+ 
 -# pkg_tar no longer allows directories to be specified.
 -# Must use copy_directory to create Tree Artifacts.
 -# https://github.com/bazelbuild/rules_pkg/issues/611
@@ -64,7 +64,7 @@ index 12cf08abb..9e25a6747 100644
  # This rule is used to copy the source code from other bazel rules.
  # This can be used for reproducible builds.
  # Only cc targets are needed at this point, so only the files needed to build
-@@ -88,18 +40,15 @@ pkg_tar(
+@@ -113,18 +65,15 @@ pkg_tar(
          ".bazelversion",
          "BUILD",
          "WORKSPACE",
@@ -87,7 +87,7 @@ index 12cf08abb..9e25a6747 100644
 -        "srcs/": "",
 -    },
  )
-
+ 
  pkg_files(
 diff --git a/build_defs/aws/kmstool/kmstool.BUILD b/build_defs/aws/kmstool/kmstool.BUILD
 index 022ca6791..5a5d95a2e 100644

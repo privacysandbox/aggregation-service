@@ -127,11 +127,16 @@ java_test(
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
         "//java/com/google/aggregate/adtech/worker/testing:in_memory_logger",
+        "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
+        "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
+        "//java/external:acai",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:google_truth",
         "//java/external:guava",
+        "//java/external:guice",
     ],
 )
 
@@ -141,6 +146,21 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
+        "//java/com/google/aggregate/adtech/worker/writer/avro",
+        "//java/external:acai",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:jimfs",
+    ],
+)
+
+java_test(
+    name = "AvroDebugResultsFileReaderTest",
+    srcs = ["AvroDebugResultsFileReaderTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/testing:avro_debug_results_file_reader",
         "//java/com/google/aggregate/adtech/worker/writer/avro",
         "//java/external:acai",
         "//java/external:google_truth",

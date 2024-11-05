@@ -30,6 +30,7 @@ import com.google.common.math.DoubleMath;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.errorprone.annotations.Var;
 import com.google.inject.Inject;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Supplier;
@@ -59,6 +60,28 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
   }
 
   @Override
+  public NoisedAggregationResult createResultSet(
+      List<AggregatedFact> facts, Optional<Double> debugPrivacyEpsilon) {
+    final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
+        getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
+
+    return NoisedAggregationResult.create(
+        requestScopedPrivacyParamsSupplier.get(), ImmutableList.copyOf(facts));
+  }
+
+  @Override
+  public ImmutableList<AggregatedFact> thresholdAggregatedFacts(
+      List<AggregatedFact> aggregatedFacts, Optional<Double> debugPrivacyEpsilon) {
+    final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
+        getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
+    final Supplier<Double> requestScopedThresholdSupplier =
+        getScopedThreshold(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
+    double threshold = requestScopedThresholdSupplier.get();
+
+    return threshold(aggregatedFacts, threshold);
+  }
+
+  @Override
   public NoisedAggregationResult threshold(
       Iterable<AggregatedFact> aggregatedFacts, Optional<Double> debugPrivacyEpsilon) {
     final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
@@ -67,13 +90,7 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
         getScopedThreshold(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
     double threshold = requestScopedThresholdSupplier.get();
 
-    ImmutableList<AggregatedFact> thresholdedFacts =
-        Streams.stream(aggregatedFacts)
-            .filter(
-                aggregatedFactItem ->
-                    (DoubleMath.fuzzyCompare(aggregatedFactItem.getMetric(), threshold, TOLERANCE)
-                        >= 0))
-            .collect(toImmutableList());
+    ImmutableList<AggregatedFact> thresholdedFacts = threshold(aggregatedFacts, threshold);
 
     return NoisedAggregationResult.create(
         requestScopedPrivacyParamsSupplier.get(), thresholdedFacts);
@@ -118,9 +135,25 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
     return NoisedAggregationResult.create(requestScopedPrivacyParamsSupplier.get(), noisedFacts);
   }
 
-  private AggregatedFact noiseSingleFact(
+  public AggregatedFact noiseSingleFact(
       AggregatedFact aggregatedFact, Supplier<NoiseApplier> scopedNoiseApplier) {
     return noiseSingleFact(aggregatedFact, scopedNoiseApplier.get());
+  }
+
+  public Supplier<NoiseApplier> getRequestScopedNoiseApplier(Optional<Double> debugPrivacyEpsilon) {
+    final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
+        getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
+    return getScopedNoiseApplier(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
+  }
+
+  private ImmutableList<AggregatedFact> threshold(
+      Iterable<AggregatedFact> aggregatedFacts, double threshold) {
+    return Streams.stream(aggregatedFacts)
+        .filter(
+            aggregatedFactItem ->
+                (DoubleMath.fuzzyCompare(aggregatedFactItem.getMetric(), threshold, TOLERANCE)
+                    >= 0))
+        .collect(toImmutableList());
   }
 
   private AggregatedFact noiseSingleFact(AggregatedFact aggregatedFact, NoiseApplier noiseApplier) {

@@ -19,26 +19,38 @@ package com.google.aggregate.adtech.worker.testing;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
+import com.google.aggregate.protocol.avro.AvroDebugResultsSchemaSupplier;
+import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import java.math.BigInteger;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class InMemoryResultLoggerTest {
+  @Rule public final Acai acai = new Acai(InMemoryResultLoggerTest.TestEnv.class);
+
+  @Inject AvroResultsSerdes avroResultsSerdes;
+  @Inject AvroDebugResultsSerdes avroDebugResultsSerdes;
 
   // Under test
   InMemoryResultLogger inMemoryResultLogger;
 
   @Before
   public void setUp() {
-    inMemoryResultLogger = new InMemoryResultLogger();
+    inMemoryResultLogger = new InMemoryResultLogger(avroResultsSerdes, avroDebugResultsSerdes);
   }
 
   @Test
@@ -109,5 +121,14 @@ public class InMemoryResultLoggerTest {
     assertThrows(
         ResultLogException.class,
         () -> inMemoryResultLogger.logResults(aggregatedFacts, Job, /* isDebugRun= */ true));
+  }
+
+  private static final class TestEnv extends AbstractModule {
+
+    @Override
+    protected void configure() {
+      bind(AvroResultsSchemaSupplier.class).toInstance(new AvroResultsSchemaSupplier());
+      bind(AvroDebugResultsSchemaSupplier.class).toInstance(new AvroDebugResultsSchemaSupplier());
+    }
   }
 }

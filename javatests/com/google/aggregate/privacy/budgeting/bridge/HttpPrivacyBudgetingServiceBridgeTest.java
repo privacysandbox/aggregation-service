@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.acai.Acai;
 import com.google.acai.TestScoped;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
+import com.google.aggregate.util.ClientVersionUtils;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
@@ -29,6 +30,7 @@ import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRe
 import com.google.scp.coordinator.privacy.budgeting.model.ReportingOriginToPrivacyBudgetUnits;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClient;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import javax.inject.Inject;
 import org.junit.Rule;
 import org.junit.Test;
@@ -45,42 +47,46 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
   private static final String REPORTING_ORIGIN_2 = "origin2.foo.com";
 
   private static final PrivacyBudgetUnit WORKER_FIRST_UNIT =
-      PrivacyBudgetUnit.create("foo1", Instant.ofEpochMilli(1000), REPORTING_ORIGIN_1);
+      PrivacyBudgetUnit.createHourTruncatedUnit(
+          "foo1", Instant.ofEpochSecond(10000), REPORTING_ORIGIN_1);
   private static final PrivacyBudgetUnit WORKER_SECOND_UNIT =
-      PrivacyBudgetUnit.create("foo2", Instant.ofEpochMilli(2000), REPORTING_ORIGIN_1);
+      PrivacyBudgetUnit.createHourTruncatedUnit(
+          "foo2", Instant.ofEpochSecond(20000), REPORTING_ORIGIN_1);
 
   private static final PrivacyBudgetUnit WORKER_THIRD_UNIT =
-      PrivacyBudgetUnit.create("foo3", Instant.ofEpochMilli(3000), REPORTING_ORIGIN_2);
+      PrivacyBudgetUnit.createHourTruncatedUnit(
+          "foo3", Instant.ofEpochSecond(30000), REPORTING_ORIGIN_2);
 
   private static final PrivacyBudgetUnit WORKER_FOURTH_UNIT =
-      PrivacyBudgetUnit.create("foo4", Instant.ofEpochMilli(4000), REPORTING_ORIGIN_1);
+      PrivacyBudgetUnit.createHourTruncatedUnit(
+          "foo4", Instant.ofEpochSecond(40000), REPORTING_ORIGIN_1);
 
   private static final com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit
       API_FIRST_UNIT =
           com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit.builder()
               .privacyBudgetKey("foo1")
-              .reportingWindow(Instant.ofEpochMilli(1000))
+              .reportingWindow(Instant.ofEpochSecond(10000).truncatedTo(ChronoUnit.HOURS))
               .build();
 
   private static final com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit
       API_SECOND_UNIT =
           com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit.builder()
               .privacyBudgetKey("foo2")
-              .reportingWindow(Instant.ofEpochMilli(2000))
+              .reportingWindow(Instant.ofEpochSecond(20000).truncatedTo(ChronoUnit.HOURS))
               .build();
 
   private static final com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit
       API_THIRD_UNIT =
           com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit.builder()
               .privacyBudgetKey("foo3")
-              .reportingWindow(Instant.ofEpochMilli(3000))
+              .reportingWindow(Instant.ofEpochSecond(30000).truncatedTo(ChronoUnit.HOURS))
               .build();
 
   private static final com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit
       API_FOURTH_UNIT =
           com.google.scp.coordinator.privacy.budgeting.model.PrivacyBudgetUnit.builder()
               .privacyBudgetKey("foo4")
-              .reportingWindow(Instant.ofEpochMilli(4000))
+              .reportingWindow(Instant.ofEpochSecond(40000).truncatedTo(ChronoUnit.HOURS))
               .build();
 
   private static final ReportingOriginToPrivacyBudgetUnits ORIGIN_1_UNITS =
@@ -119,6 +125,7 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                     ImmutableList.of(ORIGIN_2_UNITS, ORIGIN_1_UNITS))
                 .claimedIdentity(CLAIMED_IDENTITY)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
+                .trustedServicesClientVersion(ClientVersionUtils.getServiceClientVersion())
                 .build());
   }
 
@@ -139,6 +146,7 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                 .reportingOriginToPrivacyBudgetUnitsList(ImmutableList.of(ORIGIN_1_UNITS))
                 .claimedIdentity(CLAIMED_IDENTITY)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
+                .trustedServicesClientVersion(ClientVersionUtils.getServiceClientVersion())
                 .build());
   }
 
@@ -160,6 +168,7 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                     ImmutableList.of(ORIGIN_1_UNITS, ORIGIN_2_UNITS))
                 .claimedIdentity(CLAIMED_IDENTITY)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
+                .trustedServicesClientVersion(ClientVersionUtils.getServiceClientVersion())
                 .build());
   }
 

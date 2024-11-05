@@ -1,11 +1,24 @@
 # Changelog
 
+## [2.9.0](https://github.com/privacysandbox/aggregation-service/compare/v2.8.0...v2.9.0) (2024-11-04)
+
+-   Updated PBS budget consumption request to use service client version.
+-   Added missing permissions to custom GCP Deploy role in adtech_setup environment.
+-   Reduced domain processing memory usage by parallelizing the domain processing stage and keeping
+    `AggregatedFacts` in memory in AVRO format files.
+-   Updated Aggregation Service sizing guidance with the latests benchmark results.
+
 ## [2.8.0](https://github.com/privacysandbox/aggregation-service/compare/v2.7.0...v2.8.0) (2024-09-11)
 
 -   Increased read threads in Aggregation Service to match the number of CPUs.
 -   Enabled worker instance OTel logs - processed job's id and worker health status.
 -   [GCP only] Updated the GCP image build target to "worker_mp_gcp_prod". Note: This change would
     impact only if you build your own image.
+
+## [2.7.1](https://github.com/privacysandbox/aggregation-service/compare/v2.7.0...v2.7.1) (2024-09-20)
+
+-   [GCP Only] Added a version in GCP VPC serverless connector module to fix 'Invalid type
+    specification' error.
 
 ## [2.7.0](https://github.com/privacysandbox/aggregation-service/compare/v2.6.0...v2.7.0) (2024-08-01)
 

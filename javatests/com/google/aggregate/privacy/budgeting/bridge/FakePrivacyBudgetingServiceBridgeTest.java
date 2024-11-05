@@ -35,9 +35,9 @@ public class FakePrivacyBudgetingServiceBridgeTest {
   private String attributionReportTo = "https://foo.com";
 
   private final PrivacyBudgetUnit firstId =
-      PrivacyBudgetUnit.create("foo", Instant.ofEpochMilli(1000), attributionReportTo);
+      PrivacyBudgetUnit.createHourTruncatedUnit("foo", Instant.EPOCH, attributionReportTo);
   private final PrivacyBudgetUnit secondId =
-      PrivacyBudgetUnit.create("foo", Instant.ofEpochMilli(2000), attributionReportTo);
+      PrivacyBudgetUnit.createHourTruncatedUnit("foo", Instant.now(), attributionReportTo);
 
   @Before
   public void setUp() {
