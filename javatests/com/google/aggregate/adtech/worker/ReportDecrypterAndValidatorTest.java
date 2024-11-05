@@ -21,7 +21,13 @@ import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.acai.Acai;
 import com.google.acai.TestScoped;
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipher;
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipher.PayloadDecryptionException;
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipher.PayloadParsingException;
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory;
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory.CipherCreationException;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
+import com.google.aggregate.adtech.worker.decryption.RecordDecrypter.DecryptionException;
 import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.model.ErrorCounter;
@@ -93,7 +99,9 @@ public class ReportDecrypterAndValidatorTest {
 
   @Test
   public void testDecryptionError() {
-    fakeRecordDecrypter.setShouldThrow(/* shouldThrow= */ true, /* reason= */ null);
+    fakeRecordDecrypter.setShouldThrow(
+        /* shouldThrow= */ true,
+        new DecryptionException(new IllegalStateException("The decrypter was set to throw.")));
 
     DecryptionValidationResult decryptionValidationResult =
         reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
@@ -120,7 +128,11 @@ public class ReportDecrypterAndValidatorTest {
 
   @Test
   public void testDecryptionKeyServiceError_INTERNAL() {
-    fakeRecordDecrypter.setShouldThrow(true, ErrorReason.INTERNAL);
+    fakeRecordDecrypter.setShouldThrow(
+        true,
+        new DecryptionException(
+            new CipherCreationException(
+                new Exception("FakeRecordDecrypter test throw"), ErrorReason.INTERNAL)));
     DecryptionValidationResult decryptionValidationResult =
         reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
 
@@ -131,7 +143,12 @@ public class ReportDecrypterAndValidatorTest {
 
   @Test
   public void testDecryptionKeyServiceError_KEY_DECRYPTION_ERROR() {
-    fakeRecordDecrypter.setShouldThrow(true, ErrorReason.KEY_DECRYPTION_ERROR);
+    fakeRecordDecrypter.setShouldThrow(
+        true,
+        new DecryptionException(
+            new CipherCreationException(
+                new Exception("FakeRecordDecrypter test throw"),
+                ErrorReason.KEY_DECRYPTION_ERROR)));
     DecryptionValidationResult decryptionValidationResult =
         reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
 
@@ -141,8 +158,41 @@ public class ReportDecrypterAndValidatorTest {
   }
 
   @Test
+  public void testDecryptionKeyServiceError_REPORT_PARSING_ERROR() {
+    fakeRecordDecrypter.setShouldThrow(
+        true,
+        new DecryptionException(
+            new PayloadParsingException(new Exception("sample report parsing error"))));
+    DecryptionValidationResult decryptionValidationResult =
+        reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
+
+    assertThat(decryptionValidationResult.report()).isEmpty();
+    assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
+        .containsExactly(ErrorCounter.REPORT_PARSING_ERROR);
+  }
+
+  @Test
+  public void testDecryptionKeyServiceError_PAYLOAD_DECRYPTION_EXCEPTION() {
+    fakeRecordDecrypter.setShouldThrow(
+        true,
+        new DecryptionException(
+            new PayloadDecryptionException(new Exception("sample payload decryption error"))));
+    DecryptionValidationResult decryptionValidationResult =
+        reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
+
+    // Check that a PayloadDecryptionException counts as a Decryption Error.
+    assertThat(decryptionValidationResult.report()).isEmpty();
+    assertThat(decryptionValidationResult.errorMessages().stream().map(ErrorMessage::category))
+        .containsExactly(ErrorCounter.DECRYPTION_ERROR);
+  }
+
+  @Test
   public void testDecryptionKeyServiceError_KEY_NOT_FOUND() {
-    fakeRecordDecrypter.setShouldThrow(true, ErrorReason.KEY_NOT_FOUND);
+    fakeRecordDecrypter.setShouldThrow(
+        true,
+        new DecryptionException(
+            new CipherCreationException(
+                new Exception("FakeRecordDecrypter test throw"), ErrorReason.KEY_NOT_FOUND)));
     DecryptionValidationResult decryptionValidationResult =
         reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
 
@@ -153,7 +203,11 @@ public class ReportDecrypterAndValidatorTest {
 
   @Test
   public void testDecryptionKeyServiceError_DEFAULT() {
-    fakeRecordDecrypter.setShouldThrow(true, ErrorReason.UNKNOWN_ERROR);
+    fakeRecordDecrypter.setShouldThrow(
+        true,
+        new DecryptionException(
+            new CipherCreationException(
+                new Exception("FakeRecordDecrypter test throw"), ErrorReason.UNKNOWN_ERROR)));
     DecryptionValidationResult decryptionValidationResult =
         reportDecrypterAndValidator.decryptAndValidate(encryptedReport, ctx);
 

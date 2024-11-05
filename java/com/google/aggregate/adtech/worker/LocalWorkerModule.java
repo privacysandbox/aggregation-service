@@ -26,7 +26,6 @@ import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
-import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.InstanceId;
@@ -173,10 +172,6 @@ public final class LocalWorkerModule extends AbstractModule {
     bind(long.class)
         .annotatedWith(OutputShardFileSizeBytes.class)
         .toInstance(localWorkerArgs.getOutputShardFileSizeBytes());
-
-    bind(boolean.class)
-        .annotatedWith(EnablePrivacyBudgetKeyFiltering.class)
-        .toInstance(localWorkerArgs.isLabeledPrivacyBudgetKeysEnabled());
   }
 
   @Provides

@@ -45,9 +45,8 @@ public final class OutputShardFileHelper {
   /**
    * Set the file size for a shard in bytes.
    *
-   * @param fileSize Output shard file size in bytes.
-   *                 It must be larger than one record size + AVRO metadata size
-   *                 and smaller than the maximum size(5GB) of a single shard file.
+   * @param fileSize Output shard file size in bytes. It must be larger than one record size + AVRO
+   *     metadata size and smaller than the maximum size(5GB) of a single shard file.
    */
   public static void setOutputShardFileSizeBytes(long fileSize) {
     if (fileSize >= RECORD_FILE_SIZE_BYTES + AVRO_METADATA_SIZE_BYTES
@@ -60,10 +59,29 @@ public final class OutputShardFileHelper {
     return outputShardFileSizeBytes;
   }
 
+  /**
+   * Returns the number of records per summary report shard to be written.
+   *
+   * @return The number of records per shard.
+   */
+  public static int getMaxRecordsPerShard() {
+    return Double.valueOf(
+            Math.max(
+                Math.ceil(
+                    ((outputShardFileSizeBytes - AVRO_METADATA_SIZE_BYTES)
+                        / RECORD_FILE_SIZE_BYTES)),
+                1))
+        .intValue();
+  }
+
   public static int getNumShards(long outputRecordCount) {
-    return Double.valueOf(Math.max(Math.ceil(
-        outputRecordCount * RECORD_FILE_SIZE_BYTES /
-            (outputShardFileSizeBytes - AVRO_METADATA_SIZE_BYTES)), 1))
+    return Double.valueOf(
+            Math.max(
+                Math.ceil(
+                    outputRecordCount
+                        * RECORD_FILE_SIZE_BYTES
+                        / (outputShardFileSizeBytes - AVRO_METADATA_SIZE_BYTES)),
+                1))
         .intValue();
   }
 
@@ -74,12 +92,12 @@ public final class OutputShardFileHelper {
    * @param totalShards The total number of shards
    * @param recordsPerShard The number of records per shard
    * @param remainingRecordAtTheEnd The number of remaining records after distributing records
-   *                                evenly to each shard
-   * @return The exclusive end index for the shard.
-   *     In most cases, the end index would be Shard ID * the number of records per shard.
-   *     When it's the last shard and there are remaining records after distributing records
-   *     evenly to all shards except the last shard, the end index for the last shard would be
-   *     the number of distributed records to all shards except the last shard + remaining records.
+   *     evenly to each shard
+   * @return The exclusive end index for the shard. In most cases, the end index would be Shard ID *
+   *     the number of records per shard. When it's the last shard and there are remaining records
+   *     after distributing records evenly to all shards except the last shard, the end index for
+   *     the last shard would be the number of distributed records to all shards except the last
+   *     shard + remaining records.
    */
   public static int getEndIndexOfShard(
       int shardId, long totalShards, long recordsPerShard, long remainingRecordAtTheEnd) {

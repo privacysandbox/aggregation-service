@@ -516,13 +516,34 @@ public class AwsWorkerContinuousTestHelper {
     return readerFactory.create(Files.newInputStream(avroFile));
   }
 
-  public static ImmutableList<AggregatedFact> readDebugResultsFromS3(
+  public static ImmutableList<AggregatedFact> readDebugResultsFromMultipleFiles(
       S3BlobStorageClient s3BlobStorageClient,
       AvroDebugResultsReaderFactory readerFactory,
       String outputBucket,
       String outputPrefix)
       throws Exception {
 
+    BlobStoreDataLocation blobsPrefixLocation =
+        BlobStoreDataLocation.create(outputBucket, outputPrefix);
+    DataLocation prefixLocation = DataLocation.ofBlobStoreDataLocation(blobsPrefixLocation);
+    ImmutableList<String> shardBlobs = s3BlobStorageClient.listBlobs(prefixLocation);
+
+    ImmutableList.Builder<AggregatedFact> aggregatedFactBuilder = ImmutableList.builder();
+    for (String shardBlob : shardBlobs) {
+      aggregatedFactBuilder.addAll(
+          readDebugResultsFromS3(
+              s3BlobStorageClient, readerFactory, blobsPrefixLocation.bucket(), shardBlob));
+    }
+
+    return aggregatedFactBuilder.build();
+  }
+
+  public static ImmutableList<AggregatedFact> readDebugResultsFromS3(
+      S3BlobStorageClient s3BlobStorageClient,
+      AvroDebugResultsReaderFactory readerFactory,
+      String outputBucket,
+      String outputPrefix)
+      throws Exception {
     Stream<AvroDebugResultsRecord> writtenResults;
     Path tempResultFile = Files.createTempFile(/* prefix= */ "debug_results", /* suffix= */ "avro");
 

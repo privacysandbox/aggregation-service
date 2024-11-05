@@ -552,6 +552,28 @@ public abstract class SmokeTestBase {
   }
 
   protected static <T extends BlobStorageClient>
+      ImmutableList<AggregatedFact> readDebugResultsFromMultipleFiles(
+          T blobStorageClient,
+          AvroDebugResultsReaderFactory readerFactory,
+          String outputBucket,
+          String outputPrefix)
+          throws Exception {
+    BlobStoreDataLocation blobsPrefixLocation =
+        BlobStoreDataLocation.create(outputBucket, outputPrefix);
+    DataLocation prefixLocation = DataLocation.ofBlobStoreDataLocation(blobsPrefixLocation);
+    ImmutableList<String> shardBlobs = blobStorageClient.listBlobs(prefixLocation);
+
+    ImmutableList.Builder<AggregatedFact> aggregatedFactBuilder = ImmutableList.builder();
+    for (String shard : shardBlobs) {
+      aggregatedFactBuilder.addAll(
+          readDebugResultsFromCloud(
+              blobStorageClient, readerFactory, blobsPrefixLocation.bucket(), shard));
+    }
+
+    return aggregatedFactBuilder.build();
+  }
+
+  protected static <T extends BlobStorageClient>
       ImmutableList<AggregatedFact> readDebugResultsFromCloud(
           T blobStorageClient,
           AvroDebugResultsReaderFactory readerFactory,

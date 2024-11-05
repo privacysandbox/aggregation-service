@@ -23,8 +23,9 @@ import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
+import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
-import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteStreams;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -37,27 +38,23 @@ import javax.inject.Inject;
 
 /** Reads output domain from a text file with each aggregation key on a separate line. */
 public final class TextOutputDomainProcessor extends OutputDomainProcessor {
-
-  private final BlobStorageClient blobStorageClient;
-  private final StopwatchRegistry stopwatches;
-
   @Inject
   public TextOutputDomainProcessor(
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       BlobStorageClient blobStorageClient,
-      StopwatchRegistry stopwatches,
+      AvroResultsSerdes resultsSerdes,
+      AvroDebugResultsSerdes debugResultsSerdes,
       @DomainOptional Boolean domainOptional,
       @EnableThresholding Boolean enableThresholding) {
     super(
         blockingThreadPool,
         nonBlockingThreadPool,
         blobStorageClient,
-        stopwatches,
+        resultsSerdes,
+        debugResultsSerdes,
         domainOptional,
         enableThresholding);
-    this.blobStorageClient = blobStorageClient;
-    this.stopwatches = stopwatches;
   }
 
   public Stream<BigInteger> readInputStream(InputStream shardInputStream) {

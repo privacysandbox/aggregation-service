@@ -37,7 +37,6 @@ import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyStri
 
 import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
-import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
@@ -53,6 +52,7 @@ import com.google.aggregate.adtech.worker.exceptions.ConcurrentShardReadExceptio
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.adtech.worker.exceptions.InternalServerException;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
+import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.AvroRecordEncryptedReportConverter;
 import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
@@ -68,8 +68,8 @@ import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBrid
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetingServiceBridgeException;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
-import com.google.aggregate.privacy.noise.model.NoisedAggregatedResultSet;
-import com.google.aggregate.privacy.noise.model.NoisedAggregationResult;
+import com.google.aggregate.privacy.noise.model.AggregatedResults;
+import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.aggregate.protocol.avro.AvroReportsReaderFactory;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
@@ -143,7 +143,6 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   private final PrivacyBudgetingServiceBridge privacyBudgetingServiceBridge;
   private final ListeningExecutorService blockingThreadPool;
   private final ListeningExecutorService nonBlockingThreadPool;
-  private final boolean enablePrivacyBudgetKeyFiltering;
   private final OTelConfiguration oTelConfiguration;
   private final double defaultReportErrorThresholdPercentage;
   private final Boolean streamingOutputDomainProcessing;
@@ -165,8 +164,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       @ReportErrorThresholdPercentage double defaultReportErrorThresholdPercentage,
-      @StreamingOutputDomainProcessing Boolean streamingOutputDomainProcessing,
-      @EnablePrivacyBudgetKeyFiltering boolean enablePrivacyBudgetKeyFiltering) {
+      @StreamingOutputDomainProcessing Boolean streamingOutputDomainProcessing) {
     this.reportDecrypterAndValidator = reportDecrypterAndValidator;
     this.aggregationEngineFactory = aggregationEngineFactory;
     this.outputDomainProcessor = outputDomainProcessor;
@@ -183,12 +181,9 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     this.oTelConfiguration = oTelConfiguration;
     this.defaultReportErrorThresholdPercentage = defaultReportErrorThresholdPercentage;
     this.streamingOutputDomainProcessing = streamingOutputDomainProcessing;
-    this.enablePrivacyBudgetKeyFiltering = enablePrivacyBudgetKeyFiltering;
   }
 
-  /**
-   * Processor responsible for performing aggregation.
-   */
+  /** Processor responsible for performing aggregation. */
   @Override
   public JobResult process(Job job)
       throws ExecutionException, InterruptedException, AggregationJobProcessException {
@@ -215,7 +210,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     if (jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME)
         && jobParams.containsKey(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX)
         && (!jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME).isEmpty()
-        || !jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX).isEmpty())) {
+            || !jobParams.get(JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX).isEmpty())) {
       outputDomainLocation =
           Optional.of(
               BlobStorageClient.getDataLocation(
@@ -255,13 +250,8 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
 
     try {
       double reportErrorThresholdPercentage = getReportErrorThresholdPercentage(jobParams);
-      @Var ImmutableSet<UnsignedLong> filteringIds = ImmutableSet.of();
-      if (enablePrivacyBudgetKeyFiltering) {
-        filteringIds =
-            NumericConversions.getUnsignedLongsFromString(
-                jobParams.get(JobUtils.JOB_PARAM_FILTERING_IDS),
-                JobUtils.JOB_PARAM_FILTERING_IDS_DELIMITER);
-      }
+      ImmutableSet<UnsignedLong> filteringIds = JobUtils.getFilteringIdsFromJobOrDefault(job);
+
       AggregationEngine aggregationEngine = aggregationEngineFactory.create(filteringIds);
       ErrorSummaryAggregator errorAggregator =
           ErrorSummaryAggregator.createErrorSummaryAggregator(
@@ -285,15 +275,15 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
             Optional.of(RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE));
       }
 
-      NoisedAggregatedResultSet noisedResultSet;
+      AggregatedResults aggregatedResults;
       try {
-          noisedResultSet =
-              conflateWithDomainAndAddNoiseStreaming(
-                  outputDomainLocation,
-                  outputDomainShards,
-                  aggregationEngine,
-                  debugPrivacyEpsilon,
-                  debugRun);
+        aggregatedResults =
+            conflateWithDomainAndAddNoiseStreaming(
+                outputDomainLocation,
+                outputDomainShards,
+                aggregationEngine,
+                debugPrivacyEpsilon,
+                debugRun);
       } catch (DomainReadException e) {
         throw new AggregationJobProcessException(
             INPUT_DATA_READ_FAILED, "Exception while reading domain input data.", e.getCause());
@@ -309,17 +299,14 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
           jobCode = AggregationWorkerReturnCode.getDebugEquivalent(e.getCode());
         }
 
-        NoisedAggregationResult noisedDebugResult = noisedResultSet.noisedDebugResult().get();
-        resultLogger.logResults(
-            noisedDebugResult.noisedAggregatedFacts(), job, /* isDebugRun= */ true);
+        logResults(aggregatedResults, job, /* isDebugRun= */ true);
       } else {
         consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
       }
 
       // Log summary results
       try (Timer t = oTelConfiguration.createDebugTimerStarted("summary_write_time", jobKey)) {
-        resultLogger.logResults(
-            noisedResultSet.noisedResult().noisedAggregatedFacts(), job, /* isDebugRun= */ false);
+        logResults(aggregatedResults, job, /* isDebugRun= */ false);
       }
 
       return jobResultHelper.createJobResult(
@@ -346,6 +333,35 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     }
   }
 
+  private void logResults(AggregatedResults aggregatedResults, Job ctx, boolean isDebugRun) {
+    // Only one of noisedAggregationResultSet (partial RxJava-based stream domain processing) or
+    // summaryReportAvroSet(full RxJava-based stream domain processing) will be present, with the
+    // full stream processing enabled by default.
+    aggregatedResults
+        .noisedAggregatedResultSet()
+        .ifPresent(
+            noisedAggregatedResultSet -> {
+              ImmutableList<AggregatedFact> noisedFacts =
+                  isDebugRun
+                      ? noisedAggregatedResultSet.noisedDebugResult().get().noisedAggregatedFacts()
+                      : noisedAggregatedResultSet.noisedResult().noisedAggregatedFacts();
+
+              resultLogger.logResults(noisedFacts, ctx, isDebugRun);
+            });
+
+    aggregatedResults
+        .summaryReportAvroSet()
+        .ifPresent(
+            summaryReportAvroSet -> {
+              ImmutableList<SummaryReportAvro> summaryReportAvros =
+                  isDebugRun
+                      ? summaryReportAvroSet.debugSummaryReport().get()
+                      : summaryReportAvroSet.summaryReports();
+
+              resultLogger.logResultsAvros(summaryReportAvros, ctx, isDebugRun);
+            });
+  }
+
   private static Optional<Long> getInputReportCountFromJobParams(Map<String, String> jobParams) {
     String inputReportCount = jobParams.get(JobUtils.JOB_PARAM_INPUT_REPORT_COUNT);
     if (inputReportCount == null || inputReportCount.trim().isEmpty()) {
@@ -354,14 +370,24 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     return Optional.ofNullable(Long.parseLong(inputReportCount.trim()));
   }
 
-  private NoisedAggregatedResultSet conflateWithDomainAndAddNoiseStreaming(
+  private AggregatedResults conflateWithDomainAndAddNoiseStreaming(
       Optional<DataLocation> outputDomainLocation,
       ImmutableList<DataLocation> outputDomainShards,
       AggregationEngine engine,
       Optional<Double> debugPrivacyEpsilon,
       Boolean debugRun)
       throws DomainReadException {
-    return outputDomainProcessor.adjustAggregationWithDomainAndNoiseStreaming(
+    if (streamingOutputDomainProcessing) {
+      return outputDomainProcessor.adjustAggregationWithDomainAndNoiseStreaming(
+          engine,
+          outputDomainLocation,
+          outputDomainShards,
+          noisedAggregationRunner,
+          debugPrivacyEpsilon,
+          debugRun);
+    }
+
+    return outputDomainProcessor.adjustAggregationWithDomainAndNoise(
         engine,
         outputDomainLocation,
         outputDomainShards,
@@ -418,8 +444,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
         final String reportingOrigin =
             job.requestInfo().getJobParametersMap().get(JOB_PARAM_ATTRIBUTION_REPORT_TO);
         missingPrivacyBudgetUnits =
-            privacyBudgetingServiceBridge.consumePrivacyBudget(
-                budgetsToConsume, claimedIdentity);
+            privacyBudgetingServiceBridge.consumePrivacyBudget(budgetsToConsume, claimedIdentity);
       }
     } catch (PrivacyBudgetingServiceBridgeException e) {
       if (e.getStatusCode() != null) {

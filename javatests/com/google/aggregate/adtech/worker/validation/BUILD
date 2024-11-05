@@ -131,68 +131,6 @@ java_test(
 )
 
 java_test(
-    name = "PrivacyBudgetKeyValidatorFactoryTest",
-    srcs = ["PrivacyBudgetKeyValidatorFactoryTest.java"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/com/google/aggregate/adtech/worker/validation/v01",
-        "//java/external:clients_jobclient_aws",
-        "//java/external:clients_jobclient_model",
-        "//java/external:google_truth",
-        "//java/external:google_truth8",
-    ],
-)
-
-java_test(
-    name = "AttributionReportingPrivacyBudgetKeyFieldsValidatorTest",
-    srcs = ["v01/AttributionReportingPrivacyBudgetKeyFieldsValidatorTest.java"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/com/google/aggregate/adtech/worker/validation/v01",
-        "//java/external:google_truth",
-        "//java/external:google_truth8",
-    ],
-)
-
-java_test(
-    name = "AttributionReportingDebugPrivacyBudgetKeyFieldsValidatorTest",
-    srcs = ["v01/AttributionReportingDebugPrivacyBudgetKeyFieldsValidatorTest.java"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/com/google/aggregate/adtech/worker/validation/v01",
-        "//java/external:google_truth",
-        "//java/external:google_truth8",
-    ],
-)
-
-java_test(
-    name = "ProtectedAudiencePrivacyBudgetKeyFieldsValidatorTest",
-    srcs = ["v01/ProtectedAudiencePrivacyBudgetKeyFieldsValidatorTest.java"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/com/google/aggregate/adtech/worker/validation/v01",
-        "//java/external:google_truth",
-        "//java/external:google_truth8",
-    ],
-)
-
-java_test(
-    name = "SharedStoragePrivacyBudgetKeyFieldsValidatorTest",
-    srcs = ["v01/SharedStoragePrivacyBudgetKeyFieldsValidatorTest.java"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/com/google/aggregate/adtech/worker/validation/v01",
-        "//java/external:google_truth",
-        "//java/external:google_truth8",
-    ],
-)
-
-java_test(
     name = "SharedInfoReportIdValidatorTest",
     srcs = ["SharedInfoReportIdValidatorTest.java"],
     deps = [

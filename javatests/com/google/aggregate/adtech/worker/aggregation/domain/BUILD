@@ -27,6 +27,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/configs",
         "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
         "//java/com/google/aggregate/privacy/noise",
@@ -39,6 +40,7 @@ java_test(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
+        "//java/external:test_parameter_injector",
         "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient",
     ],
 )
@@ -54,6 +56,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/configs",
         "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
         "//java/com/google/aggregate/privacy/noise",
         "//java/com/google/aggregate/privacy/noise/model",
@@ -66,6 +69,7 @@ java_test(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
+        "//java/external:test_parameter_injector",
         "@shared_libraries//java/com/google/scp/operator/cpio/blobstorageclient",
     ],
 )

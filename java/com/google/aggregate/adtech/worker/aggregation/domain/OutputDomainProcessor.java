@@ -22,10 +22,16 @@ import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
-import com.google.aggregate.perf.StopwatchRegistry;
+import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
+import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
+import com.google.aggregate.privacy.noise.NoiseApplier;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
+import com.google.aggregate.privacy.noise.model.AggregatedResults;
 import com.google.aggregate.privacy.noise.model.NoisedAggregatedResultSet;
 import com.google.aggregate.privacy.noise.model.NoisedAggregationResult;
+import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
+import com.google.aggregate.privacy.noise.model.SummaryReportAvroSet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -39,12 +45,15 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -65,23 +74,26 @@ public abstract class OutputDomainProcessor {
   private final ListeningExecutorService blockingThreadPool; // for blocking I/O operations
   private final ListeningExecutorService nonBlockingThreadPool; // for other processing operations
   private final BlobStorageClient blobStorageClient;
-  private final StopwatchRegistry stopwatches;
   private final Boolean domainOptional;
   private final Boolean enableThresholding;
+  private final AvroResultsSerdes resultsSerdes;
+  private final AvroDebugResultsSerdes debugResultsSerdes;
 
   OutputDomainProcessor(
       ListeningExecutorService blockingThreadPool,
       ListeningExecutorService nonBlockingThreadPool,
       BlobStorageClient blobStorageClient,
-      StopwatchRegistry stopwatches,
+      AvroResultsSerdes resultsSerdes,
+      AvroDebugResultsSerdes debugResultsSerdes,
       Boolean domainOptional,
       Boolean enableThresholding) {
     this.blockingThreadPool = blockingThreadPool;
     this.nonBlockingThreadPool = nonBlockingThreadPool;
     this.blobStorageClient = blobStorageClient;
-    this.stopwatches = stopwatches;
     this.domainOptional = domainOptional;
     this.enableThresholding = enableThresholding;
+    this.resultsSerdes = resultsSerdes;
+    this.debugResultsSerdes = debugResultsSerdes;
   }
 
   /**
@@ -113,6 +125,189 @@ public abstract class OutputDomainProcessor {
   }
 
   /**
+   * Process output domains using RxJava streaming API to read the domains, conflate with report
+   * facts, noise, and buffer for summary report. When domainOptional is set, aggregatable
+   * report-only facts are also included but thresholded using the noised metric. When debugRun is
+   * set, domain only, aggregatable report only, and overlapping facts are annotated and set as
+   * NoisedDebugResults. Since output domain keys are processed and added to summary reports
+   * separately from report-only keys, enabling debug run or domain optional results in separate
+   * files.
+   *
+   * @return NoisedAggregatedResultSet containing the combined and noised Aggregatable reports and
+   *     output domain buckets.
+   */
+  public AggregatedResults adjustAggregationWithDomainAndNoiseStreaming(
+      AggregationEngine aggregationEngine,
+      Optional<DataLocation> domainLocation,
+      ImmutableList<DataLocation> domainShards,
+      NoisedAggregationRunner noisedAggregationRunner,
+      Optional<Double> debugPrivacyEpsilon,
+      Boolean debugRun)
+      throws DomainReadException {
+    Set<BigInteger> domainKeySet = Sets.newConcurrentHashSet();
+    AtomicLong outputDomainTotalCount = new AtomicLong(0);
+    AtomicInteger shardCounter = new AtomicInteger(0);
+    Supplier<NoiseApplier> requestScopedNoiseApplier =
+        noisedAggregationRunner.getRequestScopedNoiseApplier(debugPrivacyEpsilon);
+
+    // SynchronizedList is thread-safe. Only using bulk addAll function in threads that process
+    // buffered facts for each summary report.
+    List<SummaryReportAvro> summaryReportAvros = Collections.synchronizedList(new ArrayList<>());
+    List<SummaryReportAvro> debugSummaryReportAvros =
+        Collections.synchronizedList(new ArrayList<>());
+
+    Flowable.fromStream(domainShards.stream())
+        .flatMap(
+            dataLocation ->
+                processOutputDomainShard(
+                    dataLocation,
+                    aggregationEngine,
+                    noisedAggregationRunner,
+                    requestScopedNoiseApplier,
+                    domainKeySet,
+                    debugRun),
+            /* delayErrors= */ false,
+            NUM_READ_THREADS,
+            MAX_DOMAIN_READ_BUFFER_SIZE)
+        .buffer(OutputShardFileHelper.getMaxRecordsPerShard())
+        .doOnNext(domains -> outputDomainTotalCount.addAndGet(domains.size()))
+        .flatMap(
+            summaryFacts ->
+                processDomainSummaryFacts(
+                    ImmutableList.copyOf(summaryFacts),
+                    shardCounter.addAndGet(1),
+                    debugRun,
+                    summaryReportAvros,
+                    debugSummaryReportAvros),
+            NUM_PROCESS_THREADS)
+        .blockingSubscribe();
+
+    if (domainLocation.isPresent() && outputDomainTotalCount.get() < 1) {
+      throw new DomainReadException(
+          new IllegalArgumentException(
+              String.format(
+                  "No output domain provided in the location: %s. Please refer to the API"
+                      + " documentation for output domain parameters at"
+                      + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/api.md",
+                  domainLocation)));
+    }
+
+    if (debugRun || domainOptional) {
+      Flowable.fromIterable(aggregationEngine.getEntries())
+          .map(
+              reportOnlyEntry -> {
+                BigInteger reportOnlyKey = reportOnlyEntry.getKey();
+                AggregatedFact reportOnlyFact =
+                    AggregatedFact.create(reportOnlyKey, reportOnlyEntry.getValue().longValue());
+                noisedAggregationRunner.noiseSingleFact(reportOnlyFact, requestScopedNoiseApplier);
+
+                if (debugRun) {
+                  reportOnlyFact.setDebugAnnotations(List.of(DebugBucketAnnotation.IN_REPORTS));
+                }
+                return reportOnlyFact;
+              })
+          .buffer(OutputShardFileHelper.getMaxRecordsPerShard())
+          .flatMap(
+              summaryFacts ->
+                  processReportOnlyFacts(
+                      ImmutableList.copyOf(summaryFacts),
+                      shardCounter.addAndGet(1),
+                      debugRun,
+                      debugPrivacyEpsilon,
+                      noisedAggregationRunner,
+                      summaryReportAvros,
+                      debugSummaryReportAvros))
+          .blockingSubscribe();
+    }
+
+    SummaryReportAvroSet summaryReportAvroSet =
+        SummaryReportAvroSet.create(
+            ImmutableList.copyOf(summaryReportAvros),
+            debugRun
+                ? Optional.of(ImmutableList.copyOf(debugSummaryReportAvros))
+                : Optional.empty());
+
+    return AggregatedResults.create(summaryReportAvroSet);
+  }
+
+  private Flowable<Object> processReportOnlyFacts(
+      ImmutableList<AggregatedFact> summaryFacts,
+      Integer shardId,
+      boolean debugRun,
+      Optional<Double> debugPrivacyEpsilon,
+      NoisedAggregationRunner noisedAggregationRunner,
+      List<SummaryReportAvro> summaryReportAvros,
+      List<SummaryReportAvro> debugSummaryReportAvros) {
+    if (domainOptional) {
+      ImmutableList<AggregatedFact> thresholdedFacts =
+          enableThresholding
+              ? noisedAggregationRunner.thresholdAggregatedFacts(summaryFacts, debugPrivacyEpsilon)
+              : summaryFacts;
+
+      byte[] avroBytes = resultsSerdes.convert(thresholdedFacts);
+      summaryReportAvros.add(SummaryReportAvro.create(shardId, avroBytes));
+    }
+
+    if (debugRun) {
+      byte[] debugAvroBytes = debugResultsSerdes.convert(summaryFacts);
+      debugSummaryReportAvros.add(SummaryReportAvro.create(shardId, debugAvroBytes));
+    }
+
+    return Flowable.empty();
+  }
+
+  private Flowable<Object> processDomainSummaryFacts(
+      ImmutableList<AggregatedFact> summaryFacts,
+      int shardId,
+      Boolean debugRun,
+      List<SummaryReportAvro> summaryReportAvros,
+      List<SummaryReportAvro> debugSummaryReportAvros) {
+
+    byte[] avroBytes = resultsSerdes.convert(summaryFacts);
+    summaryReportAvros.add(SummaryReportAvro.create(shardId, avroBytes));
+
+    if (debugRun) {
+      byte[] debugAvroBytes = debugResultsSerdes.convert(summaryFacts);
+      debugSummaryReportAvros.add(SummaryReportAvro.create(shardId, debugAvroBytes));
+    }
+
+    return Flowable.empty();
+  }
+
+  private Flowable<AggregatedFact> processOutputDomainShard(
+      DataLocation dataLocation,
+      AggregationEngine aggregationEngine,
+      NoisedAggregationRunner noisedAggregationRunner,
+      Supplier<NoiseApplier> noiseApplier,
+      Set<BigInteger> domainKeySet,
+      Boolean debugRun) {
+    return readShardData(dataLocation)
+        .filter(domainKeySet::add)
+        .map(
+            domainKey -> {
+              AggregatedFact aggregatedFact =
+                  AggregatedFact.create(
+                      domainKey, aggregationEngine.getAggregatedValueOrDefault(domainKey, 0));
+              noisedAggregationRunner.noiseSingleFact(aggregatedFact, noiseApplier);
+
+              if (debugRun) {
+                List<DebugBucketAnnotation> debugAnnotations = new ArrayList<>();
+                if (aggregationEngine.containsKey(domainKey)) {
+                  debugAnnotations.add(DebugBucketAnnotation.IN_REPORTS);
+                }
+                debugAnnotations.add(DebugBucketAnnotation.IN_DOMAIN);
+
+                aggregatedFact.setDebugAnnotations(debugAnnotations);
+              }
+
+              aggregationEngine.remove(domainKey);
+
+              return aggregatedFact;
+            })
+        .subscribeOn(Schedulers.from(blockingThreadPool));
+  }
+
+  /**
    * Conflate aggregated facts with the output domain and noise results using RxJava streaming API.
    * When domainOptional is set, keys only in the aggregatable reports are also included but
    * thresholded using the noised metric. When debugRun is set, domain only, aggregatable report
@@ -121,7 +316,7 @@ public abstract class OutputDomainProcessor {
    * @return NoisedAggregatedResultSet containing the combined and noised Aggregatable reports and
    *     output domain buckets.
    */
-  public NoisedAggregatedResultSet adjustAggregationWithDomainAndNoiseStreaming(
+  public AggregatedResults adjustAggregationWithDomainAndNoise(
       AggregationEngine aggregationEngine,
       Optional<DataLocation> domainLocation,
       ImmutableList<DataLocation> domainShards,
@@ -187,7 +382,7 @@ public abstract class OutputDomainProcessor {
         NoisedAggregatedResultSet.builder().setNoisedResult(noisedOverlappingAndDomainResults);
 
     if (!(debugRun || domainOptional)) {
-      return noisedResultSetBuilder.build();
+      return AggregatedResults.create(noisedResultSetBuilder.build());
     }
 
     // ReportOnly facts are included only if debug run or domain optional are set.
@@ -234,7 +429,7 @@ public abstract class OutputDomainProcessor {
               noisedReportOnlyResults, noisedDomainOnlyFacts, noisedOverlappingFacts));
     }
 
-    return noisedResultSetBuilder.build();
+    return AggregatedResults.create(noisedResultSetBuilder.build());
   }
 
   private NoisedAggregationResult getAnnotatedDebugResults(

@@ -22,9 +22,11 @@ import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
+import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -48,13 +50,16 @@ import org.apache.avro.io.JsonEncoder;
  */
 public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
 
-  private AvroResultsSchemaSupplier schemaSupplier;
+  private final AvroResultsSchemaSupplier schemaSupplier;
+  private final AvroResultsSerdes avroResultsSerdes;
   private final ObjectMapper mapper = new ObjectMapper();
   private final SimpleModule module = new SimpleModule();
 
   @Inject
-  LocalJsonResultFileWriter(AvroResultsSchemaSupplier schemaSupplier) {
+  LocalJsonResultFileWriter(
+      AvroResultsSchemaSupplier schemaSupplier, AvroResultsSerdes resultsSerdes) {
     this.schemaSupplier = schemaSupplier;
+    this.avroResultsSerdes = resultsSerdes;
     mapper.registerModule(module);
   }
 
@@ -89,6 +94,13 @@ public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
     } catch (IOException e) {
       throw new FileWriteException("Failed to write local JSON file", e);
     }
+  }
+
+  @Override
+  public void writeLocalFile(byte[] avroFileBytes, Path resultFilePath) throws FileWriteException {
+    ImmutableList<AggregatedFact> aggregatedFacts =
+        avroResultsSerdes.reverse().convert(avroFileBytes);
+    this.writeLocalFile(aggregatedFacts.stream(), resultFilePath);
   }
 
   @Override

@@ -70,13 +70,17 @@ public class CborPayloadSerdesTest {
         System.getenv("CHROMIUM_LATEST_GOLDENS_PRIVATE_AGGREGATION");
     String paths_from_env_attribution_reporting =
         System.getenv("CHROMIUM_LATEST_GOLDENS_ATTRIBUTION_REPORTING");
+    String paths_from_env_attribution_reporting_debug =
+        System.getenv("CHROMIUM_LATEST_GOLDENS_ATTRIBUTION_REPORTING_DEBUG");
 
     assertThat(paths_from_env_private_aggregation).isNotNull();
     assertThat(paths_from_env_attribution_reporting).isNotNull();
+    assertThat(paths_from_env_attribution_reporting_debug).isNotNull();
 
     List<String> golden_paths = new ArrayList<>();
     golden_paths.addAll(Arrays.asList(paths_from_env_private_aggregation.split(" ")));
     golden_paths.addAll(Arrays.asList(paths_from_env_attribution_reporting.split(" ")));
+    golden_paths.addAll(Arrays.asList(paths_from_env_attribution_reporting_debug.split(" ")));
 
     for (String golden_path : golden_paths) {
       Path path = Path.of(golden_path);

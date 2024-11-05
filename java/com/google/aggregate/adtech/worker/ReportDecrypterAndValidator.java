@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipher.PayloadParsingException;
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory.CipherCreationException;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter.DecryptionException;
@@ -91,6 +92,8 @@ public final class ReportDecrypterAndValidator {
       if (e.getCause() instanceof CipherCreationException) {
         ErrorReason reason = ((CipherCreationException) e.getCause()).reason;
         errorMessageBuilder.setCategory(errorCounterFromCipherCreationException(reason));
+      } else if (e.getCause() instanceof PayloadParsingException) {
+        errorMessageBuilder.setCategory(ErrorCounter.REPORT_PARSING_ERROR);
       } else {
         errorMessageBuilder.setCategory(ErrorCounter.DECRYPTION_ERROR);
       }

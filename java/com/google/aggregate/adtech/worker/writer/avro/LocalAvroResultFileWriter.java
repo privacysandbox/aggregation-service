@@ -40,7 +40,7 @@ import org.apache.avro.io.DatumWriter;
 /** Writes a local results file using the Avro format. */
 public final class LocalAvroResultFileWriter implements LocalResultFileWriter {
 
-  private AvroResultsSchemaSupplier schemaSupplier;
+  private final AvroResultsSchemaSupplier schemaSupplier;
 
   @Inject
   LocalAvroResultFileWriter(AvroResultsSchemaSupplier schemaSupplier) {
@@ -78,6 +78,16 @@ public final class LocalAvroResultFileWriter implements LocalResultFileWriter {
       }
 
       dataFileWriter.close();
+    } catch (IOException e) {
+      throw new FileWriteException("Failed to write local Avro file", e);
+    }
+  }
+
+  /** Write the results AVRO file byte[] at the {@code Path} given. */
+  @Override
+  public void writeLocalFile(byte[] avroFileBytes, Path resultFilePath) throws FileWriteException {
+    try {
+      Files.write(resultFilePath, avroFileBytes);
     } catch (IOException e) {
       throw new FileWriteException("Failed to write local Avro file", e);
     }

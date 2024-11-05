@@ -66,6 +66,8 @@ public enum ErrorCounter {
           SharedInfo.SUPPORTED_APIS)),
   REQUIRED_SHAREDINFO_FIELD_INVALID("One or more required SharedInfo fields are empty or invalid."),
   INVALID_REPORT_ID("Report ID missing or invalid in SharedInfo."),
+  REPORT_PARSING_ERROR(
+      "Parsing report data failed. This occurs when the report's binary data cannot be converted to a valid format."),
   UNSUPPORTED_SHAREDINFO_VERSION(
       String.format(
           "Report has an unsupported version value in its shared_info. Supported values for report"

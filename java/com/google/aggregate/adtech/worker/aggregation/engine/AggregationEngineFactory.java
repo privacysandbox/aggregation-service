@@ -30,9 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.LongAdder;
 import javax.inject.Inject;
 
-/**
- * Factory for creating AggregationEngine object.
- */
+/** Factory for creating AggregationEngine object. */
 public class AggregationEngineFactory {
 
   private final PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory;
@@ -42,9 +40,7 @@ public class AggregationEngineFactory {
     this.privacyBudgetKeyGeneratorFactory = privacyBudgetKeyGeneratorFactory;
   }
 
-  /**
-   * Creates AggregationEngine object with queried filteringId.
-   */
+  /** Creates AggregationEngine object with queried filteringId. */
   public AggregationEngine create(ImmutableSet<UnsignedLong> filteringIds) {
     // Number of logical cores available to the JVM is used to hint the concurrent map maker. Any
     // number will work, this is just a hint that is passed to the map maker, but different values
@@ -61,11 +57,8 @@ public class AggregationEngineFactory {
         newConcurrentHashSet();
     Set<UUID> reportIdSet = newConcurrentHashSet();
 
-    // null and zero are to be treated as the same.
-    ImmutableSet.Builder<UnsignedLong> filteringIdsEnhanced = new ImmutableSet.Builder<>();
-    filteringIdsEnhanced.addAll(filteringIds);
     if (filteringIds.isEmpty()) {
-      filteringIdsEnhanced.add(UnsignedLong.ZERO);
+      throw new IllegalStateException("Filtering Id cannot be empty.");
     }
 
     return new AggregationEngine(
@@ -73,14 +66,6 @@ public class AggregationEngineFactory {
         aggregationMap,
         privacyBudgetUnits,
         reportIdSet,
-        filteringIdsEnhanced.build());
-  }
-
-  /**
-   * Creates AggregationEngine object.
-   * @deprecated Deprecated in favor of the {@code create(filteringIds)}.
-   */
-  public AggregationEngine create() {
-    return create(ImmutableSet.of());
+        filteringIds);
   }
 }

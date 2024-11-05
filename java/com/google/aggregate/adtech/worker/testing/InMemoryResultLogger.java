@@ -19,8 +19,12 @@ package com.google.aggregate.adtech.worker.testing;
 import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
+import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.jobclient.model.Job;
+import javax.inject.Inject;
 
 /**
  * {@link ResultLogger} implementation to materialized and store aggregation results in memory for
@@ -32,15 +36,56 @@ public final class InMemoryResultLogger implements ResultLogger {
   private MaterializedAggregationResults materializedDebugAggregations;
   private boolean shouldThrow;
   private volatile boolean hasLogged;
+  private final AvroResultsSerdes avroResultsSerdes;
+  private final AvroDebugResultsSerdes avroDebugResultsSerdes;
 
-  InMemoryResultLogger() {
+  @Inject
+  InMemoryResultLogger(
+      AvroResultsSerdes avroResultsSerdes, AvroDebugResultsSerdes avroDebugResultsSerdes) {
     materializedAggregations = null;
     shouldThrow = false;
     hasLogged = false;
+    this.avroResultsSerdes = avroResultsSerdes;
+    this.avroDebugResultsSerdes = avroDebugResultsSerdes;
   }
 
   public synchronized boolean hasLogged() {
     return hasLogged;
+  }
+
+  @Override
+  public void logResultsAvros(
+      ImmutableList<SummaryReportAvro> summaryReportAvros, Job ctx, boolean isDebugRun)
+      throws ResultLogException {
+    hasLogged = true;
+
+    if (shouldThrow) {
+      throw new ResultLogException(new IllegalStateException("Was set to throw"));
+    }
+
+    if (isDebugRun) {
+      materializedDebugAggregations =
+          MaterializedAggregationResults.of(
+              summaryReportAvros.stream()
+                  .flatMap(
+                      summaryReportAvro ->
+                          avroDebugResultsSerdes
+                              .reverse()
+                              .convert(summaryReportAvro.reportBytes())
+                              .stream()));
+      System.out.println("Materialized debug results: " + materializedDebugAggregations);
+    } else {
+      materializedAggregations =
+          MaterializedAggregationResults.of(
+              summaryReportAvros.stream()
+                  .flatMap(
+                      summaryReportAvro ->
+                          avroResultsSerdes
+                              .reverse()
+                              .convert(summaryReportAvro.reportBytes())
+                              .stream()));
+      System.out.println("Materialized results: " + materializedAggregations);
+    }
   }
 
   @Override

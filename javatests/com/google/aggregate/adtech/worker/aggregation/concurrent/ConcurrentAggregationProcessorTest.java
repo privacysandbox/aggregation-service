@@ -60,7 +60,6 @@ import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
-import com.google.aggregate.adtech.worker.Annotations.EnablePrivacyBudgetKeyFiltering;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
@@ -72,8 +71,6 @@ import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.aggregation.domain.AvroOutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.OutputDomainProcessor;
 import com.google.aggregate.adtech.worker.aggregation.domain.TextOutputDomainProcessor;
-import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
-import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngineFactory;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
@@ -92,6 +89,8 @@ import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.Fact;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
+import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.PayloadSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.SharedInfoSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.cbor.CborPayloadSerdes;
@@ -104,7 +103,6 @@ import com.google.aggregate.adtech.worker.util.ReportingOriginUtils;
 import com.google.aggregate.adtech.worker.validation.ReportValidator;
 import com.google.aggregate.adtech.worker.validation.ReportVersionValidator;
 import com.google.aggregate.perf.StopwatchExporter;
-import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.aggregate.privacy.budgeting.bridge.FakePrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
@@ -124,12 +122,14 @@ import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule.ConstantNoiseApplier;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier.FakeNoiseApplier;
+import com.google.aggregate.protocol.avro.AvroDebugResultsSchemaSupplier;
 import com.google.aggregate.protocol.avro.AvroOutputDomainReaderFactory;
 import com.google.aggregate.protocol.avro.AvroOutputDomainRecord;
 import com.google.aggregate.protocol.avro.AvroOutputDomainWriter;
 import com.google.aggregate.protocol.avro.AvroOutputDomainWriterFactory;
 import com.google.aggregate.protocol.avro.AvroReportWriter;
 import com.google.aggregate.protocol.avro.AvroReportWriterFactory;
+import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
 import com.google.aggregate.shared.mapper.TimeObjectMapper;
 import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableList;
@@ -216,7 +216,6 @@ public class ConcurrentAggregationProcessorTest {
   @Inject AvroOutputDomainWriterFactory domainWriterFactory;
   @Inject OutputDomainProcessorHelper outputDomainProcessorHelper;
   @Inject private PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory;
-  @Inject private FeatureFlagHelper featureFlagHelper;
   private Path outputDomainDirectory;
   private Path reportsDirectory;
   private Path invalidReportsDirectory;
@@ -347,10 +346,17 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 2, 2L),
             AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 8, 8L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -364,14 +370,20 @@ public class ConcurrentAggregationProcessorTest {
         reportsDirectory.resolve("reports_7.avro"), ImmutableList.of(testReport1, testReport2));
     JobResult jobResultProcessor = processor.get().process(ctx);
 
-    // Check if empty report is skipped and output is processed without errors.
-    assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 2, 2L),
             AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 8, 8L),
             AggregatedFact.create(/* bucket= */ createBucketFromInt(3), /* metric= */ 9, 9L),
             AggregatedFact.create(/* bucket= */ createBucketFromInt(4), /* metric= */ 16, 16L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    // Check if empty report is skipped and output is processed without errors.
+    assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -393,9 +405,14 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+
+    AggregatedFact expectedFact =
+        AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 5, 8L);
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 5, 8L));
+        .containsExactly(expectedFact);
   }
 
   @Test
@@ -409,10 +426,16 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 2, 2L),
             AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 8, 8L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -427,12 +450,18 @@ public class ConcurrentAggregationProcessorTest {
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
     // Key 3 added as an extra key from the output domain.
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(1), /* metric= */ 2, /* unnoisedMetric= */ 2L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -447,12 +476,17 @@ public class ConcurrentAggregationProcessorTest {
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
     // Key 3 added as an extra key from the output domain.
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(3), /* metric= */ 0, /* unnoisedMetric= */ 0L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(4), /* metric= */ 0, /* unnoisedMetric= */ 0L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -466,9 +500,15 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
+    AggregatedFact expectedFact =
+        AggregatedFact.create(
+            /* bucket= */ createBucketFromInt(2), /* metric= */ 5, /* unnoisedMetric= */ 8L);
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
+
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 5, 8L));
+        .containsExactly(expectedFact);
   }
 
   @Test
@@ -499,9 +539,14 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
+    AggregatedFact expectedFact =
+        AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 5, 8L);
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
+
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 5, 8L));
+        .containsExactly(expectedFact);
   }
 
   @Test
@@ -533,9 +578,15 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
+
+    AggregatedFact expectedFact =
+        AggregatedFact.create(
+            /* bucket= */ createBucketFromInt(2), /* metric= */ 5, /* unnoisedMetric= */ 8L);
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 5, 8L));
+        .containsExactly(expectedFact);
   }
 
   @Test
@@ -578,10 +629,17 @@ public class ConcurrentAggregationProcessorTest {
             ResultLogException.class, () -> resultLogger.getMaterializedDebugAggregationResults());
 
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+
+    AggregatedFact expectedFact =
+        AggregatedFact.create(
+            /* bucket= */ createBucketFromInt(2), /* metric= */ 5, /* unnoisedMetric= */ 8L);
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
+
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(
-                /* bucket= */ createBucketFromInt(2), /* metric= */ 5, /* unnoisedMetric= */ 8L));
+        .containsExactly(expectedFact);
+
     assertThat(exception).hasCauseThat().isInstanceOf(IllegalStateException.class);
     assertThat(exception)
         .hasMessageThat()
@@ -722,10 +780,16 @@ public class ConcurrentAggregationProcessorTest {
     // Confirm correct success code is returned, and not an alternate debug mode success code
     assertThat(jobResultProcessor.resultInfo().getReturnCode())
         .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
+    AggregatedFact expectedFact =
+        AggregatedFact.create(
+            /* bucket= */ createBucketFromInt(2), /* metric= */ 5, /* unnoisedMetric= */ 8L);
+
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
+
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(
-                /* bucket= */ createBucketFromInt(2), /* metric= */ 5, /* unnoisedMetric= */ 8L));
+        .containsExactly(expectedFact);
     assertThat(resultLogger.getMaterializedDebugAggregationResults().getMaterializedAggregations())
         .containsExactly(
             AggregatedFact.create(
@@ -768,12 +832,21 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
+    AggregatedFact expectedFact1 =
+        AggregatedFact.create(
+            /* bucket= */ createBucketFromInt(2), /* metric= */ 5, /* unnoisedMetric= */ 8L);
+    AggregatedFact expectedFact2 =
+        AggregatedFact.create(
+            /* bucket= */ createBucketFromInt(3), /* metric= */ -3, /* unnoisedMetric= */ 0L);
+
+    if (streamingOutputDomainTestParam) {
+      expectedFact1.setUnnoisedMetric(Optional.empty());
+      expectedFact2.setUnnoisedMetric(Optional.empty());
+    }
+
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(
-                /* bucket= */ createBucketFromInt(2), /* metric= */ 5, /* unnoisedMetric= */ 8L),
-            AggregatedFact.create(
-                /* bucket= */ createBucketFromInt(3), /* metric= */ -3, /* unnoisedMetric= */ 0L));
+        .containsExactly(expectedFact1, expectedFact2);
+
     assertThat(resultLogger.getMaterializedDebugAggregationResults().getMaterializedAggregations())
         .containsExactly(
             AggregatedFact.create(
@@ -804,12 +877,19 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(1), /* metric= */ -1, /* unnoisedMetric= */ 2L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(2), /* metric= */ 5, /* unnoisedMetric= */ 8L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -824,14 +904,21 @@ public class ConcurrentAggregationProcessorTest {
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
     // Key 3 added as an extra key from the output domain.
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(1), /* metric= */ 2, /* unnoisedMetric= */ 2L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(3), /* metric= */ 0, /* unnoisedMetric= */ 0L));
+
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -843,15 +930,22 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
-    // Key 3 added as an extra key from the output domain.
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(1), /* metric= */ 2, /* unnoisedMetric= */ 2L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(3), /* metric= */ 0, /* unnoisedMetric= */ 0L));
+
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    // Key 3 added as an extra key from the output domain.
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -865,14 +959,20 @@ public class ConcurrentAggregationProcessorTest {
     assertThat(jobResultProcessor).isEqualTo(makeExpectedJobResult());
     // Key 3 added as an extra key from the output domain.
     // Key is filtered out because it is not in the output domain.
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(1), /* metric= */ 2, /* unnoisedMetric= */ 2L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(3), /* metric= */ 0, /* unnoisedMetric= */ 0L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -951,12 +1051,19 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(1), /* metric= */ 12, /* unnoisedMetric= */ 2L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(2), /* metric= */ 18, /* unnoisedMetric= */ 8L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -991,12 +1098,17 @@ public class ConcurrentAggregationProcessorTest {
                     .build())
             .build();
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
+            AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 1, 1L),
+            AggregatedFact.create(/* bucket= */ createBucketFromInt(2), /* metric= */ 8, 8L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(
-                /* bucket= */ createBucketFromInt(1), /* metric= */ 1, /* unnoisedMetric= */ 1L),
-            AggregatedFact.create(
-                /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L));
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -1096,10 +1208,15 @@ public class ConcurrentAggregationProcessorTest {
     assertThat(result.resultInfo().getReturnCode()).contains("SUCCESS");
 
     // No reports and one key specified in the domain so a single aggregated fact is expected.
+    AggregatedFact expectedFact =
+        AggregatedFact.create(
+            /* bucket= */ createBucketFromInt(3), /* metric= */ 10, /* unnoisedMetric= */ 0L);
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
+
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(
-                /* bucket= */ createBucketFromInt(3), /* metric= */ 10, /* unnoisedMetric= */ 0L));
+        .containsExactly(expectedFact);
   }
 
   @Test
@@ -1150,7 +1267,8 @@ public class ConcurrentAggregationProcessorTest {
                                 ImmutableList.of(
                                     ErrorCount.newBuilder()
                                         .setCategory(ErrorCounter.INTERNAL_ERROR.name())
-                                        .setDescription(ErrorCounter.INTERNAL_ERROR.getDescription())
+                                        .setDescription(
+                                            ErrorCounter.INTERNAL_ERROR.getDescription())
                                         .setCount(4L)
                                         .build(),
                                     ErrorCount.newBuilder()
@@ -1363,8 +1481,9 @@ public class ConcurrentAggregationProcessorTest {
                     .build())
             .build();
     assertThat(actualJobResult).isEqualTo(expectedJobResult);
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(3), /* metric= */ 9, /* unnoisedMetric= */ 9L),
             AggregatedFact.create(
@@ -1379,12 +1498,16 @@ public class ConcurrentAggregationProcessorTest {
                 /* bucket= */ createBucketFromInt(10),
                 /* metric= */ 100,
                 /* unnoisedMetric= */ 100L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
-  public void process_withNoQueriedFilteringId_filteringNotEnabled_queries0OrNullIds()
-      throws Exception {
-    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(false);
+  public void process_withNoQueriedFilteringId_queries0OrNullIds() throws Exception {
     Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
     Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
     EncryptedReport reportWithoutId =
@@ -1416,72 +1539,20 @@ public class ConcurrentAggregationProcessorTest {
 
     processor.get().process(ctx);
 
+    AggregatedFact expectedFact =
+        AggregatedFact.create(
+            /* bucket= */ new BigInteger("11111"), /* metric= */ 22, /* unnoisedMetric= */ 22L);
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
+
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(
-                /* bucket= */ new BigInteger("11111"),
-                /* metric= */ 22,
-                /* unnoisedMetric= */ 22L));
+        .containsExactly(expectedFact);
   }
 
   @Test
-  public void process_withQueriedFilteringId_filteringNotEnabled_queries0OrNullIds()
+  public void process_withQueriedFilteringId_filtersForTheGivenIds()
       throws Exception {
-    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(false);
-    Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
-    Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
-    EncryptedReport reportWithoutId =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithoutId, nullFact1), VERSION_0_1));
-
-    Fact factWithDefaultId =
-        Fact.builder()
-            .setBucket(new BigInteger("11111"))
-            .setValue(11)
-            .setId(UnsignedLong.ZERO)
-            .build();
-    Fact factWithId =
-        Fact.builder()
-            .setBucket(new BigInteger("33333"))
-            .setValue(33)
-            .setId(UnsignedLong.valueOf(12))
-            .build();
-    Fact nullFact2 =
-        Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(UnsignedLong.ZERO).build();
-    EncryptedReport reportWithIds =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithDefaultId, factWithId, nullFact2), "1.0"));
-
-    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
-    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
-
-    ImmutableMap<String, String> jobParams = ImmutableMap.of(JOB_PARAM_FILTERING_IDS, "12");
-    ctx =
-        ctx.toBuilder()
-            .setRequestInfo(
-                ctx.requestInfo().toBuilder()
-                    .putAllJobParameters(
-                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
-                    .build())
-            .build();
-    processor.get().process(ctx);
-
-    // Even though the job queries for the id = 12, the aggregation is done for id = 0 or null since
-    // the feature flag is not enabled.
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(
-                /* bucket= */ new BigInteger("11111"),
-                /* metric= */ 22,
-                /* unnoisedMetric= */ 22L));
-  }
-
-  @Test
-  public void process_withQueriedFilteringId_filteringEnabled_filtersForTheGivenIds()
-      throws Exception {
-    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(true);
     Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
     Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
     EncryptedReport reportWithoutId =
@@ -1536,12 +1607,15 @@ public class ConcurrentAggregationProcessorTest {
             .build();
     processor.get().process(ctx);
 
+    AggregatedFact expectedFact =
+        AggregatedFact.create(
+            /* bucket= */ new BigInteger("33333"), /* metric= */ 33, /* unnoisedMetric= */ 33L);
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
+
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(
-                /* bucket= */ new BigInteger("33333"),
-                /* metric= */ 33,
-                /* unnoisedMetric= */ 33L));
+        .containsExactly(expectedFact);
     assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isPresent();
     assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent().get())
         .containsExactlyElementsIn(expectedPrivacyBudgetUnits);
@@ -1550,7 +1624,6 @@ public class ConcurrentAggregationProcessorTest {
   @Test
   public void process_withConsecutiveJobsAndSameFilteringIds_throwsPrivacyExhausted()
       throws Exception {
-    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(true);
     Fact factWithoutId1 = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
     EncryptedReport reportWithoutId =
         getEncryptedReport(
@@ -1598,7 +1671,6 @@ public class ConcurrentAggregationProcessorTest {
   @Test
   public void process_withConsecutiveJobsAndDifferentFilteringIds_budgetingSucceeds()
       throws Exception {
-    featureFlagHelper.setEnablePrivacyBudgetKeyFiltering(true);
     Fact factWithoutId1 = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
     Fact factWithoutId2 = Fact.builder().setBucket(new BigInteger("11111")).setValue(22).build();
     Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
@@ -1704,11 +1776,16 @@ public class ConcurrentAggregationProcessorTest {
                     .build())
             .build();
 
-    JobResult jobResultProcessor = processor.get().process(ctx);
+    JobResult ignored = processor.get().process(ctx);
+
+    AggregatedFact expectedFact =
+        AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 0, 0L);
+    if (streamingOutputDomainTestParam) {
+      expectedFact.setUnnoisedMetric(Optional.empty());
+    }
 
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
-            AggregatedFact.create(/* bucket= */ createBucketFromInt(1), /* metric= */ 0, 0L));
+        .containsExactly(expectedFact);
   }
 
   @Test
@@ -1738,12 +1815,21 @@ public class ConcurrentAggregationProcessorTest {
     JobResult jobResultProcessor = processor.get().process(ctx);
 
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
-    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-        .containsExactly(
+
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(1), /* metric= */ 2, /* unnoisedMetric= */ 2L),
             AggregatedFact.create(
                 /* bucket= */ createBucketFromInt(2), /* metric= */ 8, /* unnoisedMetric= */ 8L));
+
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
+
     // Check that the right attributionReportTo and debugPrivacyBudgetLimit were sent to the bridge
     String claimedIdentity =
         ReportingOriginUtils.convertReportingOriginToSite(
@@ -1815,7 +1901,9 @@ public class ConcurrentAggregationProcessorTest {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "https://example.foo.com"), 1);
+        PrivacyBudgetUnit.createHourTruncatedUnit(
+            "1", Instant.ofEpochMilli(0), "https://example.foo.com"),
+        1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -1886,7 +1974,9 @@ public class ConcurrentAggregationProcessorTest {
     // Privacy Budget failure via thrown exception
     fakePrivacyBudgetingServiceBridge.setShouldThrow();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "https://example.foo.com"), 1);
+        PrivacyBudgetUnit.createHourTruncatedUnit(
+            "1", Instant.ofEpochMilli(0), "https://example.foo.com"),
+        1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -1916,7 +2006,9 @@ public class ConcurrentAggregationProcessorTest {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.create("1", Instant.ofEpochMilli(0), "https://example.foo.com"), 1);
+        PrivacyBudgetUnit.createHourTruncatedUnit(
+            "1", Instant.ofEpochMilli(0), "https://example.foo.com"),
+        1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -1957,10 +2049,7 @@ public class ConcurrentAggregationProcessorTest {
   private void compareDebugFact(AggregatedFact resultFact, AggregatedFact debugFact) {
     assertEquals(resultFact.getBucket(), debugFact.getBucket());
     assertEquals(resultFact.getMetric(), debugFact.getMetric());
-
-    assertThat(resultFact.getUnnoisedMetric()).isPresent();
     assertThat(debugFact.getUnnoisedMetric()).isPresent();
-    assertEquals(resultFact.getUnnoisedMetric().get(), debugFact.getUnnoisedMetric().get());
   }
 
   private void writeOutputDomainTextFile(Path outputDomainPath, String... keys) throws IOException {
@@ -2005,7 +2094,7 @@ public class ConcurrentAggregationProcessorTest {
     PrivacyBudgetKeyGenerator privacyBudgetKeyGenerator =
         privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput).get();
     PrivacyBudgetUnit privacyBudgetUnit =
-        PrivacyBudgetUnit.create(
+        PrivacyBudgetUnit.createHourTruncatedUnit(
             privacyBudgetKeyGenerator.generatePrivacyBudgetKey(
                 PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput.builder()
                     .setFilteringId(filteringId)
@@ -2119,15 +2208,6 @@ public class ConcurrentAggregationProcessorTest {
     }
   }
 
-  private static class FeatureFlagHelper {
-
-    boolean enablePrivacyBudgetKeyFiltering = true;
-
-    void setEnablePrivacyBudgetKeyFiltering(boolean enablePrivacyBudgetKeyFiltering) {
-      this.enablePrivacyBudgetKeyFiltering = enablePrivacyBudgetKeyFiltering;
-    }
-  }
-
   public static Job generateJob(
       String id, Optional<String> attributionReportTo, Optional<String> reportingSite) {
     if (attributionReportTo.isEmpty() && reportingSite.isEmpty()) {
@@ -2227,7 +2307,8 @@ public class ConcurrentAggregationProcessorTest {
       bind(double.class).annotatedWith(ReportErrorThresholdPercentage.class).toInstance(10.0);
       bind(OutputDomainProcessorHelper.class).toInstance(helper);
 
-      bind(FeatureFlagHelper.class).toInstance(new FeatureFlagHelper());
+      bind(AvroResultsSchemaSupplier.class).toInstance(new AvroResultsSchemaSupplier());
+      bind(AvroDebugResultsSchemaSupplier.class).toInstance(new AvroDebugResultsSchemaSupplier());
     }
 
     @Provides
@@ -2253,24 +2334,27 @@ public class ConcurrentAggregationProcessorTest {
         @BlockingThreadPool ListeningExecutorService blockingThreadPool,
         @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
         BlobStorageClient blobStorageClient,
-        StopwatchRegistry stopwatchRegistry,
         AvroOutputDomainReaderFactory avroOutputDomainReaderFactory,
+        AvroResultsSerdes resultsSerdes,
+        AvroDebugResultsSerdes debugResultsSerdes,
         @EnableThresholding Boolean enableThresholding,
         @DomainOptional Boolean domainOptional) {
       return helper.isAvroOutputDomainProcessor()
           ? new AvroOutputDomainProcessor(
-          blockingThreadPool,
-          nonBlockingThreadPool,
-          blobStorageClient,
-          avroOutputDomainReaderFactory,
-          stopwatchRegistry,
-          domainOptional,
-          enableThresholding)
+              blockingThreadPool,
+              nonBlockingThreadPool,
+              blobStorageClient,
+              avroOutputDomainReaderFactory,
+              resultsSerdes,
+              debugResultsSerdes,
+              domainOptional,
+              enableThresholding)
           : new TextOutputDomainProcessor(
               blockingThreadPool,
               nonBlockingThreadPool,
               blobStorageClient,
-              stopwatchRegistry,
+              resultsSerdes,
+              debugResultsSerdes,
               domainOptional,
               enableThresholding);
     }
@@ -2321,17 +2405,6 @@ public class ConcurrentAggregationProcessorTest {
     @CustomForkJoinThreadPool
     ListeningExecutorService provideCustomForkJoinThreadPool() {
       return newDirectExecutorService();
-    }
-
-    @Provides
-    AggregationEngine provideAggregationEngine(AggregationEngineFactory aggregationEngineFactory) {
-      return aggregationEngineFactory.create();
-    }
-
-    @Provides
-    @EnablePrivacyBudgetKeyFiltering
-    Boolean provideEnableBudgetKeyFiltering(FeatureFlagHelper featureFlagHelper) {
-      return featureFlagHelper.enablePrivacyBudgetKeyFiltering;
     }
   }
 }

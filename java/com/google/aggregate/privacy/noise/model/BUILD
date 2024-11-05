@@ -19,8 +19,11 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "model",
     srcs = [
+        "AggregatedResults.java",
         "NoisedAggregatedResultSet.java",
         "NoisedAggregationResult.java",
+        "SummaryReportAvro.java",
+        "SummaryReportAvroSet.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [

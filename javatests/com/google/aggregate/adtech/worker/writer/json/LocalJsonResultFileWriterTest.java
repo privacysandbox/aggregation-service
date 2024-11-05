@@ -23,12 +23,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
+import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.inject.AbstractModule;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -50,6 +53,8 @@ public class LocalJsonResultFileWriterTest {
   // Under test
   @Inject LocalJsonResultFileWriter localJsonResultFileWriter;
 
+  @Inject AvroResultsSerdes avroResultsSerdes;
+
   ImmutableList<AggregatedFact> results;
   private FileSystem filesystem;
   private Path jsonFile;
@@ -68,6 +73,13 @@ public class LocalJsonResultFileWriterTest {
             AggregatedFact.create(NumericConversions.createBucketFromInt(789), 40L));
   }
 
+  @Test
+  public void testWriteFileBytes() throws Exception {
+    byte[] resultsBytes = avroResultsSerdes.convert(results);
+    localJsonResultFileWriter.writeLocalFile(resultsBytes, jsonFile);
+    assertJsonResults();
+  }
+
   /**
    * Simple test that a results file can be written. The file is read back to check that it contains
    * the right data.
@@ -75,19 +87,7 @@ public class LocalJsonResultFileWriterTest {
   @Test
   public void testWriteFile() throws Exception {
     localJsonResultFileWriter.writeLocalFile(results.stream(), jsonFile);
-    ObjectMapper mapper = new ObjectMapper();
-    JsonNode jsonNode = mapper.readTree(Files.newInputStream(jsonFile));
-    List<AggregatedFact> writtenResults = new ArrayList<>();
-    jsonNode
-        .iterator()
-        .forEachRemaining(
-            entry -> {
-              writtenResults.add(
-                  AggregatedFact.create(
-                      NumericConversions.createBucketFromString(entry.get("bucket").asText()),
-                      entry.get("metric").asLong()));
-            });
-    assertThat(writtenResults).containsExactly(results.toArray());
+    assertJsonResults();
   }
 
   @Test
@@ -105,5 +105,27 @@ public class LocalJsonResultFileWriterTest {
     assertThat(localJsonResultFileWriter.getFileExtension()).isEqualTo(".json");
   }
 
-  public static final class TestEnv extends AbstractModule {}
+  private void assertJsonResults() throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode jsonNode = mapper.readTree(Files.newInputStream(jsonFile));
+    List<AggregatedFact> writtenResults = new ArrayList<>();
+    jsonNode
+        .iterator()
+        .forEachRemaining(
+            entry -> {
+              writtenResults.add(
+                  AggregatedFact.create(
+                      NumericConversions.createBucketFromString(entry.get("bucket").asText()),
+                      entry.get("metric").asLong()));
+            });
+    assertThat(writtenResults).containsExactly(results.toArray());
+  }
+
+  public static final class TestEnv extends AbstractModule {
+
+    @Override
+    public void configure() {
+      bind(AvroResultsSchemaSupplier.class).toInstance(new AvroResultsSchemaSupplier());
+    }
+  }
 }
