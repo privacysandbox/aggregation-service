@@ -330,7 +330,7 @@ file into smaller shards.
 
 Run the following in the `<repository_root>`.
 
-```
+```sh
 git fetch origin && git checkout -b dev-v{VERSION} v{VERSION}
 cd terraform/gcp
 bash download_prebuilt_dependencies.sh
@@ -339,7 +339,7 @@ bash download_prebuilt_dependencies.sh
 
 Execute the following commands with your own Google Cloud account. If you were previously impersonating a service account, clean the environment variable :
 
-```
+```sh
 export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=""
 cd environments/adtech_setup
 terraform plan
@@ -348,7 +348,7 @@ terraform apply
 
 Execute the following command by impersonating the Deploy Service Account :
 
-```
+```sh
 export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT="<YourDeployServiceAccountName>@<ProjectID>.iam.gserviceaccount.com"
 cd ../dev
 terraform apply
