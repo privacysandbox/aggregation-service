@@ -35,6 +35,16 @@ POST
   // available to the enclave and 1000.
   "input_data_blob_prefix": <string>,
 
+  // [Optional] Input prefixes list. A maximum of 50 entries can be specified in the list.
+  // List of input data paths. Each entry in the list should either be a path to
+  // a single file or a prefix in file path for multiple files.
+  // For example, specifying "["folder1/shard", "folder2/shard/test2.avro"]" would
+  // take as input all files with paths starting with "folder1/shard"
+  // along with the file "folder2/shard/test2.avro".
+  // This parameter and the "input_data_blob_prefix" parameter are mutually
+  // exclusive. Exactly one of the two parameters should be provided in the request.
+  "input_data_blob_prefixes": <list<string>>,
+
   // Storage bucket for input data.
   "input_data_bucket_name": <string>,
 
@@ -168,6 +178,8 @@ These are the validations that are done before the aggregation begins.
    `reporting_site`.
 5. If `job_parameters.reporting_site` is provided, `shared_info.reporting_origin` of all
    aggregatable reports should belong to this reporting site.
+6. Job request should contain exactly one of `input_data_blob_prefix` and `input_data_blob_prefixes`
+   parameters.
 
 Return code:
 [INVALID_JOB](java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L38)
@@ -213,6 +225,9 @@ Not found: 404 Not Found
   "request_updated_at": <timestamp>,
   // Location of input reports
   "input_data_blob_prefix": <string>,
+  // [Optional] List of locations of input reports from the CreateJob request,
+  // if provided.
+  "input_data_blob_prefixes": <list<string>>,
   "input_data_bucket_name": <string>,
   // Location of output summary report
   "output_data_blob_prefix": <string>,
