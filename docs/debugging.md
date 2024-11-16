@@ -160,6 +160,9 @@ The schema of debug summary reports is in the following [Avro](https://avro.apac
 
 ### Privacy Budget Service Errors
 
+> The following behavior will be the default in version 2.10 and onward. In version 2.9 and before,
+> debug runs **do** consume budget.
+
 When an aggregation job is performed with `debug_run` enabled, the privacy budget is **not**
 consumed. Furthermore, budget availability will not be checked while `debug_run` is enabled -- even
 if budget is not available, the summary report will still be generated successfully.
