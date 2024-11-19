@@ -43,6 +43,7 @@ POST
   // along with the file "folder2/shard/test2.avro".
   // This parameter and the "input_data_blob_prefix" parameter are mutually
   // exclusive. Exactly one of the two parameters should be provided in the request.
+  // The parameter "input_data_blob_prefixes" will be supported in version 2.10 and onward.
   "input_data_blob_prefixes": <list<string>>,
 
   // Storage bucket for input data.
@@ -179,7 +180,7 @@ These are the validations that are done before the aggregation begins.
 5. If `job_parameters.reporting_site` is provided, `shared_info.reporting_origin` of all
    aggregatable reports should belong to this reporting site.
 6. Job request should contain exactly one of `input_data_blob_prefix` and `input_data_blob_prefixes`
-   parameters.
+   parameters. This validation will be enforced in version 2.10 and onward.
 
 Return code:
 [INVALID_JOB](java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L38)
@@ -226,7 +227,7 @@ Not found: 404 Not Found
   // Location of input reports
   "input_data_blob_prefix": <string>,
   // [Optional] List of locations of input reports from the CreateJob request,
-  // if provided.
+  // if provided. This parameter will be available in version 2.10 and onward.
   "input_data_blob_prefixes": <list<string>>,
   "input_data_bucket_name": <string>,
   // Location of output summary report
