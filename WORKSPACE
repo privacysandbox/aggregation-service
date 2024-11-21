@@ -82,6 +82,7 @@ git_repository(
         "//build_defs/shared_libraries:pbs_client.patch",
         "//build_defs/shared_libraries:rules_pkg_build_fix.patch",
         "//build_defs/shared_libraries:v1.13-adtech-setup-premission.patch",
+        "//build_defs/shared_libraries:v1.13-ebs_size_increase.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",

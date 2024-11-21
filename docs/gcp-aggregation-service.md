@@ -326,7 +326,7 @@ file into smaller shards.
     [Google Cloud Function instructions](https://cloud.google.com/functions/docs/securing/authenticating)
     for sending an authenticated request. [Detailed API spec](/docs/api.md#getjob-endpoint)_
 
-## Updating the system
+# **Upgrade Environment**
 
 Run the following in the `<repository_root>`.
 
@@ -334,7 +334,23 @@ Run the following in the `<repository_root>`.
 git fetch origin && git checkout -b dev-v{VERSION} v{VERSION}
 cd terraform/gcp
 bash download_prebuilt_dependencies.sh
-cd environments/dev
+```
+
+Execute the following commands with your own Google Cloud account. If you were previously
+impersonating a service account, clean the environment variable :
+
+```sh
+export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=""
+cd environments/adtech_setup
+terraform plan
+terraform apply
+```
+
+Execute the following command by impersonating the Deploy Service Account :
+
+```sh
+export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT="<YourDeployServiceAccountName>@<ProjectID>.iam.gserviceaccount.com"
+cd ../dev
 terraform apply
 ```
 

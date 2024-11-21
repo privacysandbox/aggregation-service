@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.9.1](https://github.com/privacysandbox/aggregation-service/compare/v2.9.0...v2.9.1) (2024-11-20)
+
+-   [AWS Only] Added a fix to address the reduced volume size of new AMIs by setting it to 8 GB.
+
 ## [2.9.0](https://github.com/privacysandbox/aggregation-service/compare/v2.8.0...v2.9.0) (2024-11-04)
 
 -   Updated PBS budget consumption request to use service client version.
