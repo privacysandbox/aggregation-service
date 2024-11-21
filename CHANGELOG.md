@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.7.2](https://github.com/privacysandbox/aggregation-service/compare/v2.7.1...v2.7.2) (2024-11-20)
+
+-   [AWS Only] Added a fix to address the reduced volume size of new AMIs by setting it to 8 GB.
+
 ## [2.7.1](https://github.com/privacysandbox/aggregation-service/compare/v2.7.0...v2.7.1) (2024-09-20)
 
 -   [GCP Only] Added a version in GCP VPC serverless connector module to fix 'Invalid type
