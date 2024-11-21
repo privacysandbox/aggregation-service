@@ -22,6 +22,7 @@ import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyStri
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.InstanceId;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.OutputShardFileSizeBytes;
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
@@ -42,6 +43,7 @@ import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
+import io.opentelemetry.api.logs.Severity;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.slf4j.Logger;
@@ -71,7 +73,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
   // Tracks whether the service should be pulling more jobs. Once the shutdown of the service
   // is initiated, this is switched to false.
   private volatile boolean moreNewRequests;
-
+  private final String instanceID;
   private static final String METRIC_NAMESPACE = "scp/worker";
   private static final String JOB_ERROR_METRIC_NAME = "WorkerJobError";
   private static final String JOB_COMPLETION_METRIC_NAME = "WorkerJobCompletion";
@@ -89,7 +91,8 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @BenchmarkMode boolean benchmarkMode,
       @DomainOptional Boolean domainOptional,
-      @OutputShardFileSizeBytes long outputShardFileSizeBytes) {
+      @OutputShardFileSizeBytes long outputShardFileSizeBytes,
+      @InstanceId String instanceID) {
     this.jobClient = jobClient;
     this.jobProcessor = jobProcessor;
     this.jobResultHelper = jobResultHelper;
@@ -103,14 +106,23 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     this.benchmarkMode = benchmarkMode;
     this.domainOptional = domainOptional;
     this.outputShardFileSizeBytes = outputShardFileSizeBytes;
+    this.instanceID = instanceID;
   }
 
   @Override
-  protected void run() {
+  protected void run() throws InterruptedException {
     logger.info("Aggregation worker started");
+    logger.info("Worker Max Heap Size (MiB): " + Runtime.getRuntime().maxMemory() / (1024 * 1024));
     oTelConfiguration.createProdMemoryUtilizationRatioGauge();
     oTelConfiguration.createProdCPUUtilizationGauge();
     setOutputShardFileSizeBytes(outputShardFileSizeBytes);
+    oTelConfiguration.writeProdLog(
+        instanceID + "-AggregationWorker: Worker is healthy.", Severity.INFO);
+    oTelConfiguration.writeProdLog(
+        instanceID
+            + "-AggregationWorker: Worker Max Heap Size (MiB):"
+            + Runtime.getRuntime().maxMemory() / (1024 * 1024),
+        Severity.INFO);
 
     while (moreNewRequests) {
       Optional<Job> job = Optional.empty();
@@ -137,6 +149,8 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
         Job currentJob = job.get();
         JobResult jobResult = null;
         String jobID = toJobKeyString(currentJob.jobKey());
+        oTelConfiguration.writeProdLog(
+            instanceID + "-AggregationWorker: Successfully pull a job: " + jobID, Severity.INFO);
         try (Timer t =
             oTelConfiguration.createProdTimerStarted(
                 "total_execution_time", jobID, TimerUnit.SECONDS)) {

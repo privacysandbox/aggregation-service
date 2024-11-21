@@ -18,6 +18,7 @@ package com.google.aggregate.protocol.avro;
 
 import java.io.OutputStream;
 import javax.inject.Inject;
+import org.apache.avro.Schema;
 import org.apache.avro.file.DataFileWriter;
 import org.apache.avro.generic.GenericDatumWriter;
 import org.apache.avro.generic.GenericRecord;
@@ -31,6 +32,10 @@ public final class AvroDebugResultsWriterFactory {
   @Inject
   public AvroDebugResultsWriterFactory(AvroDebugResultsSchemaSupplier schemaSupplier) {
     this.schemaSupplier = schemaSupplier;
+  }
+
+  public Schema getSchema() {
+    return schemaSupplier.get();
   }
 
   public AvroDebugResultsWriter create(OutputStream outStream) {

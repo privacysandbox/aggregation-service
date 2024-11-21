@@ -24,6 +24,7 @@ tags_kv="$(echo "${tags}" | jq "[.Tags[] | {key:.Key, value:.Value}] | from_entr
 env_name="$(echo "${tags_kv}" | jq -r ".environment")"
 allowed_metrics="$(echo "${tags_kv}" | jq -r ".otel_metrics" | jq -r '.[]')"
 allowed_spans="$(echo "${tags_kv}" | jq -r ".otel_spans" | jq -r '.[]')"
+min_log_level="$(echo "${tags_kv}" | jq -r ".min_log_level")"
 
 # Generate otel filter yaml file.
 generate_filter_yaml_file(){
@@ -47,7 +48,7 @@ generate_filter_yaml_file(){
 generate_filter_yaml_file "${allowed_metrics}" /opt/otel/metrics.yaml
 generate_filter_yaml_file "${allowed_spans}" /opt/otel/spans.yaml
 
-declare COLLECTOR_IMAGE=public.ecr.aws/aws-observability/aws-otel-collector:v0.32.0
+declare COLLECTOR_IMAGE=public.ecr.aws/aws-observability/aws-otel-collector:v0.36.0
 declare -r COLLECTOR_NAME="otel-collector"
 declare -a DOCKER_FLAGS=(
   --detach
@@ -59,6 +60,7 @@ declare -a DOCKER_FLAGS=(
   --user "$(id -u):$(id -g)"
   --network host
   --env "ENV_NAME=${env_name}"
+  --env "MIN_LOG_LEVEL=${min_log_level}"
 )
 
 declare -a -r COLLECTOR_FLAGS=(

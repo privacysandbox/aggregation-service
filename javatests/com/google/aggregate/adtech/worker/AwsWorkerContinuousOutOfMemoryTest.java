@@ -95,7 +95,7 @@ public class AwsWorkerContinuousOutOfMemoryTest {
             "%s/%s/test-outputs/OOM_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest1 =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -119,7 +119,7 @@ public class AwsWorkerContinuousOutOfMemoryTest {
             "%s/%s/test-outputs/OOM_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest2 =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -156,9 +156,7 @@ public class AwsWorkerContinuousOutOfMemoryTest {
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
       bind(S3AsyncClient.class)
-          .toInstance(
-              S3AsyncClient.builder()
-                  .region(AWS_S3_BUCKET_REGION).build());
+          .toInstance(S3AsyncClient.builder().region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

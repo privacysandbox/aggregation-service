@@ -18,6 +18,7 @@ package com.google.privacysandbox.otel;
 
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.metrics.LongCounter;
 import java.util.Map;
 
@@ -126,4 +127,18 @@ public interface OTelConfiguration {
   static void resetForTest() {
     GlobalOpenTelemetry.resetForTest();
   }
+
+  /**
+   * Write logs with given body in both prod and debug environment.
+   *
+   * @param body
+   */
+  void writeProdLog(String body, Severity severity);
+
+  /**
+   * Write logs with given body in debug environment.
+   *
+   * @param body
+   */
+  void writeDebugLog(String body, Severity severity);
 }

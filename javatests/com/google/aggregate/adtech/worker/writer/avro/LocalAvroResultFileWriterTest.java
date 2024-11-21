@@ -18,16 +18,12 @@ package com.google.aggregate.adtech.worker.writer.avro;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.model.EncryptedReport;
-import com.google.aggregate.adtech.worker.testing.AvroReportsFileReader;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.inject.AbstractModule;
@@ -48,29 +44,10 @@ public class LocalAvroResultFileWriterTest {
 
   // Under test
   @Inject LocalAvroResultFileWriter localAvroResultFileWriter;
-
   @Inject AvroResultsFileReader avroResultsFileReader;
-  @Inject AvroReportsFileReader avroReportsFileReader;
-
   private FileSystem filesystem;
   private Path avroFile;
   ImmutableList<AggregatedFact> results;
-  private ImmutableList<EncryptedReport> reports;
-  private final ByteSource encryptedReport1Payload = ByteSource.wrap(new byte[] {0x00, 0x01});
-  private final ByteSource encryptedReport2Payload = ByteSource.wrap(new byte[] {0x01, 0x02});
-  private final EncryptedReport encryptedReport1 =
-      EncryptedReport.builder()
-          .setPayload(encryptedReport1Payload)
-          .setKeyId("key1")
-          .setSharedInfo("foo")
-          .build();
-
-  private final EncryptedReport encryptedReport2 =
-      EncryptedReport.builder()
-          .setPayload(encryptedReport2Payload)
-          .setKeyId("key2")
-          .setSharedInfo("bar")
-          .build();
 
   @Before
   public void setUp() throws Exception {
@@ -83,7 +60,6 @@ public class LocalAvroResultFileWriterTest {
             AggregatedFact.create(BigInteger.valueOf(123), 50L),
             AggregatedFact.create(BigInteger.valueOf(456), 30L),
             AggregatedFact.create(BigInteger.valueOf(789), 40L));
-    reports = ImmutableList.of(encryptedReport1, encryptedReport2);
   }
 
   /**
@@ -107,32 +83,6 @@ public class LocalAvroResultFileWriterTest {
     assertThrows(
         FileWriteException.class,
         () -> localAvroResultFileWriter.writeLocalFile(results.stream(), nonExistentDirectory));
-  }
-
-  @Test
-  public void localReportWrite_succeeds() throws Exception {
-    localAvroResultFileWriter.writeLocalReportFile(reports.stream(), avroFile);
-
-    ImmutableList<EncryptedReport> writtenReports =
-        avroReportsFileReader.readAvroReportsFile(avroFile);
-    assertThat(writtenReports.get(0).sharedInfo()).isEqualTo(encryptedReport1.sharedInfo());
-    assertTrue(writtenReports.get(0).payload().contentEquals(encryptedReport1.payload()));
-    assertThat(writtenReports.get(0).keyId()).isEqualTo(encryptedReport1.keyId());
-
-    assertThat(writtenReports.get(1).sharedInfo()).isEqualTo(encryptedReport2.sharedInfo());
-    assertTrue(writtenReports.get(1).payload().contentEquals(encryptedReport2.payload()));
-    assertThat(writtenReports.get(1).keyId()).isEqualTo(encryptedReport2.keyId());
-  }
-
-  @Test
-  public void localReportWrite_invalidWritePath_fails() throws Exception {
-    Path nonExistentDirectory =
-        avroFile.getFileSystem().getPath("/doesnotexist", avroFile.toString());
-
-    assertThrows(
-        FileWriteException.class,
-        () ->
-            localAvroResultFileWriter.writeLocalReportFile(reports.stream(), nonExistentDirectory));
   }
 
   @Test

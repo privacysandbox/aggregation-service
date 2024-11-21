@@ -50,23 +50,16 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/**
- * GCP performance regression test implementation
- */
+/** GCP performance regression test implementation */
 @RunWith(JUnit4.class)
 public final class GcpWorkerPerformanceRegressionTest {
 
-  @Rule
-  public final Acai acai = new Acai(TestEnv.class);
-  @Rule
-  public TestName name = new TestName();
+  @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public TestName name = new TestName();
 
-  @Inject
-  GcsBlobStorageClient gcsBlobStorageClient;
-  @Inject
-  AvroResultsFileReader avroResultsFileReader;
-  @Inject
-  private AvroDebugResultsReaderFactory readerFactory;
+  @Inject GcsBlobStorageClient gcsBlobStorageClient;
+  @Inject AvroResultsFileReader avroResultsFileReader;
+  @Inject private AvroDebugResultsReaderFactory readerFactory;
   private static final String PERFORMANCE_REGRESSION_DATA_BUCKET =
       "gcp_performance_regression_test_data";
   private static final int NUM_WARMUP_RUNS = 5;
@@ -99,7 +92,7 @@ public final class GcpWorkerPerformanceRegressionTest {
               "test-data/%s/test-outputs/500k_report_%s_500k_domain_warmup_output.avro",
               KOKORO_BUILD_ID, i);
       CreateJobRequest createJobRequest =
-          SmokeTestBase.createJobRequest(
+          SmokeTestBase.createJobRequestWithAttributionReportTo(
               getTestDataBucket(PERFORMANCE_REGRESSION_DATA_BUCKET),
               inputKey,
               getTestDataBucket(PERFORMANCE_REGRESSION_DATA_BUCKET),
@@ -110,8 +103,8 @@ public final class GcpWorkerPerformanceRegressionTest {
                   + name.getMethodName()
                   + "_warmup-"
                   + i,
-              /* outputDomainBucketName= */
-              Optional.of(getTestDataBucket(PERFORMANCE_REGRESSION_DATA_BUCKET)),
+              /* outputDomainBucketName= */ Optional.of(
+                  getTestDataBucket(PERFORMANCE_REGRESSION_DATA_BUCKET)),
               /* outputDomainPrefix= */ Optional.of(domainKey));
       createJob(createJobRequest);
 
@@ -153,7 +146,7 @@ public final class GcpWorkerPerformanceRegressionTest {
               "test-data/%s/test-outputs/500k_report_%s_500k_domain_transient_output.avro",
               KOKORO_BUILD_ID, i);
       CreateJobRequest createJobRequest =
-          SmokeTestBase.createJobRequest(
+          SmokeTestBase.createJobRequestWithAttributionReportTo(
               getTestDataBucket(PERFORMANCE_REGRESSION_DATA_BUCKET),
               inputKey,
               getTestDataBucket(PERFORMANCE_REGRESSION_DATA_BUCKET),
@@ -164,8 +157,8 @@ public final class GcpWorkerPerformanceRegressionTest {
                   + name.getMethodName()
                   + "_transient-"
                   + i,
-              /* outputDomainBucketName= */
-              Optional.of(getTestDataBucket(PERFORMANCE_REGRESSION_DATA_BUCKET)),
+              /* outputDomainBucketName= */ Optional.of(
+                  getTestDataBucket(PERFORMANCE_REGRESSION_DATA_BUCKET)),
               /* outputDomainPrefix= */ Optional.of(domainKey));
       createJob(createJobRequest);
       transientJobRequests.add(createJobRequest);

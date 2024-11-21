@@ -206,7 +206,6 @@ public abstract class AvroRecordWriter<Record> implements AutoCloseable {
         recordSpliterator.tryAdvance(
             record -> {
               GenericRecord genericAvroRecord = null;
-              // TODO(b/276489466): Replace try-catch with a thrown TunnelException from Guava lib
               try {
                 genericAvroRecord = serializeRecordToGeneric(record, schema);
                 streamWriter.append(genericAvroRecord);

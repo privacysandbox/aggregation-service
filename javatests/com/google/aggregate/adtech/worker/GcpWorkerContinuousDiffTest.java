@@ -55,15 +55,12 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class GcpWorkerContinuousDiffTest {
 
-  @Rule
-  public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final Acai acai = new Acai(TestEnv.class);
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
-  @Inject
-  GcsBlobStorageClient gcsBlobStorageClient;
-  @Inject
-  AvroResultsFileReader avroResultsFileReader;
+  @Inject GcsBlobStorageClient gcsBlobStorageClient;
+  @Inject AvroResultsFileReader avroResultsFileReader;
 
   @Before
   public void checkBuildEnv() {
@@ -86,7 +83,7 @@ public class GcpWorkerContinuousDiffTest {
             "%s/test-outputs/10k_diff_test_output.avro.result", SmokeTestBase.KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -114,12 +111,12 @@ public class GcpWorkerContinuousDiffTest {
     MapDifference<BigInteger, AggregatedFact> diffs =
         ResultDiffer.diffResults(aggregatedFacts.stream(), goldenAggregatedFacts.stream());
     assertWithMessage(
-        String.format(
-            "Found (%s) diffs between left(test) and right(golden). Found (%s) entries only on"
-                + " left(test) and (%s) entries only on right(golden).",
-            diffs.entriesDiffering().size(),
-            diffs.entriesOnlyOnLeft().size(),
-            diffs.entriesOnlyOnRight().size()))
+            String.format(
+                "Found (%s) diffs between left(test) and right(golden). Found (%s) entries only on"
+                    + " left(test) and (%s) entries only on right(golden).",
+                diffs.entriesDiffering().size(),
+                diffs.entriesOnlyOnLeft().size(),
+                diffs.entriesOnlyOnRight().size()))
         .that(diffs.areEqual())
         .isTrue();
 

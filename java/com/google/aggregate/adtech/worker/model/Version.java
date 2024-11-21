@@ -38,8 +38,6 @@ public abstract class Version implements Comparable<Version> {
     return Version.create(Integer.valueOf(parts[0]), Integer.valueOf(parts[1]));
   }
 
-  // TODO(b/303480127): Remove isZero() from Version class in ReportVersionValidator when
-  // MAJOR_VERSION_ZERO is removed from SUPPORTED_MAJOR_VERSIONS.
   public boolean isZero() {
     return (major() == 0 && minor() == 0);
   }

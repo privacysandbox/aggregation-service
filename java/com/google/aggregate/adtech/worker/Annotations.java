@@ -113,11 +113,6 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface StreamingOutputDomainProcessing {}
 
-  @BindingAnnotation
-  @Target({FIELD, PARAMETER, METHOD})
-  @Retention(RUNTIME)
-  public @interface EnablePrivacyBudgetKeyFiltering {}
-
   /** Annotation for the set of supported APIs. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})
@@ -134,6 +129,12 @@ public final class Annotations {
   @Target({FIELD, PARAMETER, METHOD})
   @Retention(RUNTIME)
   public @interface CustomForkJoinThreadPool {}
+
+  /** Annotation for cloud instance id. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface InstanceId {}
 
   private Annotations() {}
 }

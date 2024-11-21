@@ -21,16 +21,16 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableMap;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.sdk.common.Clock;
-import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.logs.data.LogRecordData;
 import io.opentelemetry.sdk.metrics.data.MetricData;
 import io.opentelemetry.sdk.resources.Resource;
+import io.opentelemetry.sdk.testing.exporter.InMemoryLogRecordExporter;
 import io.opentelemetry.sdk.testing.exporter.InMemoryMetricReader;
 import io.opentelemetry.sdk.testing.exporter.InMemorySpanExporter;
-import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import io.opentelemetry.sdk.trace.data.SpanData;
-import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
@@ -48,6 +48,9 @@ public final class OTelConfigurationImplTest {
   private final Resource RESOURCE = Resource.getDefault();
   private InMemorySpanExporter spanExporter;
   private InMemoryMetricReader metricReader;
+
+  private InMemoryLogRecordExporter logRecordExporter;
+
   private OTelConfiguration oTelConfigurationImpl;
 
   @Before
@@ -55,23 +58,9 @@ public final class OTelConfigurationImplTest {
     // Reset the OpenTelemetry object for tests
     OTelConfiguration.resetForTest();
 
-    // Setup trace provider
     spanExporter = InMemorySpanExporter.create();
-    SdkTracerProvider sdkTracerProvider =
-        SdkTracerProvider.builder()
-            .addSpanProcessor(SimpleSpanProcessor.create(spanExporter))
-            .setResource(RESOURCE)
-            .setClock(CLOCK)
-            .build();
-
-    // Setup meter provider
     metricReader = InMemoryMetricReader.create();
-    SdkMeterProvider sdkMeterProvider =
-        SdkMeterProvider.builder()
-            .setResource(RESOURCE)
-            .setClock(CLOCK)
-            .registerMetricReader(metricReader)
-            .build();
+    logRecordExporter = InMemoryLogRecordExporter.create();
 
     oTelConfigurationImpl = new OTelConfigurationImpl();
   }
@@ -257,5 +246,25 @@ public final class OTelConfigurationImplTest {
     List<SpanData> spanItems = spanExporter.getFinishedSpanItems();
 
     assertThat(spanItems).isEmpty();
+  }
+
+  @Test
+  public void createProdLogs() {
+    oTelConfigurationImpl.writeProdLog("test", Severity.INFO);
+
+    List<LogRecordData> logItems = logRecordExporter.getFinishedLogRecordItems();
+
+    // No logs will be emitted because it is noop.
+    assertThat(logItems).isEmpty();
+  }
+
+  @Test
+  public void createDebugLogs() {
+    oTelConfigurationImpl.writeDebugLog("test", Severity.INFO);
+
+    List<LogRecordData> logItems = logRecordExporter.getFinishedLogRecordItems();
+
+    // No logs will be emitted because it is noop.
+    assertThat(logItems).isEmpty();
   }
 }

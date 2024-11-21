@@ -20,7 +20,8 @@ exclude: (?x)^(
              builders/.*|
              javatests/testData/.*|
              version.txt|
-             .*\.patch
+             .*\.patch |
+             licenses/THIRD_PARTY_NOTICES/.*
          )$
 
 fail_fast: true

@@ -42,4 +42,9 @@ CONTAINER_DEPS = {
         "registry": "gcr.io",
         "repository": "distroless/java17-debian11",
     },
+    "java_base_gcp": {
+        "digest": "sha256:da08cd3597b09c8073a5f4c3f1d226826fc35f16643c3243a6f8c85a2ee3efbf",
+        "registry": "gcr.io",
+        "repository": "distroless/java17-debian12",
+    },
 }

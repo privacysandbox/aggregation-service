@@ -27,6 +27,7 @@ java_library(
         "//java/external:opentelemetry_api",
         "//java/external:opentelemetry_context",
         "//java/external:opentelemetry_sdk_common",
+        "//java/external:opentelemetry_sdk_logs",
         "//java/external:opentelemetry_sdk_trace",
     ],
 )

@@ -23,7 +23,7 @@ import static com.google.aggregate.adtech.worker.SmokeTestBase.checkJobExecution
 import static com.google.aggregate.adtech.worker.SmokeTestBase.getTestDataBucket;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.getTestProjectId;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.getTestServiceAccount;
-import static com.google.aggregate.adtech.worker.SmokeTestBase.readDebugResultsFromCloud;
+import static com.google.aggregate.adtech.worker.SmokeTestBase.readDebugResultsFromMultipleFiles;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.readResultsFromCloud;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.submitJobAndWaitForResult;
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
@@ -41,6 +41,9 @@ import com.google.auth.oauth2.ImpersonatedCredentials;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.UnsignedLong;
+import com.google.errorprone.annotations.Var;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.GcsBlobStorageClient;
@@ -83,14 +86,14 @@ public final class GcpWorkerContinuousSmokeTest {
    */
   @Test
   public void createJobE2ETest() throws Exception {
-    String inputDataPrefix = String.format("%s/test-inputs/10k_test_input_1.avro", KOKORO_BUILD_ID);
+    String inputDataPrefix = String.format("%s/test-inputs/10k_test_input_1/", KOKORO_BUILD_ID);
     String domainDataPrefix =
         String.format("%s/test-inputs/10k_test_domain_1.avro", KOKORO_BUILD_ID);
     String outputDataPrefix =
         String.format("%s/test-outputs/10k_test_domain_1.avro.result", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputDataPrefix,
             getTestDataBucket(),
@@ -114,15 +117,14 @@ public final class GcpWorkerContinuousSmokeTest {
   */
   @Test
   public void createNotDebugJobE2EReportDebugEnabledTest() throws Exception {
-    String inputDataPrefix =
-        String.format("%s/test-inputs/10k_test_input_debug.avro", KOKORO_BUILD_ID);
+    String inputDataPrefix = String.format("%s/test-inputs/10k_test_input_debug/", KOKORO_BUILD_ID);
     String domainDataPrefix =
         String.format("%s/test-inputs/10k_test_domain_debug.avro", KOKORO_BUILD_ID);
     String outputDataPrefix =
         String.format("%s/test-outputs/10k_test_input_non_debug.avro.result", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputDataPrefix,
             getTestDataBucket(),
@@ -130,7 +132,7 @@ public final class GcpWorkerContinuousSmokeTest {
             false,
             Optional.of(getTestDataBucket()),
             Optional.of(domainDataPrefix));
-    JsonNode result = SmokeTestBase.submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
     checkJobExecutionResult(result, SUCCESS.name(), 0);
 
     // Read output avro from GCS.
@@ -159,17 +161,15 @@ public final class GcpWorkerContinuousSmokeTest {
   @Test
   public void createDebugJobE2EReportDebugModeEnabledTest() throws Exception {
     String inputDataPrefix =
-        String.format(
-            "%s/test-inputs/10k_test_input_debug_for_debug_disabled.avro", KOKORO_BUILD_ID);
+        String.format("%s/test-inputs/10k_test_input_debug_for_debug_disabled/", KOKORO_BUILD_ID);
     String domainDataPrefix =
         String.format(
             "%s/test-inputs/10k_test_domain_debug_for_debug_disabled.avro", KOKORO_BUILD_ID);
     String outputDataPrefix =
-        String.format(
-            "%s/test-outputs/10k_test_input_debug_for_debug_disabled.avro.result", KOKORO_BUILD_ID);
+        String.format("%s/test-outputs/10k_test_input_debug_for_debug_disabled", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputDataPrefix,
             getTestDataBucket(),
@@ -177,7 +177,7 @@ public final class GcpWorkerContinuousSmokeTest {
             true,
             Optional.of(getTestDataBucket()),
             Optional.of(domainDataPrefix));
-    JsonNode result = SmokeTestBase.submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
     checkJobExecutionResult(result, SUCCESS.name(), 0);
 
     // Read output avro from GCS.
@@ -192,11 +192,11 @@ public final class GcpWorkerContinuousSmokeTest {
 
     // Read debug results avro from GCS.
     ImmutableList<AggregatedFact> aggregatedDebugFacts =
-        readDebugResultsFromCloud(
+        readDebugResultsFromMultipleFiles(
             gcsBlobStorageClient,
             readerFactory,
             getTestDataBucket(),
-            getDebugFilePrefix(outputDataPrefix + OUTPUT_DATA_PREFIX_NAME));
+            getDebugFilePrefix(outputDataPrefix));
     // Debug facts count should be greater than or equal to the summary facts count because some
     // keys are filtered out due to thresholding or not in domain.
     assertThat(aggregatedDebugFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
@@ -208,14 +208,14 @@ public final class GcpWorkerContinuousSmokeTest {
   */
   @Test
   public void createDebugJobE2EReportDebugModeDisabledTest() throws Exception {
-    String inputDataPrefix = String.format("%s/test-inputs/10k_test_input_2.avro", KOKORO_BUILD_ID);
+    String inputDataPrefix = String.format("%s/test-inputs/10k_test_input_2/", KOKORO_BUILD_ID);
     String domainDataPrefix =
         String.format("%s/test-inputs/10k_test_domain_2.avro", KOKORO_BUILD_ID);
     String outputDataPrefix =
         String.format("%s/test-outputs/10k_test_input_2.avro.result", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputDataPrefix,
             getTestDataBucket(),
@@ -270,7 +270,7 @@ public final class GcpWorkerContinuousSmokeTest {
   @Test
   public void createJobE2EAggregateReportingDebugTest() throws Exception {
     String inputDataPrefix =
-        String.format("%s/test-inputs/10k_test_input_attribution_debug.avro", KOKORO_BUILD_ID);
+        String.format("%s/test-inputs/10k_test_input_attribution_debug/", KOKORO_BUILD_ID);
     String domainDataPrefix =
         String.format("%s/test-inputs/10k_test_domain_attribution_debug.avro", KOKORO_BUILD_ID);
     String outputDataPrefix =
@@ -278,7 +278,7 @@ public final class GcpWorkerContinuousSmokeTest {
             "%s/test-outputs/10k_test_output_attribution_debug.avro.result", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputDataPrefix,
             getTestDataBucket(),
@@ -297,28 +297,154 @@ public final class GcpWorkerContinuousSmokeTest {
     assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
   }
 
+  /**
+   * This test includes sending a job with reporting site only. Verifies that jobs with only
+   * reporting site are successful.
+   */
+  @Test
+  public void createJobE2ETestWithReportingSite() throws Exception {
+    var inputDataPrefix =
+        String.format("%s/test-inputs/10k_test_input_reporting_site/", KOKORO_BUILD_ID);
+    var domainDataPrefix =
+        String.format("%s/test-inputs/10k_test_domain_reporting_site.avro", KOKORO_BUILD_ID);
+    var outputDataPrefix =
+        String.format(
+            "%s/test-outputs/10k_test_output_reporting_site.avro.result", KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        SmokeTestBase.createJobRequestWithReportingSite(
+            getTestDataBucket(),
+            inputDataPrefix,
+            getTestDataBucket(),
+            outputDataPrefix,
+            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
+            /* outputDomainPrefix= */ Optional.of(domainDataPrefix));
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    checkJobExecutionResult(result, SUCCESS.name(), 0);
+
+    ImmutableList<AggregatedFact> aggregatedFacts =
+        readResultsFromCloud(
+            gcsBlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            outputDataPrefix + OUTPUT_DATA_PREFIX_NAME);
+    assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
+  }
+
+  /**
+   * This test includes sending a job with reports from multiple reporting origins belonging to the
+   * same reporting site. Verifies that all the reports are processed successfully.
+   */
+  @Test
+  public void createJobE2ETestWithMultipleReportingOrigins() throws Exception {
+    var inputDataPrefix = String.format("%s/test-inputs/same-site/", KOKORO_BUILD_ID);
+    var domainDataPrefix =
+        String.format(
+            "%s/test-inputs/10k_test_domain_multiple_origins_same_site.avro", KOKORO_BUILD_ID);
+    var outputDataPrefix =
+        String.format(
+            "%s/test-outputs/10k_test_output_multiple_origins_same_site.avro.result",
+            KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        SmokeTestBase.createJobRequestWithReportingSite(
+            getTestDataBucket(),
+            inputDataPrefix,
+            getTestDataBucket(),
+            outputDataPrefix,
+            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
+            /* outputDomainPrefix= */ Optional.of(domainDataPrefix));
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    checkJobExecutionResult(result, SUCCESS.name(), 0);
+
+    ImmutableList<AggregatedFact> aggregatedFacts =
+        readResultsFromCloud(
+            gcsBlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            outputDataPrefix + OUTPUT_DATA_PREFIX_NAME);
+    assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
+  }
+
+  /**
+   * This test includes sending a job with reports from multiple reporting origins belonging to
+   * different reporting sites. It is expected that the 5k reports with a different reporting site
+   * will fail and come up in the error counts.
+   */
+  @Test
+  public void createJobE2ETestWithSomeReportsHavingDifferentReportingOrigins() throws Exception {
+    var inputDataPrefix = String.format("%s/test-inputs/different-site/", KOKORO_BUILD_ID);
+    var domainDataPrefix =
+        String.format(
+            "%s/test-inputs/10k_test_domain_multiple_origins_different_site.avro", KOKORO_BUILD_ID);
+    var outputDataPrefix =
+        String.format(
+            "%s/test-outputs/10k_test_output_multiple_origins_different_site.avro.result",
+            KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        SmokeTestBase.createJobRequestWithReportingSite(
+            getTestDataBucket(),
+            inputDataPrefix,
+            getTestDataBucket(),
+            outputDataPrefix,
+            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
+            /* outputDomainPrefix= */ Optional.of(domainDataPrefix));
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
+    assertThat(
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("count")
+                .asInt())
+        .isEqualTo(5000);
+    assertThat(
+            result
+                .get("result_info")
+                .get("error_summary")
+                .get("error_counts")
+                .get(0)
+                .get("category")
+                .asText())
+        .isEqualTo(ErrorCounter.REPORTING_SITE_MISMATCH.name());
+
+    ImmutableList<AggregatedFact> aggregatedFacts =
+        readResultsFromCloud(
+            gcsBlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            outputDataPrefix + OUTPUT_DATA_PREFIX_NAME);
+    assertThat(aggregatedFacts.size()).isAtLeast(5000);
+  }
+
   /*
    Creates a job and waits for successful completion. Then creates another job for the same data
    and verifies the privacy budget is exhausted.
   */
   @Test
   public void createJobE2ETestPrivacyBudgetExhausted() throws Exception {
-    String inputDataPrefix = String.format("%s/test-inputs/10k_test_input_3.avro", KOKORO_BUILD_ID);
+    String inputDataPrefix = String.format("%s/test-inputs/10k_test_input_3/", KOKORO_BUILD_ID);
     String domainDataPrefix =
         String.format("%s/test-inputs/10k_test_domain_3.avro", KOKORO_BUILD_ID);
     String outputDataPrefix =
         String.format("%s/test-outputs/10k_test_input_3.avro.result", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest1 =
-        SmokeTestBase.createJobRequest(
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputDataPrefix,
             getTestDataBucket(),
             outputDataPrefix,
             Optional.of(getTestDataBucket()),
             Optional.of(domainDataPrefix));
-    JsonNode result =
-        SmokeTestBase.submitJobAndWaitForResult(createJobRequest1, COMPLETION_TIMEOUT);
+    JsonNode result = submitJobAndWaitForResult(createJobRequest1, COMPLETION_TIMEOUT);
     assertThat(result.get("result_info").get("return_code").asText())
         .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
     assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
@@ -326,13 +452,87 @@ public final class GcpWorkerContinuousSmokeTest {
 
     CreateJobRequest createJobRequest2 =
         createJobRequest1.toBuilder().setJobRequestId(UUID.randomUUID().toString()).build();
-
     result = submitJobAndWaitForResult(createJobRequest2, COMPLETION_TIMEOUT);
+    checkJobExecutionResult(result, PRIVACY_BUDGET_EXHAUSTED.name(), 0);
+  }
 
-    assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(PRIVACY_BUDGET_EXHAUSTED.name());
-    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
-        .isTrue();
+  @Test
+  public void createJob_withFilteringId() throws Exception {
+    // This tests depends on the continued usage of CONSTANT_NOISING when building.
+    // The Constant Noising adds 0 noise enabling the testing of the contribution filtering.
+    String inputKey =
+        String.format("%s/test-inputs/50k_test_input_filtering_ids.avro", KOKORO_BUILD_ID);
+    String domainKey =
+        String.format("%s/test-inputs/50k_test_domain_filtering_id.avro", KOKORO_BUILD_ID);
+    String outputKeyPrefix =
+        String.format("%s/test-outputs/50k_test_output_filtering_ids", KOKORO_BUILD_ID);
+    String outputKey = outputKeyPrefix + ".avro";
+
+    @Var ImmutableSet<UnsignedLong> filteringIds = ImmutableSet.of();
+    @Var
+    CreateJobRequest createJobRequest =
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
+            getTestDataBucket(),
+            inputKey,
+            getTestDataBucket(),
+            outputKey,
+            Optional.of(getTestDataBucket()),
+            Optional.of(domainKey),
+            filteringIds);
+    @Var JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+    checkJobExecutionResult(result, SUCCESS.name(), 0);
+    @Var
+    ImmutableList<AggregatedFact> aggregatedFacts =
+        SmokeTestBase.readResultsFromMultipleFiles(
+            gcsBlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKeyPrefix);
+    // assert that aggregated facts count is at least equal to number of domain keys
+    assertThat(aggregatedFacts.size()).isAtLeast(50000);
+    // Filtering Id = 0 filters out all contributions except 10000 keys.
+    assertThat(
+            aggregatedFacts.stream()
+                .filter(aggregatedFact -> aggregatedFact.getMetric() > 0)
+                .count())
+        .isAtLeast(10000);
+
+    filteringIds =
+        ImmutableSet.of(UnsignedLong.valueOf("18446744073709551615"), UnsignedLong.valueOf(65536));
+    createJobRequest =
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
+            getTestDataBucket(),
+            inputKey,
+            getTestDataBucket(),
+            outputKey,
+            Optional.of(getTestDataBucket()),
+            Optional.of(domainKey),
+            filteringIds);
+    // Privacy Budget is not exhausted for the same data because different filtering Ids are used.
+    result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+    checkJobExecutionResult(result, SUCCESS.name(), 0);
+    aggregatedFacts =
+        SmokeTestBase.readResultsFromMultipleFiles(
+            gcsBlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKeyPrefix);
+    // assert that aggregated facts count is at least equal to number of domain keys
+    assertThat(aggregatedFacts.size()).isAtLeast(50000);
+    // Filtering Id = 65536 & 18446744073709551615 filters out all contributions except 20000 keys.
+    assertThat(
+            aggregatedFacts.stream()
+                .filter(aggregatedFact -> aggregatedFact.getMetric() > 0)
+                .count())
+        .isAtLeast(20000);
+
+    filteringIds = ImmutableSet.of(UnsignedLong.valueOf(5), UnsignedLong.ZERO);
+    createJobRequest =
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
+            getTestDataBucket(),
+            inputKey,
+            getTestDataBucket(),
+            outputKey,
+            Optional.of(getTestDataBucket()),
+            Optional.of(domainKey),
+            filteringIds);
+    // Privacy Budget is exhausted for the same data and the same filtering ids.
+    result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+    checkJobExecutionResult(result, PRIVACY_BUDGET_EXHAUSTED.name(), 0);
   }
 
   private static class TestEnv extends AbstractModule {

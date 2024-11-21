@@ -18,7 +18,6 @@ package com.google.aggregate.tools.privacybudgetutil.common;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
-import static java.time.temporal.ChronoUnit.HOURS;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
@@ -108,9 +107,9 @@ public class ExtractionUtils {
 
       for (UnsignedLong filteringId : filteringIds) {
         keyset.add(
-            PrivacyBudgetUnit.create(
+            PrivacyBudgetUnit.createHourTruncatedUnit(
                 getPrivacyBudgetKey(info, filteringId, generatorFactory),
-                info.scheduledReportTime().truncatedTo(HOURS),
+                info.scheduledReportTime(),
                 info.reportingOrigin()));
       }
     }

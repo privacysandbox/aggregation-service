@@ -17,6 +17,7 @@
 package com.google.privacysandbox.otel;
 
 import com.google.errorprone.annotations.MustBeClosed;
+import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.metrics.LongCounter;
 import java.util.Map;
 
@@ -89,4 +90,10 @@ public final class OTelConfigurationImpl implements OTelConfiguration {
   public Timer createProdTimerStarted(String name, Map attributeMap) {
     return NOOP_TIMER;
   }
+
+  @Override
+  public void writeProdLog(String body, Severity severity) {}
+
+  @Override
+  public void writeDebugLog(String body, Severity severity) {}
 }

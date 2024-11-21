@@ -33,5 +33,11 @@ public final class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface GrpcOtelCollectorEndpoint {}
 
+  /** Annotation for enabling the OTel logs. */
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface EnableOTelLogs {}
+
   private Annotations() {}
 }

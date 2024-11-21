@@ -71,3 +71,13 @@ java_test(
         "//java/external:google_truth",
     ],
 )
+
+java_test(
+    name = "ReportingOriginUtilsTest",
+    srcs = ["ReportingOriginUtilsTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/external:google_truth",
+        "//java/external:guava",
+    ],
+)

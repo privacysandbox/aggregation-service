@@ -19,26 +19,21 @@ package com.google.aggregate.adtech.worker.writer.json;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.model.EncryptedReport;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
+import com.google.common.collect.ImmutableList;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Iterator;
-import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 import org.apache.avro.Schema;
@@ -55,14 +50,16 @@ import org.apache.avro.io.JsonEncoder;
  */
 public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
 
-  private AvroResultsSchemaSupplier schemaSupplier;
+  private final AvroResultsSchemaSupplier schemaSupplier;
+  private final AvroResultsSerdes avroResultsSerdes;
   private final ObjectMapper mapper = new ObjectMapper();
   private final SimpleModule module = new SimpleModule();
 
   @Inject
-  LocalJsonResultFileWriter(AvroResultsSchemaSupplier schemaSupplier) {
+  LocalJsonResultFileWriter(
+      AvroResultsSchemaSupplier schemaSupplier, AvroResultsSerdes resultsSerdes) {
     this.schemaSupplier = schemaSupplier;
-    module.addSerializer(EncryptedReport.class, new EncryptedReportSerializer());
+    this.avroResultsSerdes = resultsSerdes;
     mapper.registerModule(module);
   }
 
@@ -100,16 +97,10 @@ public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
   }
 
   @Override
-  public void writeLocalReportFile(Stream<EncryptedReport> reports, Path resultFilePath)
-      throws FileWriteException {
-    try {
-      List<EncryptedReport> encryptedReportsList = reports.collect(Collectors.toList());
-      String prettyJson =
-          mapper.writerWithDefaultPrettyPrinter().writeValueAsString(encryptedReportsList);
-      Files.writeString(resultFilePath, prettyJson, StandardOpenOption.CREATE);
-    } catch (Exception e) {
-      throw new FileWriteException("Failed to write reports to local Json file", e);
-    }
+  public void writeLocalFile(byte[] avroFileBytes, Path resultFilePath) throws FileWriteException {
+    ImmutableList<AggregatedFact> aggregatedFacts =
+        avroResultsSerdes.reverse().convert(avroFileBytes);
+    this.writeLocalFile(aggregatedFacts.stream(), resultFilePath);
   }
 
   @Override
@@ -124,27 +115,5 @@ public final class LocalJsonResultFileWriter implements LocalResultFileWriter {
     genericRecord.put("bucket", bucketBytes);
     genericRecord.put("metric", aggregatedFact.getMetric());
     return genericRecord;
-  }
-
-  private static class EncryptedReportSerializer extends StdSerializer<EncryptedReport> {
-
-    EncryptedReportSerializer() {
-      super(EncryptedReport.class);
-    }
-
-    EncryptedReportSerializer(Class<EncryptedReport> t) {
-      super(t);
-    }
-
-    @Override
-    public void serialize(
-        EncryptedReport encryptedReport, JsonGenerator jgen, SerializerProvider serializerProvider)
-        throws IOException {
-      jgen.writeStartObject();
-      jgen.writeStringField("key_id", encryptedReport.keyId());
-      jgen.writeBinaryField("payload", encryptedReport.payload().read());
-      jgen.writeStringField("shared_info", encryptedReport.sharedInfo());
-      jgen.writeEndObject();
-    }
   }
 }

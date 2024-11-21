@@ -19,19 +19,29 @@ package com.google.aggregate.adtech.worker.validation;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.REQUIRED_SHAREDINFO_FIELD_INVALID;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_1_0;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 
+import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Payload;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
+import com.google.aggregate.adtech.worker.util.JobUtils;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -39,8 +49,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class ReportPrivacyBudgetKeyFieldsValidatorTest {
 
-  // Under test
-  private ReportPrivacyBudgetKeyValidator validator;
+  @Rule public final Acai acai = new Acai(TestEnv.class);
 
   private Report.Builder reportBuilder;
 
@@ -59,9 +68,11 @@ public class ReportPrivacyBudgetKeyFieldsValidatorTest {
 
   private static final String INVALID_API = "invalid-api";
 
+  // Under test.
+  @Inject private ReportPrivacyBudgetKeyValidator validator;
+
   @Before
   public void setUp() {
-    validator = new ReportPrivacyBudgetKeyValidator();
     reportBuilder = Report.builder().setPayload(Payload.builder().build());
     ctx = FakeJobGenerator.generate("");
   }
@@ -138,5 +149,128 @@ public class ReportPrivacyBudgetKeyFieldsValidatorTest {
     Optional<ErrorMessage> validationError = validator.validate(reportVersion, ctx);
 
     assertThat(validationError).isEmpty();
+  }
+
+  @Test
+  public void sharedInfo_version_0_0_zeroFilteringId_validationFails() {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JobUtils.JOB_PARAM_FILTERING_IDS, "0");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+    SharedInfo.Builder sharedInfoVersionBuilder =
+        SharedInfo.builder()
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setVersion("0.0")
+            .setReportId(RANDOM_UUID)
+            .setDestination(DESTINATION)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setScheduledReportTime(FIXED_TIME)
+            .setSourceRegistrationTime(FIXED_TIME);
+    Report reportVersion = reportBuilder.setSharedInfo(sharedInfoVersionBuilder.build()).build();
+
+    Optional<ErrorMessage> validationError = validator.validate(reportVersion, ctx);
+
+    assertThat(validationError).isPresent();
+    assertThat(validationError.get().category()).isEqualTo(REQUIRED_SHAREDINFO_FIELD_INVALID);
+  }
+
+  @Test
+  public void sharedInfo_version_0_1_zeroFilteringId_validationSucceeds() {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JobUtils.JOB_PARAM_FILTERING_IDS, "0");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+    SharedInfo.Builder sharedInfoVersionBuilder =
+        SharedInfo.builder()
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setVersion(VERSION_0_1)
+            .setReportId(RANDOM_UUID)
+            .setDestination(DESTINATION)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setScheduledReportTime(FIXED_TIME)
+            .setSourceRegistrationTime(FIXED_TIME);
+    Report reportVersion = reportBuilder.setSharedInfo(sharedInfoVersionBuilder.build()).build();
+
+    Optional<ErrorMessage> validationError = validator.validate(reportVersion, ctx);
+
+    assertThat(validationError).isEmpty();
+  }
+
+  @Test
+  public void sharedInfo_version_0_1_nonZeroFilteringId_validationSucceeds() {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JobUtils.JOB_PARAM_FILTERING_IDS, "5");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+    SharedInfo.Builder sharedInfoVersionBuilder =
+        SharedInfo.builder()
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setVersion(VERSION_0_1)
+            .setReportId(RANDOM_UUID)
+            .setDestination(DESTINATION)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setScheduledReportTime(FIXED_TIME)
+            .setSourceRegistrationTime(FIXED_TIME);
+    Report reportVersion = reportBuilder.setSharedInfo(sharedInfoVersionBuilder.build()).build();
+
+    Optional<ErrorMessage> validationError = validator.validate(reportVersion, ctx);
+
+    assertThat(validationError).isEmpty();
+  }
+
+  @Test
+  public void sharedInfo_version_1_0_nonZeroFilteringId_validationSucceeds() {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JobUtils.JOB_PARAM_FILTERING_IDS, "2");
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+    SharedInfo.Builder sharedInfoVersionBuilder =
+        SharedInfo.builder()
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setVersion(VERSION_1_0)
+            .setReportId(RANDOM_UUID)
+            .setDestination(DESTINATION)
+            .setReportingOrigin(REPORTING_ORIGIN)
+            .setScheduledReportTime(FIXED_TIME)
+            .setSourceRegistrationTime(FIXED_TIME);
+    Report reportVersion = reportBuilder.setSharedInfo(sharedInfoVersionBuilder.build()).build();
+
+    Optional<ErrorMessage> validationError = validator.validate(reportVersion, ctx);
+
+    assertThat(validationError).isEmpty();
+  }
+
+  private ImmutableMap<String, String> combineJobParams(
+      Map<String, String> currentJobParams, Map<String, String> additionalJobParams) {
+    ImmutableMap.Builder<String, String> map = ImmutableMap.builder();
+    return map.putAll(currentJobParams).putAll(additionalJobParams).buildOrThrow();
+  }
+
+  public static final class TestEnv extends AbstractModule {
+
+    @Override
+    protected void configure() {
+      install(new PrivacyBudgetKeyGeneratorModule());
+    }
   }
 }

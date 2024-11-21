@@ -27,6 +27,8 @@ public interface PrivacyBudgetKeyGenerator {
 
   String generatePrivacyBudgetKey(PrivacyBudgetKeyInput privacyBudgetKeyInput);
 
+  boolean validatePrivacyBudgetKeyInput(PrivacyBudgetKeyInput privacyBudgetKeyInput);
+
   /** An input object containing values for generating Privacy Budget Key. */
   @AutoValue
   abstract class PrivacyBudgetKeyInput {

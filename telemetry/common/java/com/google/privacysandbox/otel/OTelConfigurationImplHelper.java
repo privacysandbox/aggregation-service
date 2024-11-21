@@ -21,21 +21,27 @@ import com.google.errorprone.annotations.MustBeClosed;
 import com.sun.management.OperatingSystemMXBean;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.api.logs.Logger;
+import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.Meter;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
 import java.lang.management.ManagementFactory;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /** Implements helper methods for {@link OTelConfiguration} implementations */
 public class OTelConfigurationImplHelper {
+
   private final Meter meter;
   private final Tracer tracer;
+  private final Logger logger;
 
-  OTelConfigurationImplHelper(Meter meter, Tracer tracer) {
+  OTelConfigurationImplHelper(Meter meter, Tracer tracer, Logger logger) {
     this.meter = meter;
     this.tracer = tracer;
+    this.logger = logger;
   }
 
   /** Creates a gauge meter that periodically exports memory utilization ratio */
@@ -152,5 +158,25 @@ public class OTelConfigurationImplHelper {
     attributesMap.forEach((k, v) -> attributes.put(k, v));
     SpanBuilder sp = tracer.spanBuilder(name).setNoParent();
     return new TimerImpl(sp, attributes.build());
+  }
+
+  /**
+   * Emit a log with severity. The timestamp in the log attribute is truncated into second due to
+   * privacy.
+   *
+   * @param logBody {@link String}
+   * @param severity {@link Severity}
+   */
+  public void emitLog(String logBody, Severity severity) {
+
+    long timeMillis = System.currentTimeMillis();
+    long timeSecond = TimeUnit.SECONDS.convert(timeMillis, TimeUnit.MILLISECONDS);
+
+    logger
+        .logRecordBuilder()
+        .setSeverity(severity)
+        .setBody(logBody)
+        .setObservedTimestamp(timeSecond, TimeUnit.SECONDS)
+        .emit();
   }
 }

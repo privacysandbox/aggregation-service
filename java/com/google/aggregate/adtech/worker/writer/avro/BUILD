@@ -29,8 +29,6 @@ java_library(
         "//java/com/google/aggregate/adtech/worker/writer",
         "//java/com/google/aggregate/protocol/avro:avro_debug_results",
         "//java/com/google/aggregate/protocol/avro:avro_record_writer",
-        "//java/com/google/aggregate/protocol/avro:avro_report",
-        "//java/com/google/aggregate/protocol/avro:avro_reports_schema_supplier",
         "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
         "//java/external:avro",
         "//java/external:guava",

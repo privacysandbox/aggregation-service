@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.decryption;
 
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipher.PayloadDecryptionException;
+import com.google.aggregate.adtech.worker.decryption.DecryptionCipher.PayloadParsingException;
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory.CipherCreationException;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.model.Payload;
@@ -70,7 +71,7 @@ public final class DeserializingReportDecrypter implements RecordDecrypter {
       // Deserialize the payload
       Optional<Payload> plaintextPayload = payloadSerdes.convert(decryptedPayload);
       if (plaintextPayload.isEmpty()) {
-        throw new PayloadDecryptionException(
+        throw new PayloadParsingException(
             new IllegalArgumentException("Decrypted payload could not be deserialized"));
       }
 
@@ -79,7 +80,7 @@ public final class DeserializingReportDecrypter implements RecordDecrypter {
           .setSharedInfo(sharedInfo.get())
           .build();
 
-    } catch (PayloadDecryptionException | CipherCreationException e) {
+    } catch (PayloadDecryptionException | PayloadParsingException | CipherCreationException e) {
       throw new DecryptionException(e);
     }
   }

@@ -38,7 +38,7 @@ import org.apache.avro.io.DatumReader;
 /** Simple utility to read an Avro results file, used for testing. */
 public final class AvroResultsFileReader {
 
-  AvroResultsSchemaSupplier avroResultsSchemaSupplier;
+  private final AvroResultsSchemaSupplier avroResultsSchemaSupplier;
 
   @Inject
   AvroResultsFileReader(AvroResultsSchemaSupplier avroResultsSchemaSupplier) {

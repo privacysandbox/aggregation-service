@@ -19,28 +19,38 @@ package com.google.aggregate.adtech.worker.testing;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.model.EncryptedReport;
+import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
+import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
+import com.google.aggregate.protocol.avro.AvroDebugResultsSchemaSupplier;
+import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.ByteSource;
+import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
 import java.math.BigInteger;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class InMemoryResultLoggerTest {
+  @Rule public final Acai acai = new Acai(InMemoryResultLoggerTest.TestEnv.class);
+
+  @Inject AvroResultsSerdes avroResultsSerdes;
+  @Inject AvroDebugResultsSerdes avroDebugResultsSerdes;
 
   // Under test
   InMemoryResultLogger inMemoryResultLogger;
 
   @Before
   public void setUp() {
-    inMemoryResultLogger = new InMemoryResultLogger();
+    inMemoryResultLogger = new InMemoryResultLogger(avroResultsSerdes, avroDebugResultsSerdes);
   }
 
   @Test
@@ -100,45 +110,9 @@ public class InMemoryResultLoggerTest {
   }
 
   @Test
-  public void logInMemoryReports_logSucceeds() throws ResultLogException {
-    EncryptedReport encryptedReport1 =
-        EncryptedReport.builder()
-            .setPayload(ByteSource.wrap(new byte[] {0x00, 0x01}))
-            .setKeyId("key1")
-            .setSharedInfo("foo")
-            .build();
-    EncryptedReport encryptedReport2 =
-        EncryptedReport.builder()
-            .setPayload(ByteSource.wrap(new byte[] {0x01, 0x02}))
-            .setKeyId("key2")
-            .setSharedInfo("foo")
-            .build();
-    ImmutableList<EncryptedReport> encryptedReports =
-        ImmutableList.of(encryptedReport1, encryptedReport2);
-
-    inMemoryResultLogger.logReports(encryptedReports, FakeJobGenerator.generate("foo"), "1");
-
-    assertThat(inMemoryResultLogger.getMaterializedEncryptedReports())
-        .containsExactly(encryptedReport1, encryptedReport2);
-  }
-
-  @Test
-  public void logNullReports_throwsException() {
-    ResultLogException exception =
-        assertThrows(
-            ResultLogException.class, () -> inMemoryResultLogger.getMaterializedEncryptedReports());
-
-    assertThat(exception).hasCauseThat().isInstanceOf(IllegalStateException.class);
-    assertThat(exception)
-        .hasMessageThat()
-        .contains("MaterializedEncryptionReports is null. Maybe results did not get logged.");
-  }
-
-  @Test
   public void throwsWhenSetTo() {
     inMemoryResultLogger.setShouldThrow(true);
     ImmutableList<AggregatedFact> aggregatedFacts = ImmutableList.of();
-    ImmutableList<EncryptedReport> encryptedReports = ImmutableList.of();
     Job Job = FakeJobGenerator.generate("foo");
 
     assertThrows(
@@ -147,8 +121,14 @@ public class InMemoryResultLoggerTest {
     assertThrows(
         ResultLogException.class,
         () -> inMemoryResultLogger.logResults(aggregatedFacts, Job, /* isDebugRun= */ true));
-    assertThrows(
-        ResultLogException.class,
-        () -> inMemoryResultLogger.logReports(encryptedReports, Job, "1"));
+  }
+
+  private static final class TestEnv extends AbstractModule {
+
+    @Override
+    protected void configure() {
+      bind(AvroResultsSchemaSupplier.class).toInstance(new AvroResultsSchemaSupplier());
+      bind(AvroDebugResultsSchemaSupplier.class).toInstance(new AvroDebugResultsSchemaSupplier());
+    }
   }
 }

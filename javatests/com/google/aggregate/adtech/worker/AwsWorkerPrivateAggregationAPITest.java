@@ -18,8 +18,8 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getOutputFileName;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromS3;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readDebugResultsFromMultipleFiles;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromMultipleFiles;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.common.truth.Truth.assertThat;
 
@@ -27,6 +27,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
+import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
@@ -53,10 +54,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 @RunWith(JUnit4.class)
 public class AwsWorkerPrivateAggregationAPITest {
 
-  @Rule
-  public final Acai acai = new Acai(TestEnv.class);
-  @Rule
-  public final TestName name = new TestName();
+  @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
 
@@ -64,10 +63,9 @@ public class AwsWorkerPrivateAggregationAPITest {
 
   private static final String TEST_DATA_S3_KEY_PREFIX = "generated-test-data";
 
-  @Inject
-  S3BlobStorageClient s3BlobStorageClient;
-  @Inject
-  AvroResultsFileReader avroResultsFileReader;
+  @Inject S3BlobStorageClient s3BlobStorageClient;
+  @Inject AvroResultsFileReader avroResultsFileReader;
+  @Inject private AvroDebugResultsReaderFactory debugReaderFactory;
 
   private static String getTestDataBucket() {
     if (System.getenv("TEST_DATA_BUCKET") != null) {
@@ -83,10 +81,9 @@ public class AwsWorkerPrivateAggregationAPITest {
    */
   @Test
   public void createJobE2EProtectedAudienceTest() throws Exception {
-    // TODO(b/278573071) : Enable private aggregation tests in release tests
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_protected_audience.avro",
+            "%s/%s/test-inputs/10k_test_input_protected_audience/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -94,12 +91,12 @@ public class AwsWorkerPrivateAggregationAPITest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var outputKey =
         String.format(
-            "%s/%s/test-outputs/10k_test_output_protected_audience.avro",
+            "%s/%s/test-outputs/10k_test_output_protected_audience",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     var inputKeyDebug =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_protected_audience_debug.avro",
+            "%s/%s/test-inputs/10k_test_input_protected_audience_debug/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKeyDebug =
         String.format(
@@ -107,11 +104,15 @@ public class AwsWorkerPrivateAggregationAPITest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var outputKeyDebug =
         String.format(
-            "%s/%s/test-outputs/10k_test_output_protected_audience_debug.avro",
+            "%s/%s/test-outputs/10k_test_output_protected_audience_debug",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var debugFactsOutputKey =
+        String.format(
+            "%s/%s/test-outputs/debug/10k_test_output_protected_audience_debug",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -123,7 +124,7 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     /* Debug job */
     CreateJobRequest createDebugJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKeyDebug,
             getTestDataBucket(),
@@ -142,11 +143,8 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromS3(
-            s3BlobStorageClient,
-            avroResultsFileReader,
-            getTestDataBucket(),
-            getOutputFileName(outputKey));
+        readResultsFromMultipleFiles(
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -159,14 +157,17 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     // Read debug output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFactsDebug =
-        readResultsFromS3(
-            s3BlobStorageClient,
-            avroResultsFileReader,
-            getTestDataBucket(),
-            getOutputFileName(outputKey));
+        readResultsFromMultipleFiles(
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKeyDebug);
 
     // assert that debug job aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFactsDebug.size()).isAtLeast(20000);
+
+    ImmutableList<AggregatedFact> debugAggregatedFacts =
+        readDebugResultsFromMultipleFiles(
+            s3BlobStorageClient, debugReaderFactory, getTestDataBucket(), debugFactsOutputKey);
+    // assert that debug job aggregated facts count is at least equal to number of domain keys
+    assertThat(debugAggregatedFacts.size()).isAtLeast(20000);
   }
 
   /**
@@ -176,10 +177,9 @@ public class AwsWorkerPrivateAggregationAPITest {
    */
   @Test
   public void createJobE2ESharedStorageTest() throws Exception {
-    // TODO(b/278573071) : Enable private aggregation tests in release tests
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_shared_storage.avro",
+            "%s/%s/test-inputs/10k_test_input_shared_storage/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -187,12 +187,12 @@ public class AwsWorkerPrivateAggregationAPITest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var outputKey =
         String.format(
-            "%s/%s/test-outputs/10k_test_output_shared_storage.avro",
+            "%s/%s/test-outputs/10k_test_output_shared_storage",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     var inputKeyDebug =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_shared_storage_debug.avro",
+            "%s/%s/test-inputs/10k_test_input_shared_storage_debug/",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKeyDebug =
         String.format(
@@ -200,11 +200,15 @@ public class AwsWorkerPrivateAggregationAPITest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var outputKeyDebug =
         String.format(
-            "%s/%s/test-outputs/10k_test_output_shared_storage_debug.avro",
+            "%s/%s/test-outputs/10k_test_output_shared_storage_debug",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var debugFactsOutputKeyDebug =
+        String.format(
+            "%s/%s/test-outputs/debug/10k_test_output_shared_storage_debug",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -216,7 +220,7 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     /* Debug job */
     CreateJobRequest createDebugJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             getTestDataBucket(),
             inputKeyDebug,
             getTestDataBucket(),
@@ -235,11 +239,8 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromS3(
-            s3BlobStorageClient,
-            avroResultsFileReader,
-            getTestDataBucket(),
-            getOutputFileName(outputKey));
+        readResultsFromMultipleFiles(
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKey);
 
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
@@ -252,14 +253,18 @@ public class AwsWorkerPrivateAggregationAPITest {
 
     // Read debug output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFactsDebug =
-        readResultsFromS3(
-            s3BlobStorageClient,
-            avroResultsFileReader,
-            getTestDataBucket(),
-            getOutputFileName(outputKey));
+        readResultsFromMultipleFiles(
+            s3BlobStorageClient, avroResultsFileReader, getTestDataBucket(), outputKeyDebug);
 
     // assert that debug job aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFactsDebug.size()).isAtLeast(20000);
+
+    ImmutableList<AggregatedFact> debugAggregatedFacts =
+        readDebugResultsFromMultipleFiles(
+            s3BlobStorageClient, debugReaderFactory, getTestDataBucket(), debugFactsOutputKeyDebug);
+
+    // assert that debug job aggregated facts count is at least equal to number of domain keys
+    assertThat(debugAggregatedFacts.size()).isAtLeast(20000);
   }
 
   private static class TestEnv extends AbstractModule {
@@ -273,9 +278,7 @@ public class AwsWorkerPrivateAggregationAPITest {
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
       bind(S3AsyncClient.class)
-          .toInstance(
-              S3AsyncClient.builder()
-                  .region(AWS_S3_BUCKET_REGION).build());
+          .toInstance(S3AsyncClient.builder().region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

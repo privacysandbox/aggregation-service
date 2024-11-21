@@ -100,7 +100,7 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
 
     // Create the job and wait for the result
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             inputBucket,
             inputKey,
             outputBucket,
@@ -148,7 +148,7 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
 
     // Create the job and wait for the result
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
+        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
             inputBucket,
             inputKey,
             outputBucket,
@@ -212,9 +212,7 @@ public class AwsWorkerContinuousSmokeTestChromeReports {
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
       bind(S3AsyncClient.class)
-          .toInstance(
-              S3AsyncClient.builder()
-                  .region(AWS_S3_BUCKET_REGION).build());
+          .toInstance(S3AsyncClient.builder().region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

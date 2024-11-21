@@ -28,3 +28,35 @@ java_test(
         "//java/external:guice",
     ],
 )
+
+java_test(
+    name = "AvroResultsSerdesTest",
+    srcs = ["AvroResultsSerdesTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
+        "//java/external:acai",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+        "//java/external:guava",
+        "//java/external:guice",
+    ],
+)
+
+java_test(
+    name = "AvroDebugResultsSerdesTest",
+    srcs = ["AvroDebugResultsSerdesTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
+        "//java/external:acai",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+        "//java/external:guava",
+        "//java/external:guice",
+    ],
+)
