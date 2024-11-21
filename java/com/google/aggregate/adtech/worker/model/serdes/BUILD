@@ -19,19 +19,13 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "serdes",
     srcs = [
-        "AvroDebugResultsSerdes.java",
-        "AvroResultsSerdes.java",
         "PayloadSerdes.java",
         "SharedInfoSerdes.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/util",
-        "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
-        "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
         "//java/com/google/aggregate/shared/mapper",
-        "//java/external:avro",
         "//java/external:guava",
         "//java/external:jackson_core",
         "//java/external:jackson_databind",

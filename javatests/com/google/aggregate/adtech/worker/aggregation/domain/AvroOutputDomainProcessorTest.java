@@ -25,51 +25,23 @@ import static java.nio.file.StandardOpenOption.WRITE;
 import static org.junit.Assert.assertThrows;
 
 import com.google.acai.Acai;
-import com.google.acai.TestScoped;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
-import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
-import com.google.aggregate.adtech.worker.Annotations.ParallelAggregatedFactNoising;
-import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
-import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngineFactory;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingEpsilon;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingL1Sensitivity;
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
-import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
-import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
-import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
-import com.google.aggregate.privacy.noise.Annotations.Threshold;
-import com.google.aggregate.privacy.noise.NoiseApplier;
-import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
-import com.google.aggregate.privacy.noise.NoisedAggregationRunnerImpl;
-import com.google.aggregate.privacy.noise.model.NoisedAggregatedResultSet;
-import com.google.aggregate.privacy.noise.model.SummaryReportAvroSet;
-import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
-import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
-import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule.ConstantNoiseApplier;
-import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier;
 import com.google.aggregate.protocol.avro.AvroOutputDomainRecord;
 import com.google.aggregate.protocol.avro.AvroOutputDomainWriter;
 import com.google.aggregate.protocol.avro.AvroOutputDomainWriterFactory;
 import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.primitives.UnsignedLong;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.google.inject.Singleton;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.testing.FSBlobStorageClientModule;
-import com.google.testing.junit.testparameterinjector.TestParameter;
-import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
@@ -78,8 +50,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Supplier;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.inject.Inject;
@@ -88,8 +59,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
-@RunWith(TestParameterInjector.class)
+@RunWith(JUnit4.class)
 public class AvroOutputDomainProcessorTest {
 
   @Rule public final TemporaryFolder testWorkingDir = new TemporaryFolder();
@@ -97,15 +69,8 @@ public class AvroOutputDomainProcessorTest {
   @Inject AvroOutputDomainWriterFactory avroOutputDomainWriterFactory;
   // Under test
   @Inject AvroOutputDomainProcessor outputDomainProcessor;
-  @Inject AggregationEngineFactory aggregationEngineFactory;
-  @Inject FakeNoiseApplierSupplier fakeNoiseApplierSupplier;
-  @Inject NoisedAggregationRunnerImpl noisedAggregationRunner;
-  @Inject AvroResultsSerdes resultsSerdes;
-  @Inject AvroDebugResultsSerdes debugResultsSerdes;
   private Path outputDomainDirectory;
   private DataLocation outputDomainLocation;
-  private AggregationEngine aggregationEngine;
-  @TestParameter boolean streamingOutputDomainTestParam;
 
   @Before
   public void setUp() throws Exception {
@@ -115,10 +80,6 @@ public class AvroOutputDomainProcessorTest {
         DataLocation.ofBlobStoreDataLocation(
             BlobStoreDataLocation.create(
                 /* bucket= */ outputDomainDirectory.toAbsolutePath().toString(), /* key= */ ""));
-    aggregationEngine = aggregationEngineFactory.create(ImmutableSet.of(UnsignedLong.ZERO));
-    aggregationEngine.accept(BigInteger.valueOf(33));
-    aggregationEngine.accept(BigInteger.valueOf(44));
-    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
   }
 
   @Test
@@ -133,8 +94,7 @@ public class AvroOutputDomainProcessorTest {
                 /* bucket= */ singleFilePath.getParent().toAbsolutePath().toString(),
                 /* key= */ singleFilePath.getFileName().toString()));
 
-    ImmutableSet<BigInteger> keys =
-        streamingOutputDomainTestParam ? readOutputDomainStreaming() : readOutputDomain();
+    ImmutableSet<BigInteger> keys = readOutputDomain();
 
     assertThat(keys)
         .containsExactly(BigInteger.valueOf(11), BigInteger.valueOf(22), BigInteger.valueOf(33));
@@ -171,8 +131,7 @@ public class AvroOutputDomainProcessorTest {
     writeOutputDomain(
         outputDomainDirectory.resolve("domain_2.avro"), Stream.of(11, 22, 11, 11, 22, 33));
 
-    ImmutableSet<BigInteger> keys =
-        streamingOutputDomainTestParam ? readOutputDomainStreaming() : readOutputDomain();
+    ImmutableSet<BigInteger> keys = readOutputDomain();
 
     assertThat(keys)
         .containsExactly(BigInteger.valueOf(11), BigInteger.valueOf(22), BigInteger.valueOf(33));
@@ -184,8 +143,7 @@ public class AvroOutputDomainProcessorTest {
     writeOutputDomain(
         outputDomainDirectory.resolve("domain_2.avro"), Stream.of(11, 22, 11, 11, 22, 33));
 
-    ImmutableSet<BigInteger> keys =
-        streamingOutputDomainTestParam ? readOutputDomainStreaming() : readOutputDomain();
+    ImmutableSet<BigInteger> keys = readOutputDomain();
 
     assertThat(keys)
         .containsExactly(BigInteger.valueOf(11), BigInteger.valueOf(22), BigInteger.valueOf(33));
@@ -194,7 +152,9 @@ public class AvroOutputDomainProcessorTest {
   @Test
   public void ioProblem() {
     // No file written, path pointing to a non-existing file, this should be an IO exception.
-    assertThrows(DomainReadException.class, this::readOutputDomain);
+    ExecutionException error = assertThrows(ExecutionException.class, this::readOutputDomain);
+
+    assertThat(error).hasCauseThat().isInstanceOf(DomainReadException.class);
   }
 
   @Test
@@ -202,14 +162,10 @@ public class AvroOutputDomainProcessorTest {
     writeOutputDomain(outputDomainDirectory.resolve("domain_1.avro"), Stream.of());
     writeOutputDomain(outputDomainDirectory.resolve("domain_2.avro"), Stream.of());
 
-    DomainReadException error =
-        assertThrows(
-            DomainReadException.class,
-            streamingOutputDomainTestParam
-                ? this::readOutputDomainStreaming
-                : this::readOutputDomain);
+    ExecutionException error = assertThrows(ExecutionException.class, this::readOutputDomain);
 
-    assertThat(error).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+    assertThat(error).hasCauseThat().isInstanceOf(DomainReadException.class);
+    assertThat(error.getCause()).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
     assertThat(error.getCause())
         .hasMessageThat()
         .containsMatch("No output domain provided in the location.*");
@@ -219,87 +175,17 @@ public class AvroOutputDomainProcessorTest {
   public void readOutputDomain_notReadableOutputDomain_throwsException() throws Exception {
     writeOutputDomainTextFile(outputDomainDirectory.resolve("domain_1.avro"), "bad domain");
 
-    assertThrows(
-        DomainReadException.class,
-        streamingOutputDomainTestParam ? this::readOutputDomainStreaming : this::readOutputDomain);
+    ExecutionException error = assertThrows(ExecutionException.class, this::readOutputDomain);
+
+    assertThat(error).hasCauseThat().isInstanceOf(DomainReadException.class);
   }
 
-  @Test
-  public void shardDebugResults_reportOnlyResultsInSeparateFile() throws Exception {
-    writeOutputDomain(outputDomainDirectory.resolve("domain_1.avro"), Stream.of(11, 22));
-
-    SummaryReportAvroSet summaryReportAvroSet =
-        outputDomainProcessor
-            .adjustAggregationWithDomainAndNoiseStreaming(
-                aggregationEngine,
-                Optional.of(outputDomainLocation),
-                outputDomainProcessor.listShards(outputDomainLocation),
-                noisedAggregationRunner,
-                /* debugPrivacyEpsilon= */ Optional.empty(),
-                /* debugRun= */ true)
-            .summaryReportAvroSet()
-            .get();
-
-    // Two debug summary reports, one containing keys in the domain set, and the other from the
-    // report set because domains and reports are added to summary reports separately.
-    assertThat(summaryReportAvroSet.debugSummaryReport().get()).hasSize(2);
-
-    ImmutableSet<BigInteger> debugReportKeys =
-        summaryReportAvroSet.debugSummaryReport().get().stream()
-            .flatMap(
-                debugSummaryReportAvro ->
-                    debugResultsSerdes
-                        .reverse()
-                        .convert(debugSummaryReportAvro.reportBytes())
-                        .stream())
-            .map(AggregatedFact::getBucket)
-            .collect(ImmutableSet.toImmutableSet());
-
-    assertThat(debugReportKeys)
-        .containsExactly(
-            BigInteger.valueOf(11),
-            BigInteger.valueOf(22),
-            BigInteger.valueOf(33),
-            BigInteger.valueOf(44));
-  }
-
-  private ImmutableSet<BigInteger> readOutputDomain() {
-    NoisedAggregatedResultSet noisedResultset =
-        outputDomainProcessor
-            .adjustAggregationWithDomainAndNoise(
-                aggregationEngine,
-                Optional.of(outputDomainLocation),
-                outputDomainProcessor.listShards(outputDomainLocation),
-                noisedAggregationRunner,
-                /* debugPrivacyEpsilon= */ Optional.empty(),
-                /* debugRun= */ false)
-            .noisedAggregatedResultSet()
-            .get();
-
-    return noisedResultset.noisedResult().noisedAggregatedFacts().stream()
-        .map(AggregatedFact::getBucket)
-        .collect(ImmutableSet.toImmutableSet());
-  }
-
-  private ImmutableSet<BigInteger> readOutputDomainStreaming() {
-    SummaryReportAvroSet summaryReportAvroSet =
-        outputDomainProcessor
-            .adjustAggregationWithDomainAndNoiseStreaming(
-                aggregationEngine,
-                Optional.of(outputDomainLocation),
-                outputDomainProcessor.listShards(outputDomainLocation),
-                noisedAggregationRunner,
-                /* debugPrivacyEpsilon= */ Optional.empty(),
-                /* debugRun= */ false)
-            .summaryReportAvroSet()
-            .get();
-
-    return summaryReportAvroSet.summaryReports().stream()
-        .flatMap(
-            summaryReportAvro ->
-                resultsSerdes.reverse().convert(summaryReportAvro.reportBytes()).stream())
-        .map(AggregatedFact::getBucket)
-        .collect(ImmutableSet.toImmutableSet());
+  private ImmutableSet<BigInteger> readOutputDomain()
+      throws ExecutionException, InterruptedException {
+    return outputDomainProcessor
+        .readAndDedupeDomain(
+            outputDomainLocation, outputDomainProcessor.listShards(outputDomainLocation))
+        .get();
   }
 
   private void writeOutputDomain(Path path, Stream<Integer> keys) throws IOException {
@@ -321,22 +207,10 @@ public class AvroOutputDomainProcessorTest {
     @Override
     protected void configure() {
       install(new FSBlobStorageClientModule());
-      install(new PrivacyBudgetKeyGeneratorModule());
-
       bind(FileSystem.class).toInstance(FileSystems.getDefault());
       bind(OutputDomainProcessor.class).to(AvroOutputDomainProcessor.class);
-      bind(Boolean.class).annotatedWith(DomainOptional.class).toInstance(false);
+      bind(Boolean.class).annotatedWith(DomainOptional.class).toInstance(true);
       bind(Boolean.class).annotatedWith(EnableThresholding.class).toInstance(true);
-
-      bind(FakeNoiseApplierSupplier.class).in(TestScoped.class);
-      bind(NoisedAggregationRunner.class).to(NoisedAggregationRunnerImpl.class);
-      bind(boolean.class).annotatedWith(ParallelAggregatedFactNoising.class).toInstance(true);
-      bind(Distribution.class)
-          .annotatedWith(NoisingDistribution.class)
-          .toInstance(Distribution.LAPLACE);
-      bind(double.class).annotatedWith(NoisingEpsilon.class).toInstance(0.1);
-      bind(long.class).annotatedWith(NoisingL1Sensitivity.class).toInstance(4L);
-      bind(double.class).annotatedWith(NoisingDelta.class).toInstance(5.00);
     }
 
     @Provides
@@ -349,30 +223,6 @@ public class AvroOutputDomainProcessorTest {
     @BlockingThreadPool
     ListeningExecutorService provideBlockingThreadPool() {
       return newDirectExecutorService();
-    }
-
-    @Provides
-    @Threshold
-    Supplier<Double> provideThreshold() {
-      return () -> 0.0;
-    }
-
-    @Provides
-    Supplier<NoiseApplier> provideNoiseApplierSupplier(
-        FakeNoiseApplierSupplier fakeNoiseApplierSupplier) {
-      return fakeNoiseApplierSupplier;
-    }
-
-    @Provides
-    @Singleton
-    @CustomForkJoinThreadPool
-    ListeningExecutorService provideCustomForkJoinThreadPool() {
-      return newDirectExecutorService();
-    }
-
-    @Provides
-    Supplier<PrivacyParameters> providePrivacyParamConfig(PrivacyParametersSupplier supplier) {
-      return () -> supplier.get().toBuilder().setDelta(1e-5).build();
     }
 
     @Provides

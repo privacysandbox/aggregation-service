@@ -18,7 +18,6 @@ package com.google.aggregate.privacy.budgeting.bridge;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import com.google.aggregate.util.ClientVersionUtils;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;
@@ -68,7 +67,6 @@ public final class HttpPrivacyBudgetingServiceBridge implements PrivacyBudgeting
             .reportingOriginToPrivacyBudgetUnitsList(reportingOriginToPrivacyBudgetUnits)
             .claimedIdentity(claimedIdentity)
             .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
-            .trustedServicesClientVersion(ClientVersionUtils.getServiceClientVersion())
             .build();
 
     try {
@@ -109,7 +107,7 @@ public final class HttpPrivacyBudgetingServiceBridge implements PrivacyBudgeting
     return reportingOriginToPrivacyBudgetUnits.privacyBudgetUnits().stream()
         .map(
             apiBudgetUnit ->
-                PrivacyBudgetUnit.createHourTruncatedUnit(
+                PrivacyBudgetUnit.create(
                     apiBudgetUnit.privacyBudgetKey(),
                     apiBudgetUnit.reportingWindow(),
                     reportingOrigin))

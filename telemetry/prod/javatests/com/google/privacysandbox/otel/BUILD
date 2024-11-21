@@ -26,7 +26,6 @@ java_test(
         "//java/external:opentelemetry_api",
         "//java/external:opentelemetry_sdk",
         "//java/external:opentelemetry_sdk_common",
-        "//java/external:opentelemetry_sdk_logs",
         "//java/external:opentelemetry_sdk_metrics",
         "//java/external:opentelemetry_sdk_testing",
         "//java/external:opentelemetry_sdk_trace",

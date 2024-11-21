@@ -20,6 +20,7 @@ java_library(
     name = "testing",
     srcs = [
         "FakeEncryptionKeyService.java",
+        "FakeReEncryptionKeyService.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [

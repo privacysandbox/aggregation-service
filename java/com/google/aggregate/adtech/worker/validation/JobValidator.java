@@ -16,13 +16,11 @@
 
 package com.google.aggregate.adtech.worker.validation;
 
-import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_ATTRIBUTION_REPORT_TO;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_FILTERING_IDS;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_FILTERING_IDS_DELIMITER;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_INPUT_REPORT_COUNT;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
-import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORTING_SITE;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
@@ -45,7 +43,16 @@ public final class JobValidator {
   public static void validate(Optional<Job> job, boolean domainOptional) {
     checkArgument(job.isPresent(), "Job metadata not found.");
     String jobKey = toJobKeyString(job.get().jobKey());
-    validateReportingOriginAndSite(job.get());
+    checkArgument(
+        job.get().requestInfo().getJobParametersMap().containsKey("attribution_report_to")
+            && !job.get()
+                .requestInfo()
+                .getJobParametersMap()
+                .get("attribution_report_to")
+                .trim()
+                .isEmpty(),
+        String.format(
+            "Job parameters does not have an attribution_report_to field for the Job %s.", jobKey));
     Map<String, String> jobParams = job.get().requestInfo().getJobParametersMap();
     checkArgument(
         domainOptional
@@ -80,49 +87,6 @@ public final class JobValidator {
         String.format(
             "Job parameters for the job '%s' should have comma separated integers for"
                 + " 'filtering_ids' parameter.",
-            jobKey));
-  }
-
-  /**
-   * Validates that exactly one of the two fields 'JOB_PARAM_ATTRIBUTION_REPORT_TO' and
-   * 'reporting_site' is specified and the specified field is non-empty
-   */
-  private static void validateReportingOriginAndSite(Job job) {
-    Map<String, String> jobParams = job.requestInfo().getJobParametersMap();
-    String jobKey = toJobKeyString(job.jobKey());
-    boolean bothSiteAndOriginSpecified =
-        jobParams.containsKey(JOB_PARAM_ATTRIBUTION_REPORT_TO)
-            && jobParams.containsKey(JOB_PARAM_REPORTING_SITE);
-    boolean neitherSiteOrOriginSpecified =
-        !jobParams.containsKey(JOB_PARAM_ATTRIBUTION_REPORT_TO)
-            && !jobParams.containsKey(JOB_PARAM_REPORTING_SITE);
-    if (bothSiteAndOriginSpecified || neitherSiteOrOriginSpecified) {
-      throw new IllegalArgumentException(
-          String.format(
-              "Exactly one of 'attribution_report_to' and 'reporting_site' fields should be"
-                  + " specified for the Job %s. It is recommended to use 'reporting_site'"
-                  + " parameter. Parameter 'attribution_report_to' will be deprecated in the next"
-                  + " major version upgrade of the API",
-              jobKey));
-    }
-    // Verify that either the field 'JOB_PARAM_ATTRIBUTION_REPORT_TO' is not specified or is
-    // non-empty.
-    boolean emptyAttributionReportToSpecified =
-        jobParams.containsKey(JOB_PARAM_ATTRIBUTION_REPORT_TO)
-            && jobParams.get(JOB_PARAM_ATTRIBUTION_REPORT_TO).trim().isEmpty();
-    checkArgument(
-        !emptyAttributionReportToSpecified,
-        String.format(
-            "The 'attribution_report_to' field in the Job parameters is empty for" + " the Job %s.",
-            jobKey));
-    // Verify that either the field 'reporting_site' is not specified or is non-empty.
-    boolean emptyReportingSiteSpecified =
-        jobParams.containsKey(JOB_PARAM_REPORTING_SITE)
-            && jobParams.get(JOB_PARAM_REPORTING_SITE).trim().isEmpty();
-    checkArgument(
-        !emptyReportingSiteSpecified,
-        String.format(
-            "The 'reporting_site' field in the Job parameters is empty for the Job" + " %s.",
             jobKey));
   }
 

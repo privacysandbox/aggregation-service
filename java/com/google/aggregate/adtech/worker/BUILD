@@ -64,7 +64,6 @@ java_library(
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/privacy/budgeting/bridge:unlimited_privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/privacy/noise",
-        "//java/com/google/aggregate/privacy/noise/model",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/com/google/aggregate/privacy/noise/testing",
         "//java/com/google/aggregate/protocol/avro:avro_report",
@@ -77,7 +76,6 @@ java_library(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
-        "//java/external:opentelemetry_api",
         "//java/external:operator_protos",
         "//java/external:scp_shared_proto",
         "//java/external:shared_model",
@@ -118,7 +116,6 @@ java_library(
         "//java/com/google/aggregate/adtech/worker/writer/avro",
         "//java/com/google/aggregate/perf",
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
-        "//java/com/google/aggregate/privacy/noise/model",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/com/google/aggregate/protocol/avro:avro_report",
         "//java/external:autovalue",
@@ -135,7 +132,6 @@ java_library(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
-        "//java/external:opentelemetry_api",
         "//java/external:operator_protos",
         "//java/external:scp_shared_proto",
         "//java/external:shared_model",
@@ -200,7 +196,6 @@ java_library(
         "//java/com/google/aggregate/privacy/budgeting/bridge:unlimited_privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
         "//java/com/google/aggregate/privacy/noise",
-        "//java/com/google/aggregate/privacy/noise/model",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/com/google/aggregate/privacy/noise/testing",
         "//java/com/google/aggregate/shared",
@@ -261,7 +256,7 @@ java_binary(
     classpath_resources = ["//java/com/google/aggregate:slf4jconfig_prod"],
     main_class = "com.google.aggregate.adtech.worker.LocalRunner",
     resources = [
-        "//licenses/THIRD_PARTY_NOTICES/aws_local_testing_tool:licenses",
+        "//licenses",
     ],
     runtime_deps = [
         # //telemetry needs to be before worker

@@ -322,11 +322,6 @@ public class AggregationWorkerArgs {
   private String grpcCollectorEndpoint = "http://localhost:4317";
 
   @Parameter(
-      names = "--otel_logs_enabled",
-      description = "Flag to enable the otel to export the logs.")
-  private boolean otelLogsEnabled = false;
-
-  @Parameter(
       names = "--return_stack_trace",
       description =
           "Flag to allow stackTrace to be added to the resultInfo if there are any exceptions.")
@@ -353,18 +348,18 @@ public class AggregationWorkerArgs {
   private long outputShardFileSizeBytes = 100_000_000L; // 100MB
 
   @Parameter(
-      names = "--encoded_keyset_handle",
+      names = "--test_encoded_keyset_handle",
       description =
           "Optional base64 encoded string that represents the keyset handle to retrieve an Aead."
               + " This is for coordinatorA if multi-party.")
-  private String encodedKeysetHandle = "";
+  private String testEncodedKeysetHandle = "";
 
   @Parameter(
-      names = "--coordinator_b_encoded_keyset_handle",
+      names = "--test_coordinator_b_encoded_keyset_handle",
       description =
           "Optional base64 encoded string that represents the keyset handle to retrieve an Aead for"
               + " coordinatorB.")
-  private String coordinatorBEncodedKeysetHandle = "";
+  private String testCoordinatorBEncodedKeysetHandle = "";
 
   @Parameter(
       names = "--parallel_summary_upload_enabled",
@@ -386,6 +381,13 @@ public class AggregationWorkerArgs {
       names = "--streaming_output_domain_processing_enabled",
       description = "Flag to enable RxJava streaming based output domain processing.")
   private boolean streamingOutputDomainProcessingEnabled = false;
+
+  @Parameter(
+      names = "--labeled_privacy_budget_keys_enabled",
+      description =
+          "Flag to allow filtering of labeled payload contributions. If enabled, only contributions"
+              + " corresponding to queried labels/ids are included in aggregation.")
+  private boolean labeledPrivacyBudgetKeysEnabled = false;
 
   @Parameter(
       names = "--attribution_reporting_debug_api_enabled",
@@ -611,22 +613,18 @@ public class AggregationWorkerArgs {
     return grpcCollectorEndpoint;
   }
 
-  boolean isOTelLogsEnabled() {
-    return otelLogsEnabled;
-  }
-
   public boolean isEnableReturningStackTraceInResponse() {
     return enableReturningStackTraceInResponse;
   }
 
   @Beta
-  public Optional<String> getEncodedKeysetHandle() {
-    return Optional.ofNullable(encodedKeysetHandle).filter(s -> !s.isEmpty());
+  public Optional<String> getTestEncodedKeysetHandle() {
+    return Optional.ofNullable(testEncodedKeysetHandle).filter(s -> !s.isEmpty());
   }
 
   @Beta
-  public Optional<String> getCoordinatorBEncodedKeysetHandle() {
-    return Optional.ofNullable(coordinatorBEncodedKeysetHandle).filter(s -> !s.isEmpty());
+  public Optional<String> getTestCoordinatorBEncodedKeysetHandle() {
+    return Optional.ofNullable(testCoordinatorBEncodedKeysetHandle).filter(s -> !s.isEmpty());
   }
 
   public int getMaximumDepthOfStackTrace() {
@@ -655,6 +653,10 @@ public class AggregationWorkerArgs {
 
   public boolean isStreamingOutputDomainProcessingEnabled() {
     return streamingOutputDomainProcessingEnabled;
+  }
+
+  boolean isLabeledPrivacyBudgetKeysEnabled() {
+    return labeledPrivacyBudgetKeysEnabled;
   }
 
   boolean isAttributionReportingDebugApiEnabled() {

@@ -16,8 +16,6 @@
 
 package com.google.aggregate.privacy.budgeting.bridge;
 
-import static java.time.temporal.ChronoUnit.HOURS;
-
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode;
@@ -46,11 +44,11 @@ public interface PrivacyBudgetingServiceBridge {
   @AutoValue
   abstract class PrivacyBudgetUnit {
 
-    public static PrivacyBudgetUnit createHourTruncatedUnit(
+    public static PrivacyBudgetUnit create(
         String privacyBudgetKey, Instant scheduledReportTime, String reportingOrigin) {
       return new com.google.aggregate.privacy.budgeting.bridge
           .AutoValue_PrivacyBudgetingServiceBridge_PrivacyBudgetUnit(
-          privacyBudgetKey, scheduledReportTime.truncatedTo(HOURS), reportingOrigin);
+          privacyBudgetKey, scheduledReportTime, reportingOrigin);
     }
 
     public abstract String privacyBudgetKey();

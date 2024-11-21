@@ -23,15 +23,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
+import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
-import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.ByteSource;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import com.google.inject.AbstractModule;
-import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
@@ -53,11 +52,27 @@ public class LocalJsonResultFileWriterTest {
   // Under test
   @Inject LocalJsonResultFileWriter localJsonResultFileWriter;
 
-  @Inject AvroResultsSerdes avroResultsSerdes;
-
   ImmutableList<AggregatedFact> results;
   private FileSystem filesystem;
   private Path jsonFile;
+
+  private ImmutableList<EncryptedReport> reports;
+
+  // Not testing for payload, since encrypted payload in json is not useful.
+  private final ByteSource encryptedReportPayload = ByteSource.wrap(new byte[] {0x00, 0x01});
+  private final EncryptedReport encryptedReport1 =
+      EncryptedReport.builder()
+          .setPayload(encryptedReportPayload)
+          .setKeyId("key1")
+          .setSharedInfo("foo")
+          .build();
+
+  private final EncryptedReport encryptedReport2 =
+      EncryptedReport.builder()
+          .setPayload(encryptedReportPayload)
+          .setKeyId("key2")
+          .setSharedInfo("bar")
+          .build();
 
   @Before
   public void setUp() throws Exception {
@@ -71,13 +86,7 @@ public class LocalJsonResultFileWriterTest {
             AggregatedFact.create(NumericConversions.createBucketFromInt(123), 50L),
             AggregatedFact.create(NumericConversions.createBucketFromInt(456), 30L),
             AggregatedFact.create(NumericConversions.createBucketFromInt(789), 40L));
-  }
-
-  @Test
-  public void testWriteFileBytes() throws Exception {
-    byte[] resultsBytes = avroResultsSerdes.convert(results);
-    localJsonResultFileWriter.writeLocalFile(resultsBytes, jsonFile);
-    assertJsonResults();
+    reports = ImmutableList.of(encryptedReport1, encryptedReport2);
   }
 
   /**
@@ -87,25 +96,6 @@ public class LocalJsonResultFileWriterTest {
   @Test
   public void testWriteFile() throws Exception {
     localJsonResultFileWriter.writeLocalFile(results.stream(), jsonFile);
-    assertJsonResults();
-  }
-
-  @Test
-  public void testExceptionOnFailedWrite() throws Exception {
-    Path nonExistentDirectory =
-        jsonFile.getFileSystem().getPath("/doesnotexist", jsonFile.toString());
-
-    assertThrows(
-        FileWriteException.class,
-        () -> localJsonResultFileWriter.writeLocalFile(results.stream(), nonExistentDirectory));
-  }
-
-  @Test
-  public void testFileExtension() {
-    assertThat(localJsonResultFileWriter.getFileExtension()).isEqualTo(".json");
-  }
-
-  private void assertJsonResults() throws IOException {
     ObjectMapper mapper = new ObjectMapper();
     JsonNode jsonNode = mapper.readTree(Files.newInputStream(jsonFile));
     List<AggregatedFact> writtenResults = new ArrayList<>();
@@ -121,11 +111,55 @@ public class LocalJsonResultFileWriterTest {
     assertThat(writtenResults).containsExactly(results.toArray());
   }
 
-  public static final class TestEnv extends AbstractModule {
+  @Test
+  public void testExceptionOnFailedWrite() throws Exception {
+    Path nonExistentDirectory =
+        jsonFile.getFileSystem().getPath("/doesnotexist", jsonFile.toString());
 
-    @Override
-    public void configure() {
-      bind(AvroResultsSchemaSupplier.class).toInstance(new AvroResultsSchemaSupplier());
-    }
+    assertThrows(
+        FileWriteException.class,
+        () -> localJsonResultFileWriter.writeLocalFile(results.stream(), nonExistentDirectory));
   }
+
+  @Test
+  public void writeLocalJsonReport_succeeds() throws Exception {
+    localJsonResultFileWriter.writeLocalReportFile(reports.stream(), jsonFile);
+    ObjectMapper mapper = new ObjectMapper();
+    JsonNode jsonNode = mapper.readTree(Files.newInputStream(jsonFile));
+    List<EncryptedReport> writtenReports = new ArrayList<>();
+    jsonNode
+        .iterator()
+        .forEachRemaining(
+            entry -> {
+              writtenReports.add(
+                  EncryptedReport.builder()
+                      .setSharedInfo((entry.get("shared_info").asText()))
+                      .setKeyId(entry.get("key_id").asText())
+                      .setPayload(encryptedReportPayload)
+                      .build());
+            });
+    assertThat(writtenReports.get(0).sharedInfo()).isEqualTo(encryptedReport1.sharedInfo());
+    assertThat(writtenReports.get(0).keyId()).isEqualTo(encryptedReport1.keyId());
+
+    assertThat(writtenReports.get(1).sharedInfo()).isEqualTo(encryptedReport2.sharedInfo());
+    assertThat(writtenReports.get(1).keyId()).isEqualTo(encryptedReport2.keyId());
+  }
+
+  @Test
+  public void writeLocalJsonReport_invalidPath_fails() throws Exception {
+    Path nonExistentDirectory =
+        jsonFile.getFileSystem().getPath("/doesnotexist", jsonFile.toString());
+
+    assertThrows(
+        FileWriteException.class,
+        () ->
+            localJsonResultFileWriter.writeLocalReportFile(reports.stream(), nonExistentDirectory));
+  }
+
+  @Test
+  public void testFileExtension() {
+    assertThat(localJsonResultFileWriter.getFileExtension()).isEqualTo(".json");
+  }
+
+  public static final class TestEnv extends AbstractModule {}
 }

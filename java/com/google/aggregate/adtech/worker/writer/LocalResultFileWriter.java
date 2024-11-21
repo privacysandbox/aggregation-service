@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.writer;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
@@ -26,8 +27,9 @@ public interface LocalResultFileWriter {
   /** Write the file to the local filesystem */
   void writeLocalFile(Stream<AggregatedFact> results, Path resultFile) throws FileWriteException;
 
-  /** Write the avro file bytes to the local filesystem */
-  void writeLocalFile(byte[] avroFileBytes, Path resultFilePath) throws FileWriteException;
+  /** Writes list of encrypted reports to a local file. */
+  void writeLocalReportFile(Stream<EncryptedReport> reports, Path resultFilePath)
+      throws FileWriteException;
 
   /** Returns the file extension for the file type written */
   String getFileExtension();

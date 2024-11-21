@@ -902,11 +902,6 @@ alias(
 )
 
 alias(
-    name = "aws_logs",
-    actual = "@maven//:com_amazonaws_aws_java_sdk_logs",
-)
-
-alias(
     name = "aws_auto_scaling",
     actual = "@maven//:software_amazon_awssdk_autoscaling",
 )
@@ -992,11 +987,6 @@ alias(
 )
 
 alias(
-    name = "opentelemetry_sdk_logs",
-    actual = "@maven//:io_opentelemetry_opentelemetry_sdk_logs",
-)
-
-alias(
     name = "opentelemetry_contrib_aws_xray",
     actual = "@maven//:io_opentelemetry_contrib_opentelemetry_aws_xray",
 )
@@ -1014,14 +1004,4 @@ alias(
 alias(
     name = "gcp_trace_proto",
     actual = "@maven//:com_google_api_grpc_proto_google_cloud_trace_v1",
-)
-
-alias(
-    name = "gcp_logging",
-    actual = "@maven//:com_google_cloud_google_cloud_logging",
-)
-
-alias(
-    name = "gcp_log_proto",
-    actual = "@maven//:com_google_api_grpc_proto_google_cloud_logging_v2",
 )

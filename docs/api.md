@@ -35,17 +35,6 @@ POST
   // available to the enclave and 1000.
   "input_data_blob_prefix": <string>,
 
-  // [Optional] Input prefixes list. A maximum of 50 entries can be specified in the list.
-  // List of input data paths. Each entry in the list should either be a path to
-  // a single file or a prefix in file path for multiple files.
-  // For example, specifying "["folder1/shard", "folder2/shard/test2.avro"]" would
-  // take as input all files with paths starting with "folder1/shard"
-  // along with the file "folder2/shard/test2.avro".
-  // This parameter and the "input_data_blob_prefix" parameter are mutually
-  // exclusive. Exactly one of the two parameters should be provided in the request.
-  // The parameter "input_data_blob_prefixes" will be supported in version 2.10 and onward.
-  "input_data_blob_prefixes": <list<string>>,
-
   // Storage bucket for input data.
   "input_data_bucket_name": <string>,
 
@@ -79,14 +68,6 @@ POST
     // This should be same as the reporting_origin present in the reports' shared_info.
     "attribution_report_to": <string>,
 
-    // [Optional] Reporting Site.
-    // This should be the reporting site that is onboared to aggregation service.
-    // Note: All reports in the request should have reporting origins which
-    // belong to the reporting site mentioned in this parameter. This parameter
-    // and the "attribution_report_to" parameter are mutually exclusive, exactly
-    // one of the two parameters should be provided in the request.
-    "reporting_site": "<string>"
-
     // [Optional] Differential privacy epsilon value to be used
     // for this job. 0.0 < debug_privacy_epsilon <= 64.0. The
     // value can be varied so that tests with different epsilon
@@ -112,8 +93,7 @@ POST
     // [Optional] When executing a debug run, noised and unnoised debug summary
     // report and annotations are added to indicate which keys are present in the
     // domain input and/or reports. Additionally, duplicates across batches are
-    // also not enforced. Privacy budget will not be consumed when debug_run is
-    // enabled. Note that the debug run only considers reports that have the flag
+    // also not enforced. Note that the debug run only considers reports that have the flag
     // "debug_mode": "enabled". Read /docs/debugging.md for details.
     "debug_run": <boolean value represented as string>
   }
@@ -176,12 +156,6 @@ These are the validations that are done before the aggregation begins.
    ATTRIBUTION_REPORT_TO_MISMATCH error counter. Aggregatable report validations and error counters
    can be found in the
    [Input Aggregatable Report Validations](#input-aggregatable-report-validations) below
-4. Job request's `job_parameters` should contain exactly one of `attribution_report_to` and
-   `reporting_site`.
-5. If `job_parameters.reporting_site` is provided, `shared_info.reporting_origin` of all
-   aggregatable reports should belong to this reporting site.
-6. Job request should contain exactly one of `input_data_blob_prefix` and `input_data_blob_prefixes`
-   parameters. This validation will be enforced in version 2.10 and onward.
 
 Return code:
 [INVALID_JOB](java/com/google/aggregate/adtech/worker/AggregationWorkerReturnCode.java#L38)
@@ -227,9 +201,6 @@ Not found: 404 Not Found
   "request_updated_at": <timestamp>,
   // Location of input reports
   "input_data_blob_prefix": <string>,
-  // [Optional] List of locations of input reports from the CreateJob request,
-  // if provided. This parameter will be available in version 2.10 and onward.
-  "input_data_blob_prefixes": <list<string>>,
   "input_data_bucket_name": <string>,
   // Location of output summary report
   "output_data_blob_prefix": <string>,
@@ -256,8 +227,6 @@ Not found: 404 Not Found
     "output_domain_bucket_name": <string>,
     // Reporting URL
     "attribution_report_to" : <string>,
-    // [Optional] Reporting site value from the CreateJob request, if provided.
-    "reporting_site": <string>
     // [Optional] differential privacy epsilon value to be used
     // for this job. 0.0 < debug_privacy_epsilon <= 64.0. The
     // value can be varied so that tests with different epsilon

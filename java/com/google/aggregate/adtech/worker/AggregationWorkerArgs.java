@@ -250,14 +250,17 @@ public final class AggregationWorkerArgs {
       description = "Overrides the region of the compute instance.")
   private String adtechRegionOverride = "";
 
+  // TODO(b/241266079): remove trusted_party_region_override after giving migration time.
   @Parameter(
       names = {"--trusted_party_region_override", "--coordinator_a_region_override"},
       description = "Overrides the region of coordinator A services.")
+  // TODO(b/241266079): set default to us-east-1 once services move there.
   private String coordinatorARegionOverride = "us-west-2";
 
   @Parameter(
       names = "--coordinator_b_region_override",
       description = "Overrides the region of coordinator B services.")
+  // TODO(b/241266079): set default to us-east-1 once services move there.
   private String coordinatorBRegionOverride = "us-west-2";
 
   @Parameter(
@@ -331,21 +334,25 @@ public final class AggregationWorkerArgs {
   @Parameter(
       names = "--coordinator_a_privacy_budgeting_endpoint",
       description = "Coordinator A's HTTP endpoint for privacy budgeting.")
+  // TODO(b/218508112): Better default value
   private String coordinatorAPrivacyBudgetingEndpoint = "https://foo.com/v1";
 
   @Parameter(
       names = "--coordinator_a_privacy_budget_service_auth_endpoint",
       description = "Coordinator A's Auth endpoint for privacy budgeting service.")
+  // TODO(b/218508112): Better default value
   private String coordinatorAPrivacyBudgetServiceAuthEndpoint = "https://foo.com/auth";
 
   @Parameter(
       names = "--coordinator_b_privacy_budgeting_endpoint",
       description = "Coordinator B's HTTP endpoint for privacy budgeting.")
+  // TODO(b/218508112): Better default value
   private String coordinatorBPrivacyBudgetingEndpoint = "https://bar.com/v1";
 
   @Parameter(
       names = "--coordinator_b_privacy_budget_service_auth_endpoint",
       description = "Coordinator B's Auth endpoint for privacy budgeting service.")
+  // TODO(b/218508112): Better default value
   private String coordinatorBPrivacyBudgetServiceAuthEndpoint = "https://bar.com/auth";
 
   @Parameter(names = "--noising_distribution", description = "Distribution to use for noising.")
@@ -384,11 +391,6 @@ public final class AggregationWorkerArgs {
           "Endpoint for GRPC OTel collector. Format: {protocol}://{host}:{port}, eg."
               + " http://localhost:4317")
   private String grpcCollectorEndpoint = "http://localhost:4317";
-
-  @Parameter(
-      names = "--otel_logs_enabled",
-      description = "Flag to enable the otel to export the logs.")
-  private boolean otelLogsEnabled = false;
 
   @Parameter(
       names = "--return_stack_trace",
@@ -436,6 +438,13 @@ public final class AggregationWorkerArgs {
       names = "--streaming_output_domain_processing_enabled",
       description = "Flag to enable RxJava streaming based output domain processing.")
   private boolean streamingOutputDomainProcessingEnabled = false;
+
+  @Parameter(
+      names = "--labeled_privacy_budget_keys_enabled",
+      description =
+          "Flag to allow filtering of labeled payload contributions. If enabled, only contributions"
+              + " corresponding to queried labels/ids are included in aggregation.")
+  private boolean labeledPrivacyBudgetKeysEnabled = false;
 
   @Parameter(
       names = "--local_job_params_input_filtering_ids",
@@ -712,10 +721,6 @@ public final class AggregationWorkerArgs {
     return grpcCollectorEndpoint;
   }
 
-  boolean isOTelLogsEnabled() {
-    return otelLogsEnabled;
-  }
-
   public boolean isEnableReturningStackTraceInResponse() {
     return enableReturningStackTraceInResponse;
   }
@@ -746,6 +751,10 @@ public final class AggregationWorkerArgs {
 
   public boolean isStreamingOutputDomainProcessingEnabled() {
     return streamingOutputDomainProcessingEnabled;
+  }
+
+  boolean isLabeledPrivacyBudgetKeysEnabled() {
+    return labeledPrivacyBudgetKeysEnabled;
   }
 
   String getFilteringIds() {

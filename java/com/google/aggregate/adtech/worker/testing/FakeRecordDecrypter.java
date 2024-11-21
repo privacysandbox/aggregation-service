@@ -18,7 +18,6 @@ package com.google.aggregate.adtech.worker.testing;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 
-import com.google.aggregate.adtech.worker.decryption.DecryptionCipher.PayloadDecryptionException;
 import com.google.aggregate.adtech.worker.decryption.DecryptionCipherFactory.CipherCreationException;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
@@ -32,7 +31,6 @@ import com.google.scp.operator.cpio.cryptoclient.model.ErrorReason;
 public final class FakeRecordDecrypter implements RecordDecrypter {
 
   private boolean shouldThrow;
-  private DecryptionException fakeException;
   private ErrorReason throwReason;
   private int idToGenerate;
 
@@ -49,15 +47,21 @@ public final class FakeRecordDecrypter implements RecordDecrypter {
   public Report decryptSingleReport(EncryptedReport unused) throws DecryptionException {
     if (shouldThrow) {
       shouldThrow = false;
-      throw fakeException;
+      if (throwReason != null) {
+        throw new DecryptionException(
+            new CipherCreationException(
+                new Exception("FakeRecordDecrypter test throw"), throwReason));
+      } else {
+        throw new DecryptionException(new IllegalStateException("The decrypter was set to throw."));
+      }
     }
 
     return FakeReportGenerator.generateWithParam(idToGenerate, LATEST_VERSION, "https://foo.com");
   }
 
-  public void setShouldThrow(boolean shouldThrow, DecryptionException fakeException) {
+  public void setShouldThrow(boolean shouldThrow, ErrorReason reason) {
     this.shouldThrow = shouldThrow;
-    this.fakeException = fakeException;
+    this.throwReason = reason;
   }
 
   public void setIdToGenerate(int idToGenerate) {

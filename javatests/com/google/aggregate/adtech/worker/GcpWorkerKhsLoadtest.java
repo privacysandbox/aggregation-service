@@ -47,14 +47,19 @@ import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** GCP KHS loadtest implementation */
+/**
+ * GCP KHS loadtest implementation
+ */
 @RunWith(JUnit4.class)
 public final class GcpWorkerKhsLoadtest {
 
-  @Rule public final Acai acai = new Acai(TestEnv.class);
-  @Rule public TestName name = new TestName();
+  @Rule
+  public final Acai acai = new Acai(TestEnv.class);
+  @Rule
+  public TestName name = new TestName();
 
-  private static final String KHS_LOADTEST_DATA_BUCKET = "loadtest_data";
+  private static final String KHS_LOADTEST_DATA_BUCKET =
+      "loadtest_data";
   private static final int NUM_RUNS = 5;
 
   private static final Duration COMPLETION_TIMEOUT = Duration.of(30, ChronoUnit.MINUTES);
@@ -66,29 +71,31 @@ public final class GcpWorkerKhsLoadtest {
     }
   }
 
-  /** Run Aggregation job for KHS loadtest. */
+  /**
+   * Run Aggregation job for KHS loadtest.
+   */
   @Test
   public void aggregateKhsLoadTest() throws Exception {
     ArrayList<CreateJobRequest> jobRequests = new ArrayList<>(NUM_RUNS);
     ArrayList<CreateJobRequest> jobRequestsDeepCopy = new ArrayList<>(NUM_RUNS);
 
     for (int i = 1; i <= NUM_RUNS; i++) {
-      var inputKey =
-          String.format("test-data/%s/test-inputs/loadtest_report.avro", KOKORO_BUILD_ID);
-      var domainKey =
-          String.format("test-data/%s/test-inputs/loadtest_domain.avro", KOKORO_BUILD_ID);
+      var inputKey = String.format("test-data/%s/test-inputs/loadtest_report.avro", KOKORO_BUILD_ID);
+      var domainKey = String.format("test-data/%s/test-inputs/loadtest_domain.avro", KOKORO_BUILD_ID);
       var outputKey =
-          String.format("test-data/%s/test-outputs/loadtest_%s_output.avro", KOKORO_BUILD_ID, i);
+          String.format(
+              "test-data/%s/test-outputs/loadtest_%s_output.avro",
+              KOKORO_BUILD_ID, i);
       CreateJobRequest createJobRequest =
-          SmokeTestBase.createJobRequestWithAttributionReportTo(
+          SmokeTestBase.createJobRequest(
               getTestDataBucket(KHS_LOADTEST_DATA_BUCKET),
               inputKey,
               getTestDataBucket(KHS_LOADTEST_DATA_BUCKET),
               outputKey,
               /* debugRun= */ true,
               /* jobId= */ UUID.randomUUID().toString(),
-              /* outputDomainBucketName= */ Optional.of(
-                  getTestDataBucket(KHS_LOADTEST_DATA_BUCKET)),
+              /* outputDomainBucketName= */
+              Optional.of(getTestDataBucket(KHS_LOADTEST_DATA_BUCKET)),
               /* outputDomainPrefix= */ Optional.of(domainKey));
       createJob(createJobRequest);
 

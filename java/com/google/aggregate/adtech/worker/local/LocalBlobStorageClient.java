@@ -25,7 +25,7 @@ import javax.inject.Inject;
 
 /**
  * BlobStorageClient which list a single shard. Short term fix for Standalone library to expect a
- * single file for a avro batch rather than directory.
+ * single file for a avro batch rather than directory. TODO(b/227805634) Fix and add test.
  */
 public class LocalBlobStorageClient extends FSBlobStorageClient {
 

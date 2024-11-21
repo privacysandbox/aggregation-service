@@ -22,18 +22,21 @@ import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
-import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
-import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
-import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
-import com.google.aggregate.privacy.noise.NoiseApplier;
+import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
-import com.google.aggregate.privacy.noise.model.AggregatedResults;
 import com.google.aggregate.privacy.noise.model.NoisedAggregatedResultSet;
 import com.google.aggregate.privacy.noise.model.NoisedAggregationResult;
-import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
-import com.google.aggregate.privacy.noise.model.SummaryReportAvroSet;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.MapDifference;
+import com.google.common.collect.MapDifference.ValueDifference;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
@@ -45,15 +48,15 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -74,26 +77,71 @@ public abstract class OutputDomainProcessor {
   private final ListeningExecutorService blockingThreadPool; // for blocking I/O operations
   private final ListeningExecutorService nonBlockingThreadPool; // for other processing operations
   private final BlobStorageClient blobStorageClient;
+  private final StopwatchRegistry stopwatches;
   private final Boolean domainOptional;
   private final Boolean enableThresholding;
-  private final AvroResultsSerdes resultsSerdes;
-  private final AvroDebugResultsSerdes debugResultsSerdes;
 
   OutputDomainProcessor(
       ListeningExecutorService blockingThreadPool,
       ListeningExecutorService nonBlockingThreadPool,
       BlobStorageClient blobStorageClient,
-      AvroResultsSerdes resultsSerdes,
-      AvroDebugResultsSerdes debugResultsSerdes,
+      StopwatchRegistry stopwatches,
       Boolean domainOptional,
       Boolean enableThresholding) {
     this.blockingThreadPool = blockingThreadPool;
     this.nonBlockingThreadPool = nonBlockingThreadPool;
     this.blobStorageClient = blobStorageClient;
+    this.stopwatches = stopwatches;
     this.domainOptional = domainOptional;
     this.enableThresholding = enableThresholding;
-    this.resultsSerdes = resultsSerdes;
-    this.debugResultsSerdes = debugResultsSerdes;
+  }
+
+  /**
+   * Asynchronously reads output domain from {@link DataLocation} shards and returns a deduped set
+   * of buckets in output domain as {@link BigInteger}. The input data location can contain many
+   * shards.
+   *
+   * <p>Shards are read asynchronously. If there is an error reading the shards the future will
+   * complete with an exception.
+   *
+   * @return ListenableFuture containing the output domain buckets in a set
+   * @throws DomainReadException (unchecked) if there is an error listing the shards or the location
+   *     provided has no shards present.
+   */
+  public ListenableFuture<ImmutableSet<BigInteger>> readAndDedupeDomain(
+      DataLocation outputDomainLocation, ImmutableList<DataLocation> shards) {
+    ImmutableList<ListenableFuture<ImmutableList<BigInteger>>> futureShardReads =
+        shards.stream()
+            .map(shard -> blockingThreadPool.submit(() -> readShard(shard)))
+            .collect(ImmutableList.toImmutableList());
+
+    ListenableFuture<List<ImmutableList<BigInteger>>> allFutureShards =
+        Futures.allAsList(futureShardReads);
+
+    return Futures.transform(
+        allFutureShards,
+        readShards -> {
+          Stopwatch stopwatch =
+              stopwatches.createStopwatch(
+                  String.format("domain-combine-shards-%s", UUID.randomUUID()));
+          stopwatch.start();
+          ImmutableSet<BigInteger> domain =
+              readShards.stream()
+                  .flatMap(Collection::stream)
+                  .collect(ImmutableSet.toImmutableSet());
+          stopwatch.stop();
+          if (domain.isEmpty()) {
+            throw new DomainReadException(
+                new IllegalArgumentException(
+                    String.format(
+                        "No output domain provided in the location. : %s. Please refer to the API"
+                            + " documentation for output domain parameters at"
+                            + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/api.md",
+                        outputDomainLocation)));
+          }
+          return domain;
+        },
+        nonBlockingThreadPool);
   }
 
   /**
@@ -125,189 +173,6 @@ public abstract class OutputDomainProcessor {
   }
 
   /**
-   * Process output domains using RxJava streaming API to read the domains, conflate with report
-   * facts, noise, and buffer for summary report. When domainOptional is set, aggregatable
-   * report-only facts are also included but thresholded using the noised metric. When debugRun is
-   * set, domain only, aggregatable report only, and overlapping facts are annotated and set as
-   * NoisedDebugResults. Since output domain keys are processed and added to summary reports
-   * separately from report-only keys, enabling debug run or domain optional results in separate
-   * files.
-   *
-   * @return NoisedAggregatedResultSet containing the combined and noised Aggregatable reports and
-   *     output domain buckets.
-   */
-  public AggregatedResults adjustAggregationWithDomainAndNoiseStreaming(
-      AggregationEngine aggregationEngine,
-      Optional<DataLocation> domainLocation,
-      ImmutableList<DataLocation> domainShards,
-      NoisedAggregationRunner noisedAggregationRunner,
-      Optional<Double> debugPrivacyEpsilon,
-      Boolean debugRun)
-      throws DomainReadException {
-    Set<BigInteger> domainKeySet = Sets.newConcurrentHashSet();
-    AtomicLong outputDomainTotalCount = new AtomicLong(0);
-    AtomicInteger shardCounter = new AtomicInteger(0);
-    Supplier<NoiseApplier> requestScopedNoiseApplier =
-        noisedAggregationRunner.getRequestScopedNoiseApplier(debugPrivacyEpsilon);
-
-    // SynchronizedList is thread-safe. Only using bulk addAll function in threads that process
-    // buffered facts for each summary report.
-    List<SummaryReportAvro> summaryReportAvros = Collections.synchronizedList(new ArrayList<>());
-    List<SummaryReportAvro> debugSummaryReportAvros =
-        Collections.synchronizedList(new ArrayList<>());
-
-    Flowable.fromStream(domainShards.stream())
-        .flatMap(
-            dataLocation ->
-                processOutputDomainShard(
-                    dataLocation,
-                    aggregationEngine,
-                    noisedAggregationRunner,
-                    requestScopedNoiseApplier,
-                    domainKeySet,
-                    debugRun),
-            /* delayErrors= */ false,
-            NUM_READ_THREADS,
-            MAX_DOMAIN_READ_BUFFER_SIZE)
-        .buffer(OutputShardFileHelper.getMaxRecordsPerShard())
-        .doOnNext(domains -> outputDomainTotalCount.addAndGet(domains.size()))
-        .flatMap(
-            summaryFacts ->
-                processDomainSummaryFacts(
-                    ImmutableList.copyOf(summaryFacts),
-                    shardCounter.addAndGet(1),
-                    debugRun,
-                    summaryReportAvros,
-                    debugSummaryReportAvros),
-            NUM_PROCESS_THREADS)
-        .blockingSubscribe();
-
-    if (domainLocation.isPresent() && outputDomainTotalCount.get() < 1) {
-      throw new DomainReadException(
-          new IllegalArgumentException(
-              String.format(
-                  "No output domain provided in the location: %s. Please refer to the API"
-                      + " documentation for output domain parameters at"
-                      + " https://github.com/privacysandbox/aggregation-service/blob/main/docs/api.md",
-                  domainLocation)));
-    }
-
-    if (debugRun || domainOptional) {
-      Flowable.fromIterable(aggregationEngine.getEntries())
-          .map(
-              reportOnlyEntry -> {
-                BigInteger reportOnlyKey = reportOnlyEntry.getKey();
-                AggregatedFact reportOnlyFact =
-                    AggregatedFact.create(reportOnlyKey, reportOnlyEntry.getValue().longValue());
-                noisedAggregationRunner.noiseSingleFact(reportOnlyFact, requestScopedNoiseApplier);
-
-                if (debugRun) {
-                  reportOnlyFact.setDebugAnnotations(List.of(DebugBucketAnnotation.IN_REPORTS));
-                }
-                return reportOnlyFact;
-              })
-          .buffer(OutputShardFileHelper.getMaxRecordsPerShard())
-          .flatMap(
-              summaryFacts ->
-                  processReportOnlyFacts(
-                      ImmutableList.copyOf(summaryFacts),
-                      shardCounter.addAndGet(1),
-                      debugRun,
-                      debugPrivacyEpsilon,
-                      noisedAggregationRunner,
-                      summaryReportAvros,
-                      debugSummaryReportAvros))
-          .blockingSubscribe();
-    }
-
-    SummaryReportAvroSet summaryReportAvroSet =
-        SummaryReportAvroSet.create(
-            ImmutableList.copyOf(summaryReportAvros),
-            debugRun
-                ? Optional.of(ImmutableList.copyOf(debugSummaryReportAvros))
-                : Optional.empty());
-
-    return AggregatedResults.create(summaryReportAvroSet);
-  }
-
-  private Flowable<Object> processReportOnlyFacts(
-      ImmutableList<AggregatedFact> summaryFacts,
-      Integer shardId,
-      boolean debugRun,
-      Optional<Double> debugPrivacyEpsilon,
-      NoisedAggregationRunner noisedAggregationRunner,
-      List<SummaryReportAvro> summaryReportAvros,
-      List<SummaryReportAvro> debugSummaryReportAvros) {
-    if (domainOptional) {
-      ImmutableList<AggregatedFact> thresholdedFacts =
-          enableThresholding
-              ? noisedAggregationRunner.thresholdAggregatedFacts(summaryFacts, debugPrivacyEpsilon)
-              : summaryFacts;
-
-      byte[] avroBytes = resultsSerdes.convert(thresholdedFacts);
-      summaryReportAvros.add(SummaryReportAvro.create(shardId, avroBytes));
-    }
-
-    if (debugRun) {
-      byte[] debugAvroBytes = debugResultsSerdes.convert(summaryFacts);
-      debugSummaryReportAvros.add(SummaryReportAvro.create(shardId, debugAvroBytes));
-    }
-
-    return Flowable.empty();
-  }
-
-  private Flowable<Object> processDomainSummaryFacts(
-      ImmutableList<AggregatedFact> summaryFacts,
-      int shardId,
-      Boolean debugRun,
-      List<SummaryReportAvro> summaryReportAvros,
-      List<SummaryReportAvro> debugSummaryReportAvros) {
-
-    byte[] avroBytes = resultsSerdes.convert(summaryFacts);
-    summaryReportAvros.add(SummaryReportAvro.create(shardId, avroBytes));
-
-    if (debugRun) {
-      byte[] debugAvroBytes = debugResultsSerdes.convert(summaryFacts);
-      debugSummaryReportAvros.add(SummaryReportAvro.create(shardId, debugAvroBytes));
-    }
-
-    return Flowable.empty();
-  }
-
-  private Flowable<AggregatedFact> processOutputDomainShard(
-      DataLocation dataLocation,
-      AggregationEngine aggregationEngine,
-      NoisedAggregationRunner noisedAggregationRunner,
-      Supplier<NoiseApplier> noiseApplier,
-      Set<BigInteger> domainKeySet,
-      Boolean debugRun) {
-    return readShardData(dataLocation)
-        .filter(domainKeySet::add)
-        .map(
-            domainKey -> {
-              AggregatedFact aggregatedFact =
-                  AggregatedFact.create(
-                      domainKey, aggregationEngine.getAggregatedValueOrDefault(domainKey, 0));
-              noisedAggregationRunner.noiseSingleFact(aggregatedFact, noiseApplier);
-
-              if (debugRun) {
-                List<DebugBucketAnnotation> debugAnnotations = new ArrayList<>();
-                if (aggregationEngine.containsKey(domainKey)) {
-                  debugAnnotations.add(DebugBucketAnnotation.IN_REPORTS);
-                }
-                debugAnnotations.add(DebugBucketAnnotation.IN_DOMAIN);
-
-                aggregatedFact.setDebugAnnotations(debugAnnotations);
-              }
-
-              aggregationEngine.remove(domainKey);
-
-              return aggregatedFact;
-            })
-        .subscribeOn(Schedulers.from(blockingThreadPool));
-  }
-
-  /**
    * Conflate aggregated facts with the output domain and noise results using RxJava streaming API.
    * When domainOptional is set, keys only in the aggregatable reports are also included but
    * thresholded using the noised metric. When debugRun is set, domain only, aggregatable report
@@ -316,7 +181,7 @@ public abstract class OutputDomainProcessor {
    * @return NoisedAggregatedResultSet containing the combined and noised Aggregatable reports and
    *     output domain buckets.
    */
-  public AggregatedResults adjustAggregationWithDomainAndNoise(
+  public NoisedAggregatedResultSet adjustAggregationWithDomainAndNoiseStreaming(
       AggregationEngine aggregationEngine,
       Optional<DataLocation> domainLocation,
       ImmutableList<DataLocation> domainShards,
@@ -382,7 +247,7 @@ public abstract class OutputDomainProcessor {
         NoisedAggregatedResultSet.builder().setNoisedResult(noisedOverlappingAndDomainResults);
 
     if (!(debugRun || domainOptional)) {
-      return AggregatedResults.create(noisedResultSetBuilder.build());
+      return noisedResultSetBuilder.build();
     }
 
     // ReportOnly facts are included only if debug run or domain optional are set.
@@ -429,7 +294,7 @@ public abstract class OutputDomainProcessor {
               noisedReportOnlyResults, noisedDomainOnlyFacts, noisedOverlappingFacts));
     }
 
-    return AggregatedResults.create(noisedResultSetBuilder.build());
+    return noisedResultSetBuilder.build();
   }
 
   private NoisedAggregationResult getAnnotatedDebugResults(
@@ -469,6 +334,99 @@ public abstract class OutputDomainProcessor {
         inputStream -> Flowable.fromStream(readInputStream(inputStream)),
         InputStream::close);
   }
+
+  /**
+   * Conflate aggregated facts with the output domain and noise results using the Maps.Difference
+   * API.
+   *
+   * @return NoisedAggregatedResultSet containing the combined and noised Aggregatable reports and
+   *     output domain buckets.
+   */
+  public NoisedAggregatedResultSet adjustAggregationWithDomainAndNoise(
+      NoisedAggregationRunner noisedAggregationRunner,
+      ImmutableSet<BigInteger> outputDomain,
+      ImmutableMap<BigInteger, AggregatedFact> reportsAggregatedMap,
+      Optional<Double> debugPrivacyEpsilon,
+      Boolean debugRun) {
+    // This pseudo-aggregation has all zeroes for the output domain. If a key is present in the
+    // output domain, but not in the aggregation itself, a zero is inserted which will later be
+    // noised to some value.
+    ImmutableMap<BigInteger, AggregatedFact> outputDomainPseudoAggregation =
+        outputDomain.stream()
+            .collect(
+                ImmutableMap.toImmutableMap(
+                    Function.identity(), key -> AggregatedFact.create(key, /* metric= */ 0)));
+
+    // Difference by key is computed so that the output can be adjusted for the output domain.
+    // Keys that are in the aggregation data, but not in the output domain, are subject to both
+    // noising and thresholding.
+    // Otherwise, the data is subject to noising only.
+    MapDifference<BigInteger, AggregatedFact> pseudoDiff =
+        Maps.difference(reportsAggregatedMap, outputDomainPseudoAggregation);
+
+    // The values for common keys should in theory be differing, since the pseudo aggregation will
+    // have all zeroes, while the 'real' aggregation will have non-zeroes, but just in case to
+    // cover overlapping zeroes, matching keys are also processed.
+    // `overlappingZeroes` includes all the keys present in both domain and reports but
+    // the values are 0.
+    Iterable<AggregatedFact> overlappingZeroes = pseudoDiff.entriesInCommon().values();
+    // `overlappingNonZeroes` includes all the keys present in both domain and reports, and the
+    // value is non-zero in reports.
+    Iterable<AggregatedFact> overlappingNonZeroes =
+        Maps.transformValues(pseudoDiff.entriesDiffering(), ValueDifference::leftValue).values();
+    // `domainOutputOnlyZeroes` only includes keys in domain.
+    Iterable<AggregatedFact> domainOutputOnlyZeroes = pseudoDiff.entriesOnlyOnRight().values();
+
+    NoisedAggregationResult noisedOverlappingNoThreshold =
+        noisedAggregationRunner.noise(
+            Iterables.concat(overlappingZeroes, overlappingNonZeroes), debugPrivacyEpsilon);
+
+    NoisedAggregationResult noisedDomainOnlyNoThreshold =
+        noisedAggregationRunner.noise(domainOutputOnlyZeroes, debugPrivacyEpsilon);
+
+    NoisedAggregationResult noisedDomainNoThreshold =
+        NoisedAggregationResult.merge(noisedOverlappingNoThreshold, noisedDomainOnlyNoThreshold);
+
+    NoisedAggregationResult noisedReportsOnlyNoThreshold = null;
+    if (debugRun || domainOptional) {
+      noisedReportsOnlyNoThreshold =
+          noisedAggregationRunner.noise(
+              pseudoDiff.entriesOnlyOnLeft().values(), debugPrivacyEpsilon);
+    }
+
+    NoisedAggregatedResultSet.Builder noisedResultSetBuilder = NoisedAggregatedResultSet.builder();
+
+    if (debugRun) {
+      noisedResultSetBuilder.setNoisedDebugResult(
+          getAnnotatedDebugResults(
+              noisedReportsOnlyNoThreshold,
+              noisedDomainOnlyNoThreshold,
+              noisedOverlappingNoThreshold));
+    }
+
+    if (domainOptional) {
+      NoisedAggregationResult noisedReportsDomainOptional =
+          enableThresholding
+              ? noisedAggregationRunner.threshold(
+                  noisedReportsOnlyNoThreshold.noisedAggregatedFacts(), debugPrivacyEpsilon)
+              : noisedReportsOnlyNoThreshold;
+
+      return noisedResultSetBuilder
+          .setNoisedResult(
+              NoisedAggregationResult.merge(noisedDomainNoThreshold, noisedReportsDomainOptional))
+          .build();
+    } else {
+      return noisedResultSetBuilder.setNoisedResult(noisedDomainNoThreshold).build();
+    }
+  }
+
+  /**
+   * Reads a given shard of the output domain
+   *
+   * @param shardLocation the location of the file to read
+   * @return the contents of the shard as a {@link ImmutableList}
+   */
+  protected abstract ImmutableList<BigInteger> readShard(DataLocation shardLocation);
 
   public abstract Stream<BigInteger> readInputStream(InputStream shardInputStream);
 }

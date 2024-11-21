@@ -130,24 +130,8 @@ java_library(
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/model/serdes",
-        "//java/com/google/aggregate/privacy/noise/model",
         "//java/external:clients_blobstorageclient_model",
         "//java/external:clients_jobclient_model",
-        "//java/external:guava",
-        "//java/external:javax_inject",
-    ],
-)
-
-java_library(
-    name = "avro_debug_results_file_reader",
-    srcs = ["AvroDebugResultsFileReader.java"],
-    javacopts = ["-Xep:Var"],
-    deps = [
-        "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/util",
-        "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
-        "//java/external:avro",
         "//java/external:guava",
         "//java/external:javax_inject",
     ],
@@ -161,6 +145,20 @@ java_library(
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
+        "//java/external:avro",
+        "//java/external:guava",
+        "//java/external:javax_inject",
+    ],
+)
+
+java_library(
+    name = "avro_reports_file_reader",
+    srcs = ["AvroReportsFileReader.java"],
+    javacopts = ["-Xep:Var"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/protocol/avro:avro_reports_schema_supplier",
         "//java/external:avro",
         "//java/external:guava",
         "//java/external:javax_inject",

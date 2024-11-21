@@ -18,22 +18,10 @@ package com.google.aggregate.privacy.noise;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.privacy.noise.model.NoisedAggregationResult;
-import com.google.common.collect.ImmutableList;
-import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 /** Interface to apply Differential Private Noising to {@code AggregateFact}. */
 public interface NoisedAggregationRunner {
-
-  /**
-   * Constructs a NoisedAggregationResult object with {@code AggregatedFact} list and the privacy
-   * parameter.
-   *
-   * @return new {@code NoisedAggregationResult}.
-   */
-  NoisedAggregationResult createResultSet(
-      List<AggregatedFact> facts, Optional<Double> debugPrivacyEpsilon);
 
   /**
    * Applies noise to values in a list of {@code AggregatedFact}.
@@ -42,21 +30,6 @@ public interface NoisedAggregationRunner {
    */
   NoisedAggregationResult noise(
       Iterable<AggregatedFact> aggregatedFact, Optional<Double> debugPrivacyEpsilon);
-
-  /**
-   * Applies noise to the value of the provided {@code AggregatedFact}.
-   *
-   * @return {@code AggregatedFact} with noising applied.
-   */
-  AggregatedFact noiseSingleFact(
-      AggregatedFact aggregatedFact, Supplier<NoiseApplier> scopedNoiseApplier);
-
-  /**
-   * Returns a NoiseApplier based on the request-scoped privacy parameters.
-   *
-   * @return {@code NoiseApplier}
-   */
-  Supplier<NoiseApplier> getRequestScopedNoiseApplier(Optional<Double> debugPrivacyEpsilon);
 
   /**
    * Thresholds aggregated facts, only returning AggregatedFact with noised values greater than the
@@ -68,15 +41,4 @@ public interface NoisedAggregationRunner {
    */
   NoisedAggregationResult threshold(
       Iterable<AggregatedFact> aggregatedFacts, Optional<Double> debugPrivacyEpsilon);
-
-  /**
-   * Thresholds aggregated facts, only returning AggregatedFact with noised values greater than the
-   * threshold. The Threshold value is determined by the privacy parameters.
-   *
-   * @param aggregatedFacts to threshold.
-   * @param debugPrivacyEpsilon used to compute the threshold value.
-   * @return new ImmutableList of AggregatedFacts.
-   */
-  ImmutableList<AggregatedFact> thresholdAggregatedFacts(
-      List<AggregatedFact> aggregatedFacts, Optional<Double> debugPrivacyEpsilon);
 }

@@ -25,7 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Utility to print all licenses for dependencies.
+ * Utility to print all licenses for dependencies. TODO(b/226980133) Add test for this utility if
+ * this solution is acceptable.
  */
 public final class LicenseUtil {
 

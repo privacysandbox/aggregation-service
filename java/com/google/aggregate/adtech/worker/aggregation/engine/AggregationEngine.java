@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker.aggregation.engine;
 
 import static com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.time.temporal.ChronoUnit.HOURS;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.Fact;
@@ -31,9 +32,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.UnsignedLong;
 import java.math.BigInteger;
-import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -103,26 +102,6 @@ public final class AggregationEngine implements Consumer<Report> {
     aggregationMap.computeIfAbsent(key, unused -> new LongAdder());
   }
 
-  /** Get the aggregated value for a key or return the default value. */
-  public long getAggregatedValueOrDefault(BigInteger key, long defaultValue) {
-    LongAdder aggregatedValue = aggregationMap.get(key);
-    return aggregatedValue == null ? defaultValue : aggregatedValue.longValue();
-  }
-
-  /**
-   * Remove the key and aggregated value from the aggregation engine map.
-   *
-   * @return The aggregated value for the key.
-   */
-  public OptionalLong remove(BigInteger key) {
-    LongAdder removedVal = aggregationMap.remove(key);
-    return removedVal != null ? OptionalLong.of(removedVal.longValue()) : OptionalLong.empty();
-  }
-
-  public Set<Entry<BigInteger, LongAdder>> getEntries() {
-    return aggregationMap.entrySet();
-  }
-
   public boolean containsKey(BigInteger key) {
     return aggregationMap.containsKey(key);
   }
@@ -161,8 +140,10 @@ public final class AggregationEngine implements Consumer<Report> {
     String privacyBudgetKey =
         privacyBudgetKeyGenerator.get().generatePrivacyBudgetKey(privacyBudgetKeyInput);
     PrivacyBudgetUnit budgetUnitId =
-        PrivacyBudgetUnit.createHourTruncatedUnit(
-            privacyBudgetKey, sharedInfo.scheduledReportTime(), sharedInfo.reportingOrigin());
+        PrivacyBudgetUnit.create(
+            privacyBudgetKey,
+            sharedInfo.scheduledReportTime().truncatedTo(HOURS),
+            sharedInfo.reportingOrigin());
     privacyBudgetUnits.add(budgetUnitId);
   }
 

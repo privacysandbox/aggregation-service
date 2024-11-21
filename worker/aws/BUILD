@@ -121,7 +121,7 @@ PROD_ENCLAVE_ARGS = [
     "--parallel_summary_upload_enabled",
     "--streaming_output_domain_processing_enabled",
     "--parallel_fact_noising_enabled",
-    "--otel_logs_enabled",
+    "--labeled_privacy_budget_keys_enabled",
 ]
 # Check the documentation for the worker_aws_deployment macro for details on
 # what is available in this package.
@@ -129,7 +129,6 @@ PROD_ENCLAVE_ARGS = [
 # Target to generate AMI for multi-party coordinators.
 worker_aws_deployment(
     name = "worker_mp_aws_prod",
-    additional_container_files = ["//:generate_version_file"],
     ami_name = ":ami_name_flag",
     aws_region = ":aws_region_flag",
     jar_args = PROD_ENCLAVE_ARGS + [
@@ -165,7 +164,7 @@ worker_aws_deployment(
     ],
     jar_file = "/WorkerRunner_prod_deploy.jar",
     jvm_options = DEFAULT_JVM_OPTIONS,
-    licenses = "//licenses/THIRD_PARTY_NOTICES/aws_worker_mp_aws_prod:licenses_tar",
+    licenses = ":all_licenses",
     repo_name = TEE_REPO_NAME,
     subnet_id = ":subnet_id_flag",
     user_rpms = ["//worker/aws/telemetry/otel_collector:otel_collector_rpm"],

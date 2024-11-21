@@ -50,8 +50,7 @@ public class FakeRecordDecrypterTest {
 
   @Test
   public void throwsWhenInstructed() {
-    decrypter.setShouldThrow(
-        /* shouldThrow= */ true, new DecryptionException(new IllegalStateException("test error")));
+    decrypter.setShouldThrow(/* shouldThrow= */ true, /* reason= */ null);
 
     DecryptionException e =
         assertThrows(DecryptionException.class, () -> decrypter.decryptSingleReport(null));
@@ -60,11 +59,7 @@ public class FakeRecordDecrypterTest {
 
   @Test
   public void throwsWithCorrectReason() {
-    decrypter.setShouldThrow(
-        /* shouldThrow= */ true,
-        new DecryptionException(
-            new CipherCreationException(
-                new Exception("FakeRecordDecrypter test throw"), ErrorReason.PERMISSION_DENIED)));
+    decrypter.setShouldThrow(/* shouldThrow= */ true, /* reason= */ ErrorReason.PERMISSION_DENIED);
 
     DecryptionException e =
         assertThrows(DecryptionException.class, () -> decrypter.decryptSingleReport(null));

@@ -23,8 +23,6 @@ import com.google.common.hash.Hashing;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.isFieldNonEmpty;
-
 /**
  * Generates V2 PrivacyBudgetKey. This version includes filteringId in addition to other fields in
  * V1 in privacy budget key calculations. This version of Budget Key is internal to the service. It
@@ -32,16 +30,6 @@ import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.isFi
  * com.google.aggregate.privacy.budgeting.budgetkeygenerator.protectedaudience.PrivacyBudgetKeyGeneratorModule}.
  */
 public class V2PrivacyBudgetKeyGenerator implements PrivacyBudgetKeyGenerator {
-
-  @Override
-  public boolean validatePrivacyBudgetKeyInput(PrivacyBudgetKeyInput privacyBudgetKeyInput) {
-    return isFieldNonEmpty(privacyBudgetKeyInput.sharedInfo().reportingOrigin())
-        && isFieldNonEmpty(privacyBudgetKeyInput.sharedInfo().version())
-        && isFieldNonEmpty(privacyBudgetKeyInput.sharedInfo().api())
-        && privacyBudgetKeyInput.filteringId().isPresent()
-        && privacyBudgetKeyInput.sharedInfo().scheduledReportTime() != null;
-  }
-
   @Override
   public String generatePrivacyBudgetKey(
       PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput privacyBudgetKeyInput) {

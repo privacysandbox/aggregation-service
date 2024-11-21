@@ -20,6 +20,7 @@ import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.protocol.avro.AvroDebugResultsRecord;
 import com.google.aggregate.protocol.avro.AvroDebugResultsWriter;
@@ -43,16 +44,6 @@ public final class LocalAvroDebugResultFileWriter implements LocalResultFileWrit
     this.writerFactory = writerFactory;
   }
 
-  /** Write the debug results AVRO file byte[] at the {@code Path} given. */
-  @Override
-  public void writeLocalFile(byte[] avroFileBytes, Path resultFilePath) throws FileWriteException {
-    try {
-      Files.write(resultFilePath, avroFileBytes);
-    } catch (IOException e) {
-      throw new FileWriteException("Failed to write local Avro file", e);
-    }
-  }
-
   @Override
   public void writeLocalFile(Stream<AggregatedFact> results, Path resultFilePath)
       throws FileWriteException {
@@ -73,6 +64,13 @@ public final class LocalAvroDebugResultFileWriter implements LocalResultFileWrit
     } catch (IOException e) {
       throw new FileWriteException("Failed to write local Avro debug file", e);
     }
+  }
+
+  @Override
+  public void writeLocalReportFile(Stream<EncryptedReport> reports, Path resultFilePath)
+      throws UnsupportedOperationException {
+    throw new UnsupportedOperationException(
+        "LocalAvroDebugResultFileWriter cannot write Avro report file.");
   }
 
   @Override

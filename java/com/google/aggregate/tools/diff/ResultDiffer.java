@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.testing.AvroDebugResultsFileReader;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -52,13 +51,10 @@ import javax.inject.Inject;
 public final class ResultDiffer {
 
   private final AvroResultsFileReader resultsFileReader;
-  private final AvroDebugResultsFileReader debugResultsFileReader;
 
   @Inject
-  ResultDiffer(
-      AvroResultsFileReader resultsFileReader, AvroDebugResultsFileReader debugResultsFileReader) {
+  ResultDiffer(AvroResultsFileReader resultsFileReader) {
     this.resultsFileReader = resultsFileReader;
-    this.debugResultsFileReader = debugResultsFileReader;
   }
 
   public static void main(String[] args) throws IOException {
@@ -67,7 +63,6 @@ public final class ResultDiffer {
 
     System.out.println("First results paths: " + cliArgs.firstResult);
     System.out.println("Second results paths: " + cliArgs.secondResult);
-    System.out.println("Debug run: " + cliArgs.debugRun);
 
     Injector injector = Guice.createInjector(new Env());
     ResultDiffer differ = injector.getInstance(ResultDiffer.class);
@@ -78,7 +73,7 @@ public final class ResultDiffer {
         cliArgs.secondResult.stream().map(Paths::get).collect(toImmutableList());
 
     MapDifference<BigInteger, AggregatedFact> diff =
-        differ.diffResults(firstResults, secondResults, cliArgs.debugRun);
+        differ.diffResults(firstResults, secondResults);
 
     System.out.println("Only in first:");
     System.out.println("===========================");
@@ -96,20 +91,16 @@ public final class ResultDiffer {
   }
 
   MapDifference<BigInteger, AggregatedFact> diffResults(
-      ImmutableList<Path> firstResults, ImmutableList<Path> secondResults, boolean debugRun) {
+      ImmutableList<Path> firstResults, ImmutableList<Path> secondResults) {
     Stream<AggregatedFact> firstResultConcatenated =
-        firstResults.stream().flatMap(file -> readAggregatedFacts(file, debugRun));
+        firstResults.stream().flatMap(this::readAggregatedFacts);
     Stream<AggregatedFact> secondResultConcatenated =
-        secondResults.stream().flatMap(file -> readAggregatedFacts(file, debugRun));
-
+        secondResults.stream().flatMap(this::readAggregatedFacts);
     return diffResults(firstResultConcatenated, secondResultConcatenated);
   }
 
-  private Stream<AggregatedFact> readAggregatedFacts(Path file, boolean debugRun) {
+  private Stream<AggregatedFact> readAggregatedFacts(Path file) {
     try {
-      if (debugRun) {
-        return debugResultsFileReader.readAvroResultsFile(file).stream();
-      }
       return resultsFileReader.readAvroResultsFile(file).stream();
     } catch (IOException e) {
       throw new UncheckedIOException(e);
@@ -138,8 +129,5 @@ public final class ResultDiffer {
 
     @Parameter(names = "--second_result")
     private List<String> secondResult;
-
-    @Parameter(names = "--debug_run")
-    private boolean debugRun = false;
   }
 }

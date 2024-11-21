@@ -56,10 +56,11 @@ public class ReportingOriginUtilsTest {
   }
 
   @Test
-  public void convertToSite_whenUrlWithPortProvided()
-          throws InvalidReportingOriginException {
-    assertThat(ReportingOriginUtils.convertReportingOriginToSite("http://about.foo.blogspot.com:8443/bar"))
-            .isEqualTo("https://foo.blogspot.com");
+  public void convertToSite_whenUrlWithPortProvided() throws InvalidReportingOriginException {
+    assertThat(
+            ReportingOriginUtils.convertReportingOriginToSite(
+                "http://about.foo.blogspot.com:8443/bar"))
+        .isEqualTo("https://foo.blogspot.com");
   }
 
   @Test

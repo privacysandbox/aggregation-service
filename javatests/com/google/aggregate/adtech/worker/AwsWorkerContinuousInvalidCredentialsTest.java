@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.createJobRequest;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJob;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.RETRIES_EXHAUSTED;
@@ -79,8 +80,9 @@ public class AwsWorkerContinuousInvalidCredentialsTest {
         // This output isn't checked.
         String.format("e2e_test_outputs/%s/%s", KOKORO_BUILD_ID, "invalidCredentialsTest.avro");
 
+    // TODO(b/228085828): Modify e2e tests to use output domain
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        createJobRequest(
             TESTING_BUCKET,
             INPUT_DATA_PATH,
             TESTING_BUCKET,
@@ -91,6 +93,7 @@ public class AwsWorkerContinuousInvalidCredentialsTest {
     JsonNode result =
         submitJob(createJobRequest, completionTimeout, /* waitForCompletion= */ false);
 
+    // TODO(b/230405461): Return code should be INPUT_DATA_READ_FAILED
     assertThat(result.get("result_info").get("return_code").asText())
         .isEqualTo(RETRIES_EXHAUSTED.name());
   }

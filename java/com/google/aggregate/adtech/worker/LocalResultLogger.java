@@ -23,9 +23,9 @@ import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.LibraryAnnotations.LocalOutputDirectory;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
-import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
@@ -36,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.stream.Stream;
 
+/** TODO(b/226499868): Add test for the LocalResultLogger for Standalone worker library */
 final class LocalResultLogger implements ResultLogger {
 
   private final LocalResultFileWriter localResultFileWriter;
@@ -67,37 +68,18 @@ final class LocalResultLogger implements ResultLogger {
         isDebugRun ? localDebugResultFileWriter : localResultFileWriter);
   }
 
+  // TODO(b/315199032): Add local runner test
   @Override
-  public void logResultsAvros(
-      ImmutableList<SummaryReportAvro> summaryReportAvros, Job ctx, boolean isDebugRun) {
-
-    summaryReportAvros.forEach(
-        summaryReportAvro -> {
-          String localFileName =
-              isDebugRun
-                  ? getLocalDebugFilename(ctx, summaryReportAvro.shardId())
-                  : getLocalFilename(ctx, summaryReportAvro.shardId());
-          Path localResultsFilePath =
-              workingDirectory
-                  .getFileSystem()
-                  .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
-
-          writeFileBytes(
-              summaryReportAvro.reportBytes(),
-              ctx,
-              localResultsFilePath,
-              isDebugRun ? localDebugResultFileWriter : localResultFileWriter);
-        });
-  }
-
-  private DataLocation writeFileBytes(
-      byte[] avroBytes, Job ctx, Path filePath, LocalResultFileWriter writer) {
+  public void logReports(ImmutableList<EncryptedReport> reports, Job ctx, String shardNumber)
+      throws ResultLogException {
+    String localFileName = "reencrypted_report.avro";
+    Path localReportsFilePath =
+        workingDirectory
+            .getFileSystem()
+            .getPath(Paths.get(workingDirectory.toString(), localFileName).toString());
     try {
       Files.createDirectories(workingDirectory);
-      writer.writeLocalFile(avroBytes, filePath);
-
-      return getDataLocation(
-          ctx.requestInfo().getOutputDataBucketName(), ctx.requestInfo().getOutputDataBlobPrefix());
+      localResultFileWriter.writeLocalReportFile(reports.stream(), localReportsFilePath);
     } catch (IOException | FileWriteException e) {
       throw new ResultLogException(e);
     }
@@ -109,9 +91,11 @@ final class LocalResultLogger implements ResultLogger {
     try {
       Files.createDirectories(workingDirectory);
       writer.writeLocalFile(results, filePath);
-
-      return getDataLocation(
-          ctx.requestInfo().getOutputDataBucketName(), ctx.requestInfo().getOutputDataBlobPrefix());
+      DataLocation resultLocation =
+          getDataLocation(
+              ctx.requestInfo().getOutputDataBucketName(),
+              ctx.requestInfo().getOutputDataBlobPrefix());
+      return resultLocation;
     } catch (IOException | FileWriteException e) {
       throw new ResultLogException(e);
     }
@@ -119,14 +103,6 @@ final class LocalResultLogger implements ResultLogger {
 
   private String getLocalFileName(Job ctx) {
     return "output" + localResultFileWriter.getFileExtension();
-  }
-
-  private String getLocalFilename(Job ctx, int shardId) {
-    return "output_" + shardId + localResultFileWriter.getFileExtension();
-  }
-
-  private String getLocalDebugFilename(Job ctx, int shardId) {
-    return "debug_output_" + shardId + localDebugResultFileWriter.getFileExtension();
   }
 
   private String getLocalDebugFileName(Job ctx) {

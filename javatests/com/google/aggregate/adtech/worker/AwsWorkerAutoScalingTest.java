@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.createJobRequest;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJob;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.waitForJobCompletions;
 
@@ -65,7 +66,7 @@ public class AwsWorkerAutoScalingTest {
   // and almost no job waits in queue, which would not trigger auto-scaling.
   private static final String INPUT_DATA_PATH =
       String.format(
-          "%s/%s/test-inputs/100k_auto_scale_test_input/",
+          "%s/%s/test-inputs/100k_auto_scale_test_input.avro",
           TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
   private static final String INPUT_DOMAIN_PATH =
       String.format(
@@ -93,6 +94,7 @@ public class AwsWorkerAutoScalingTest {
     }
 
     // Check for scale-out to match the concurrentJobs
+    // TODO(b/251508750) Make job queue time deterministic.
     waitForScaleAction(true);
 
     // Wait for all jobs to complete
@@ -108,7 +110,7 @@ public class AwsWorkerAutoScalingTest {
         String.format(
             "%s/test-outputs/%s/%s", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID, outputFile);
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        createJobRequest(
             getTestDataBucket(),
             INPUT_DATA_PATH,
             getTestDataBucket(),

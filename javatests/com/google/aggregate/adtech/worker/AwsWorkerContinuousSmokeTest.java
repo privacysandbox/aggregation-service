@@ -21,7 +21,7 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRI
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getOutputFileName;
-import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readDebugResultsFromMultipleFiles;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readDebugResultsFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
@@ -88,7 +88,7 @@ public class AwsWorkerContinuousSmokeTest {
 
   @Inject S3BlobStorageClient s3BlobStorageClient;
   @Inject AvroResultsFileReader avroResultsFileReader;
-  @Inject private AvroDebugResultsReaderFactory debugReaderFactory;
+  @Inject private AvroDebugResultsReaderFactory readerFactory;
 
   @Before
   public void checkBuildEnv() {
@@ -121,7 +121,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createJobE2ETest() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_1/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-inputs/10k_test_input_1.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/10k_test_domain_1.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -130,7 +130,7 @@ public class AwsWorkerContinuousSmokeTest {
             "%s/%s/test-outputs/10k_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -148,158 +148,8 @@ public class AwsWorkerContinuousSmokeTest {
             getTestDataBucket(),
             getOutputFileName(outputKey));
 
-    assertThat(aggregatedFacts.size()).isGreaterThan(10);
-  }
-
-  /**
-   * This test includes sending a job with reporting site only. Verifies that jobs with only
-   * reporting site are successful.
-   */
-  @Test
-  public void createJobE2ETestWithReportingSite() throws Exception {
-    var inputKey =
-        String.format(
-            "%s/%s/test-inputs/10k_test_input_reporting_site/",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var domainKey =
-        String.format(
-            "%s/%s/test-inputs/10k_test_domain_reporting_site.avro",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var outputKey =
-        String.format(
-            "%s/%s/test-outputs/10k_test_output_reporting_site.avro",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-
-    CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithReportingSite(
-            getTestDataBucket(),
-            inputKey,
-            getTestDataBucket(),
-            outputKey,
-            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
-            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey));
-    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
-
-    assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
-    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
-        .isTrue();
-
-    // Read output avro from s3.
-    ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromS3(
-            s3BlobStorageClient,
-            avroResultsFileReader,
-            getTestDataBucket(),
-            getOutputFileName(outputKey));
-
-    assertThat(aggregatedFacts.size()).isGreaterThan(10);
-  }
-
-  /**
-   * This test includes sending a job with reports from multiple reporting origins belonging to the
-   * same reporting site. Verifies that all the reports are processed successfully.
-   */
-  @Test
-  public void createJobE2ETestWithMultipleReportingOrigins() throws Exception {
-    var inputKey =
-        String.format("%s/%s/test-inputs/same-site/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var domainKey =
-        String.format(
-            "%s/%s/test-inputs/10k_test_domain_multiple_origins_same_site.avro",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var outputKey =
-        String.format(
-            "%s/%s/test-outputs/10k_test_output_multiple_origins_same_site.avro",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-
-    CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithReportingSite(
-            getTestDataBucket(),
-            inputKey,
-            getTestDataBucket(),
-            outputKey,
-            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
-            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey));
-    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
-
-    assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
-    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
-        .isTrue();
-
-    // Read output avro from s3.
-    ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromS3(
-            s3BlobStorageClient,
-            avroResultsFileReader,
-            getTestDataBucket(),
-            getOutputFileName(outputKey));
-
-    assertThat(aggregatedFacts.size()).isGreaterThan(10);
-  }
-
-  /**
-   * This test includes sending a job with reports from multiple reporting origins belonging to
-   * different reporting sites. It is expected that the 5k reports with a different reporting site
-   * will fail and come up in the error counts.
-   */
-  @Test
-  public void createJobE2ETestWithSomeReportsHavingDifferentReportingOrigins() throws Exception {
-    var inputKey =
-        String.format(
-            "%s/%s/test-inputs/different-site/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var domainKey =
-        String.format(
-            "%s/%s/test-inputs/10k_test_domain_multiple_origins_different_site.avro",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var outputKey =
-        String.format(
-            "%s/%s/test-outputs/10k_test_output_multiple_origins_different_site.avro",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-
-    CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithReportingSite(
-            getTestDataBucket(),
-            inputKey,
-            getTestDataBucket(),
-            outputKey,
-            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
-            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey));
-    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
-
-    assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
-    assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("count")
-                .asInt())
-        .isEqualTo(5000);
-    assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("category")
-                .asText())
-        .isEqualTo(ErrorCounter.REPORTING_SITE_MISMATCH.name());
-
-    // Read output avro from s3.
-    ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromS3(
-            s3BlobStorageClient,
-            avroResultsFileReader,
-            getTestDataBucket(),
-            getOutputFileName(outputKey));
-
+    // TODO(b/228874552) assert that the output contains more values than just the output domain
+    // values
     assertThat(aggregatedFacts.size()).isGreaterThan(10);
   }
 
@@ -310,7 +160,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createNotDebugJobE2EReportDebugEnabledTest() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_attribution_report_test_input_debug/",
+            "%s/%s/test-inputs/10k_attribution_report_test_input_debug.avro",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -322,7 +172,7 @@ public class AwsWorkerContinuousSmokeTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -357,7 +207,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createDebugJobE2EReportDebugModeEnabledTest() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_attribution_report_test_input_debug_enabled_nondebug_run/",
+            "%s/%s/test-inputs/10k_attribution_report_test_input_debug_enabled_nondebug_run.avro",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -365,11 +215,11 @@ public class AwsWorkerContinuousSmokeTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var outputKey =
         String.format(
-            "%s/%s/test-outputs/10k_attribution_report_test_output_DebugJob_debugEnabled",
+            "%s/%s/test-outputs/10k_attribution_report_test_output_DebugJob_debugEnabled.avro",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -393,23 +243,27 @@ public class AwsWorkerContinuousSmokeTest {
 
     // Read debug results avro from s3.
     ImmutableList<AggregatedFact> aggregatedDebugFacts =
-        readDebugResultsFromMultipleFiles(
+        readDebugResultsFromS3(
             s3BlobStorageClient,
-            debugReaderFactory,
+            readerFactory,
             getTestDataBucket(),
-            getDebugFilePrefix(outputKey));
+            getOutputFileName(getDebugFilePrefix(outputKey)));
 
     // Debug facts count should be greater than or equal to the summary facts count because some
     // keys are filtered out due to thresholding or not in domain.
     assertThat(aggregatedDebugFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
   }
 
+  /**
+   * This test includes sending a debug job and aggregatable reports with debug mode disabled. Uses
+   * the same data as the normal e2e test.
+  */
   @Test
   public void aggregate_withDebugReportsInNonDebugMode_errorsExceedsThreshold_quitsEarly()
       throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_2/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-inputs/10k_test_input_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/10k_test_domain_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -419,7 +273,7 @@ public class AwsWorkerContinuousSmokeTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -479,7 +333,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createJobE2EAggregateReportingDebugTest() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_attribution_debug/",
+            "%s/%s/test-inputs/10k_test_input_attribution_debug.avro",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -491,7 +345,7 @@ public class AwsWorkerContinuousSmokeTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -525,7 +379,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_3/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-inputs/10k_test_input_3.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/10k_test_domain_3.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -534,7 +388,7 @@ public class AwsWorkerContinuousSmokeTest {
             "%s/%s/test-outputs/10k_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest1 =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -573,7 +427,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_fledge/",
+            "%s/%s/test-inputs/10k_test_input_fledge.avro",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -585,7 +439,7 @@ public class AwsWorkerContinuousSmokeTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -622,7 +476,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_shared_storage/",
+            "%s/%s/test-inputs/10k_test_input_shared_storage.avro",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -634,7 +488,7 @@ public class AwsWorkerContinuousSmokeTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -660,7 +514,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createDebugJobE2ETestPrivacyBudgetExhausted() throws Exception {
     String inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_attribution_report_test_input_debug/",
+            "%s/%s/test-inputs/10k_attribution_report_test_input_debug.avro",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     String domainKey =
         String.format(
@@ -672,7 +526,7 @@ public class AwsWorkerContinuousSmokeTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest1 =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -712,7 +566,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/30k_test_input/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-inputs/30k_test_input.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/30k_test_domain.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -721,7 +575,7 @@ public class AwsWorkerContinuousSmokeTest {
             "%s/%s/test-outputs/30k_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -757,7 +611,7 @@ public class AwsWorkerContinuousSmokeTest {
   public void createJobE2ETestWithInvalidReports() throws Exception {
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_invalid_key/",
+            "%s/%s/test-inputs/10k_test_input_invalid_key.avro",
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
@@ -769,7 +623,7 @@ public class AwsWorkerContinuousSmokeTest {
             TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -811,7 +665,7 @@ public class AwsWorkerContinuousSmokeTest {
     @Var Set<UnsignedLong> filteringIds = ImmutableSet.of();
     @Var
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -840,7 +694,7 @@ public class AwsWorkerContinuousSmokeTest {
     filteringIds =
         ImmutableSet.of(UnsignedLong.valueOf("18446744073709551615"), UnsignedLong.valueOf(65536));
     createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -868,7 +722,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     filteringIds = ImmutableSet.of(UnsignedLong.valueOf(5), UnsignedLong.ZERO);
     createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        AwsWorkerContinuousTestHelper.createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),

@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.acai.Acai;
 import com.google.acai.TestScoped;
-import com.google.aggregate.adtech.worker.decryption.DecryptionCipher.PayloadParsingException;
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter.DecryptionException;
 import com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionCipherFactory;
 import com.google.aggregate.adtech.worker.encryption.EncryptionCipher;
@@ -147,8 +146,6 @@ public class DeserializingReportDecrypterTest {
             () ->
                 deserializingReportDecrypter.decryptSingleReport(
                     garbageReportEncryptedWithCorrectKey));
-
-    assertThat(decryptionException).hasCauseThat().isInstanceOf(PayloadParsingException.class);
     assertThat(decryptionException)
         .hasCauseThat()
         .hasMessageThat()

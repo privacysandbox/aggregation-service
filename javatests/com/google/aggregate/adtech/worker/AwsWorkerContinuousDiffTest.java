@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
+import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.createJobRequest;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getOutputFileName;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
@@ -110,7 +111,7 @@ public class AwsWorkerContinuousDiffTest {
     String goldenLocation = "testdata/golden/2022_10_18/10k_diff_test.avro.golden";
 
     CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
+        createJobRequest(
             getTestDataBucket(),
             inputKey,
             getTestDataBucket(),
@@ -164,7 +165,9 @@ public class AwsWorkerContinuousDiffTest {
                   .httpClient(UrlConnectionHttpClient.builder().build())
                   .build());
       bind(S3AsyncClient.class)
-          .toInstance(S3AsyncClient.builder().region(AWS_S3_BUCKET_REGION).build());
+          .toInstance(
+              S3AsyncClient.builder()
+                  .region(AWS_S3_BUCKET_REGION).build());
       bind(Boolean.class).annotatedWith(S3UsePartialRequests.class).toInstance(false);
       bind(Integer.class).annotatedWith(PartialRequestBufferSize.class).toInstance(20);
     }

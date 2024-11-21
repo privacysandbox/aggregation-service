@@ -18,7 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
+import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 
@@ -29,6 +29,7 @@ public interface ResultLogger {
   void logResults(ImmutableList<AggregatedFact> results, Job ctx, boolean isDebugRun)
       throws ResultLogException;
 
-  void logResultsAvros(
-      ImmutableList<SummaryReportAvro> summaryReportAvros, Job ctx, boolean isDebugRun);
+  /** Logs encrypted aggregatable reports. */
+  void logReports(ImmutableList<EncryptedReport> results, Job ctx, String shardNumber)
+      throws ResultLogException;
 }

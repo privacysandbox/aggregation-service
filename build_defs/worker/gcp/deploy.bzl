@@ -25,7 +25,7 @@ def worker_gcp_deployment(
 
     container_image(
         name = docker_target_name,
-        base = "@java_base_gcp//image",
+        base = "@java_base//image",
         cmd = cmd,
         entrypoint = entrypoint,
         files = files,

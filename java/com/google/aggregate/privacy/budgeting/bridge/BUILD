@@ -38,7 +38,6 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         ":privacy_budgeting_service_bridge",
-        "//java/com/google/aggregate/util",
         "//java/external:clients_distributed_privacy_budgeting",
         "//java/external:guava",
         "//java/external:javax_inject",

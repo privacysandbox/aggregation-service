@@ -326,7 +326,7 @@ file into smaller shards.
     [Google Cloud Function instructions](https://cloud.google.com/functions/docs/securing/authenticating)
     for sending an authenticated request. [Detailed API spec](/docs/api.md#getjob-endpoint)_
 
-# **Upgrade Environment**
+## Updating the system
 
 Run the following in the `<repository_root>`.
 
@@ -334,37 +334,11 @@ Run the following in the `<repository_root>`.
 git fetch origin && git checkout -b dev-v{VERSION} v{VERSION}
 cd terraform/gcp
 bash download_prebuilt_dependencies.sh
-
-```
-
-Execute the following commands with your own Google Cloud account. If you were previously impersonating a service account, clean the environment variable :
-
-```sh
-export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT=""
-cd environments/adtech_setup
-terraform plan
+cd environments/dev
 terraform apply
 ```
-
-Execute the following command by impersonating the Deploy Service Account :
-
-```sh
-export GOOGLE_IMPERSONATE_SERVICE_ACCOUNT="<YourDeployServiceAccountName>@<ProjectID>.iam.gserviceaccount.com"
-cd ../dev
-terraform apply
-```
-
 
 _Note: If you use self-built artifacts described in
 [build-scripts/gcp](/build-scripts/gcp/README.md), run `bash fetch_terraform.sh` instead of
 `bash download_prebuilt_dependencies.sh` and make sure you updated your dependencies in the `jars`
 folder._
-
-_Note: When migrating to new coordinator pair from version 2.[4|5|6].z to 2.7.z or later, ensure the
-file `/terraform/gcp/environments/shared/release_params.auto.tfvars` was updated with the following
-values:_
-
-```sh
-coordinator_a_impersonate_service_account = "a-opallowedusr@ps-msmt-coord-prd-g3p-svcacc.iam.gserviceaccount.com"
-coordinator_b_impersonate_service_account = "b-opallowedusr@ps-prod-msmt-type2-e541.iam.gserviceaccount.com"
-```

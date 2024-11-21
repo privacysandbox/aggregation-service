@@ -97,11 +97,11 @@ public class ExtractionUtilsTest {
 
   private static Set<PrivacyBudgetUnit> buildUnitSet() {
     return ImmutableSet.of(
-        PrivacyBudgetUnit.createHourTruncatedUnit(
+        PrivacyBudgetUnit.create(
             "4c136a585949aefbd6180b817933393353a27bdd3936d246a10c694066d5a79e",
             Instant.ofEpochSecond(1710288000),
             "https://privacy-sandbox-demos-dsp.dev"),
-        PrivacyBudgetUnit.createHourTruncatedUnit(
+        PrivacyBudgetUnit.create(
             "4c136a585949aefbd6180b817933393353a27bdd3936d246a10c694066d5a79e",
             Instant.ofEpochSecond(1710284400),
             "https://privacy-sandbox-demos-dsp.dev"));
@@ -109,27 +109,27 @@ public class ExtractionUtilsTest {
 
   private static Set<PrivacyBudgetUnit> buildFilteringIdsUnitSet() {
     return ImmutableSet.of(
-        PrivacyBudgetUnit.createHourTruncatedUnit(
+        PrivacyBudgetUnit.create(
             "3bd6a0d3635c6d16f5c8c70bd63005f6f8e2ad31b72c95907afea9b35919cdc1",
             Instant.ofEpochSecond(1710284400),
             "https://privacy-sandbox-demos-dsp.dev"),
-        PrivacyBudgetUnit.createHourTruncatedUnit(
+        PrivacyBudgetUnit.create(
             "b3eb3651049728d8edc02542fc685586a9ffea9c559852e0746c6cef6ddcc137",
             Instant.ofEpochSecond(1710288000),
             "https://privacy-sandbox-demos-dsp.dev"),
-        PrivacyBudgetUnit.createHourTruncatedUnit(
+        PrivacyBudgetUnit.create(
             "3bd6a0d3635c6d16f5c8c70bd63005f6f8e2ad31b72c95907afea9b35919cdc1",
             Instant.ofEpochSecond(1710288000),
             "https://privacy-sandbox-demos-dsp.dev"),
-        PrivacyBudgetUnit.createHourTruncatedUnit(
+        PrivacyBudgetUnit.create(
             "db4bb8c6d309ce494bb8f9fc0f17c2b2dc7b34ed0338e7b92319da82456bf03e",
             Instant.ofEpochSecond(1710284400),
             "https://privacy-sandbox-demos-dsp.dev"),
-        PrivacyBudgetUnit.createHourTruncatedUnit(
+        PrivacyBudgetUnit.create(
             "b3eb3651049728d8edc02542fc685586a9ffea9c559852e0746c6cef6ddcc137",
             Instant.ofEpochSecond(1710284400),
             "https://privacy-sandbox-demos-dsp.dev"),
-        PrivacyBudgetUnit.createHourTruncatedUnit(
+        PrivacyBudgetUnit.create(
             "db4bb8c6d309ce494bb8f9fc0f17c2b2dc7b34ed0338e7b92319da82456bf03e",
             Instant.ofEpochSecond(1710288000),
             "https://privacy-sandbox-demos-dsp.dev"));

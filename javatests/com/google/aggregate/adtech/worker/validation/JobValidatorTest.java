@@ -56,9 +56,7 @@ public class JobValidatorTest {
 
     assertThat(exception)
         .hasMessageThat()
-        .containsMatch(
-            "Exactly one of 'attribution_report_to' and 'reporting_site' fields should be specified"
-                + " for the Job");
+        .containsMatch("Job parameters does not have an attribution_report_to field for the Job");
   }
 
   @Test
@@ -73,8 +71,7 @@ public class JobValidatorTest {
 
     assertThat(exception)
         .hasMessageThat()
-        .containsMatch(
-            "The 'attribution_report_to' field in the Job parameters is empty for the Job");
+        .containsMatch("Job parameters does not have an attribution_report_to field for the Job");
   }
 
   @Test
@@ -345,39 +342,6 @@ public class JobValidatorTest {
     assertThrows(
         IllegalArgumentException.class,
         () -> JobValidator.validate(Optional.of(jobWithNonNumberIds), /* domainOptional= */ true));
-  }
-
-  @Test
-  public void validate_noReportingSite_fails() {
-    ImmutableMap<String, String> jobParams = ImmutableMap.of("reporting_site", "");
-    Job job = buildJob(jobParams).build();
-
-    IllegalArgumentException exception =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> JobValidator.validate(Optional.of(job), /* domainOptional= */ false));
-
-    assertThat(exception)
-        .hasMessageThat()
-        .containsMatch("The 'reporting_site' field in the Job parameters is empty for the Job");
-  }
-
-  @Test
-  public void validate_attributionReportToAndReportingSiteBothPresent_fails() {
-    ImmutableMap<String, String> jobParams =
-        ImmutableMap.of("attribution_report_to", "someOrigin", "reporting_site", "someSite");
-    Job job = buildJob(jobParams).build();
-
-    IllegalArgumentException exception =
-        assertThrows(
-            IllegalArgumentException.class,
-            () -> JobValidator.validate(Optional.of(job), /* domainOptional= */ false));
-
-    assertThat(exception)
-        .hasMessageThat()
-        .containsMatch(
-            "Exactly one of 'attribution_report_to' and 'reporting_site' fields should be specified"
-                + " for the Job");
   }
 
   private Job.Builder buildJob(ImmutableMap jobParams) {

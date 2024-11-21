@@ -53,7 +53,7 @@ public class AggregationEngineTest {
 
   @Before
   public void setUp() {
-    engine = aggregationEngineFactory.create(ImmutableSet.of(UnsignedLong.ZERO));
+    engine = aggregationEngineFactory.create();
   }
 
   @Test
@@ -308,7 +308,7 @@ public class AggregationEngineTest {
         FakeReportGenerator.generateWithFactList(
             ImmutableList.of(factWithLabel3, factWithLabel4), /* version= */ "1.1");
 
-    AggregationEngine engine = aggregationEngineFactory.create(ImmutableSet.of(UnsignedLong.ZERO));
+    AggregationEngine engine = aggregationEngineFactory.create();
     engine.accept(reportWithLabels1);
     engine.accept(reportWithLabels2);
     ImmutableMap<BigInteger, AggregatedFact> aggregation = engine.makeAggregation();
@@ -378,7 +378,7 @@ public class AggregationEngineTest {
 
   private static PrivacyBudgetUnit budgetUnit(
       String key, Instant scheduledTime, String reportingOrigin) {
-    return PrivacyBudgetUnit.createHourTruncatedUnit(key, scheduledTime, reportingOrigin);
+    return PrivacyBudgetUnit.create(key, scheduledTime, reportingOrigin);
   }
 
   static final class TestEnv extends AbstractModule {

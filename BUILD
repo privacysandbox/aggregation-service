@@ -25,10 +25,3 @@ buildifier(
     name = "buildifier_fix",
     mode = "fix",
 )
-
-genrule(
-    name = "generate_version_file",
-    srcs = ["VERSION"],
-    outs = ["generated_version_file.txt"],
-    cmd = "cat $< | sed 's/-dev$$//' > $@",
-)

@@ -1,0 +1,13 @@
+{
+  "aggregation_coordinator_origin": "https://publickeyservice.msmt.gcp.privacysandboxservices.com",
+  "aggregation_service_payloads": [
+    {
+      "debug_cleartext_payload": "omRkYXRhgqJldmFsdWVEAAAAAmZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAaJldmFsdWVEAAAAAGZidWNrZXRQAAAAAAAAAAAAAAAAAAAAAGlvcGVyYXRpb25paGlzdG9ncmFt",
+      "key_id": "example_id",
+      "payload": "g9IeDXvoc655PVAmt10dcqhTJyR/EU+vNIep+0ZL3CytfmTlE2a0XB7pAs+GmX8ejIl4f5PkIpLV4Bds4GS0kzLP/wPV5VFftLwJ1RKUsN0eEjE3UMS+D8NewSGaCy+AU5UP1B3rHsgg9gy4Xfw0zvKLtMAl8FGnkLKxNrvjRVOFNZWnm77CYvzahkedtqEJV1wN"
+    }
+  ],
+  "shared_info": "{\"api\":\"attribution-reporting-debug\",\"attribution_destination\":\"https://conversion.test\",\"debug_mode\":\"enabled\",\"report_id\":\"21abd97f-73e8-4b88-9389-a9fee6abda5e\",\"reporting_origin\":\"https://report.test\",\"scheduled_report_time\":\"1234486400\",\"version\":\"0.1\"}",
+  "source_debug_key": "123",
+  "trigger_debug_key": "456"
+}
