@@ -1,0 +1,18 @@
+diff --git a/coordinator/terraform/aws/modules/keydb/main.tf b/coordinator/terraform/aws/modules/keydb/main.tf
+index 87f839e95..759f0d589 100644
+--- a/coordinator/terraform/aws/modules/keydb/main.tf
++++ b/coordinator/terraform/aws/modules/keydb/main.tf
+@@ -74,6 +74,13 @@ resource "aws_dynamodb_table" "keydb" {
+     environment = var.environment
+     role        = "keydb"
+   }
++
++  lifecycle {
++    ignore_changes = [
++      read_capacity,
++      write_capacity,
++    ]
++  }
+ }
+
+ # Autoscaling is necessary for replication

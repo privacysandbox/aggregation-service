@@ -222,20 +222,26 @@ public final class GcpWorkerContinuousSmokeTest {
             outputDataPrefix,
             true,
             Optional.of(getTestDataBucket()),
-            Optional.of(domainDataPrefix));
+            Optional.of(domainDataPrefix),
+            /* totalReportsCount= */ 10000,
+            /* reportErrorThreshold= */ 10);
     JsonNode result = SmokeTestBase.submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
 
     assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
-    assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("count")
-                .asInt())
-        .isEqualTo(10000);
+        .isEqualTo(AggregationWorkerReturnCode.REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD.name());
+    // Due to parallel aggregation, the processing may stop a little over the threshold.
+    // So, asserting below that the processing stopped somewhere above the threshold but before all
+    // the 10K reports are processed.
+    int erroringReportCount =
+        result
+            .get("result_info")
+            .get("error_summary")
+            .get("error_counts")
+            .get(0)
+            .get("count")
+            .asInt();
+    assertThat(erroringReportCount).isAtLeast(1000);
+    assertThat(erroringReportCount).isLessThan(10000);
     assertThat(
             result
                 .get("result_info")
@@ -254,31 +260,6 @@ public final class GcpWorkerContinuousSmokeTest {
                 .get("description")
                 .asText())
         .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.getDescription());
-
-    // Read output avro from s3.
-    ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromCloud(
-            gcsBlobStorageClient,
-            avroResultsFileReader,
-            getTestDataBucket(),
-            outputDataPrefix + OUTPUT_DATA_PREFIX_NAME);
-
-    assertThat(aggregatedFacts.size()).isEqualTo(DEBUG_DOMAIN_KEY_SIZE);
-
-    // Read debug result from s3.
-    ImmutableList<AggregatedFact> aggregatedDebugFacts =
-        readDebugResultsFromCloud(
-            gcsBlobStorageClient,
-            readerFactory,
-            getTestDataBucket(),
-            getDebugFilePrefix(outputDataPrefix + OUTPUT_DATA_PREFIX_NAME));
-
-    // Only contains keys in domain because all reports are filtered out.
-    assertThat(aggregatedDebugFacts.size()).isEqualTo(DEBUG_DOMAIN_KEY_SIZE);
-    // The unnoisedMetric of aggregatedDebugFacts should be 0 for all keys because
-    // all reports are filtered out.
-    // Noised metric in both debug reports and summary reports should be noise value instead of 0.
-    aggregatedDebugFacts.forEach(fact -> assertThat(fact.getUnnoisedMetric().get()).isEqualTo(0));
   }
 
   /**
@@ -308,11 +289,11 @@ public final class GcpWorkerContinuousSmokeTest {
 
     checkJobExecutionResult(result, SUCCESS.name(), 0);
     ImmutableList<AggregatedFact> aggregatedFacts =
-            readResultsFromCloud(
-                    gcsBlobStorageClient,
-                    avroResultsFileReader,
-                    getTestDataBucket(),
-                    outputDataPrefix + OUTPUT_DATA_PREFIX_NAME);
+        readResultsFromCloud(
+            gcsBlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            outputDataPrefix + OUTPUT_DATA_PREFIX_NAME);
     assertThat(aggregatedFacts.size()).isAtLeast(DEBUG_DOMAIN_KEY_SIZE);
   }
 

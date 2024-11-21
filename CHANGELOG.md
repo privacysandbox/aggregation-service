@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.6.1](https://github.com/privacysandbox/aggregation-service/compare/v2.6.0...v2.6.1) (2024-11-20)
+
+-   [AWS Only] Added a fix to address the reduced volume size of new AMIs by setting it to 8 GB.
+
 ## [2.6.0](https://github.com/privacysandbox/aggregation-service/compare/v2.5.0...v2.6.0) (2024-07-19)
 
 -   Enabled support for

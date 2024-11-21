@@ -570,6 +570,7 @@ java_library(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:avro_results_file_reader",
+        "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/protocol/avro:avro_debug_results",
         "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
         "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",

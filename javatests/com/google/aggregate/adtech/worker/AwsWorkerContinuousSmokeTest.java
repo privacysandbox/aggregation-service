@@ -257,88 +257,7 @@ public class AwsWorkerContinuousSmokeTest {
   /**
    * This test includes sending a debug job and aggregatable reports with debug mode disabled. Uses
    * the same data as the normal e2e test.
-   */
-  @Test
-  public void createDebugJobE2EReportDebugModeDisabledTest() throws Exception {
-    var inputKey =
-        String.format(
-            "%s/%s/test-inputs/10k_test_input_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var domainKey =
-        String.format(
-            "%s/%s/test-inputs/10k_test_domain_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var outputKey =
-        String.format(
-            "%s/%s/test-outputs/10k_test_output_DebugJob_debugDisabled.avro",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-
-    CreateJobRequest createJobRequest =
-        AwsWorkerContinuousTestHelper.createJobRequest(
-            getTestDataBucket(),
-            inputKey,
-            getTestDataBucket(),
-            outputKey,
-            /* debugRun= */ true,
-            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
-            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
-            /* outputDomainPrefix= */ Optional.of(domainKey));
-    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
-
-    assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
-    assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("count")
-                .asInt())
-        .isEqualTo(10000);
-    assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("category")
-                .asText())
-        .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.name());
-    assertThat(
-            result
-                .get("result_info")
-                .get("error_summary")
-                .get("error_counts")
-                .get(0)
-                .get("description")
-                .asText())
-        .isEqualTo(ErrorCounter.DEBUG_NOT_ENABLED.getDescription());
-
-    // Read output avro from s3.
-    ImmutableList<AggregatedFact> aggregatedFacts =
-        readResultsFromS3(
-            s3BlobStorageClient,
-            avroResultsFileReader,
-            getTestDataBucket(),
-            getOutputFileName(outputKey));
-
-    assertThat(aggregatedFacts.size()).isEqualTo(DEBUG_DOMAIN_KEY_SIZE);
-
-    // Read debug result from s3.
-    ImmutableList<AggregatedFact> aggregatedDebugFacts =
-        readDebugResultsFromS3(
-            s3BlobStorageClient,
-            readerFactory,
-            getTestDataBucket(),
-            getOutputFileName(getDebugFilePrefix(outputKey)));
-
-    // Only contains keys in domain because all reports are filtered out.
-    assertThat(aggregatedDebugFacts.size()).isEqualTo(DEBUG_DOMAIN_KEY_SIZE);
-    // The unnoisedMetric of aggregatedDebugFacts should be 0 for all keys because
-    // all reports are filtered out.
-    // Noised metric in both debug reports and summary reports should be noise value instead of 0.
-    aggregatedDebugFacts.forEach(fact -> assertThat(fact.getUnnoisedMetric().get()).isEqualTo(0));
-  }
-
+  */
   @Test
   public void aggregate_withDebugReportsInNonDebugMode_errorsExceedsThreshold_quitsEarly()
       throws Exception {
@@ -716,9 +635,8 @@ public class AwsWorkerContinuousSmokeTest {
 
     // The job should be completed before the completion timeout.
     assertThat(result.get("job_status").asText()).isEqualTo("FINISHED");
-    // The threshold is 100%, so we get SUCCESS_WITH_ERRORS.
     assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.SUCCESS_WITH_ERRORS.name());
+        .isEqualTo(AggregationWorkerReturnCode.REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD.name());
   }
 
   @Test

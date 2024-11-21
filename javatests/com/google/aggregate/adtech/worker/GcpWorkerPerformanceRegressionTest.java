@@ -119,7 +119,7 @@ public final class GcpWorkerPerformanceRegressionTest {
       warmUpJobRequestsDeepCopy.add(createJobRequest);
     }
 
-    waitForJobCompletions(warmUpJobRequestsDeepCopy, COMPLETION_TIMEOUT);
+    waitForJobCompletions(warmUpJobRequestsDeepCopy, COMPLETION_TIMEOUT, true);
 
     for (int i = 1; i <= NUM_WARMUP_RUNS; i++) {
       String outputKey =
@@ -173,7 +173,7 @@ public final class GcpWorkerPerformanceRegressionTest {
     }
 
     waitForJobCompletions(
-        transientJobRequestsDeepCopy, COMPLETION_TIMEOUT, false);
+        transientJobRequestsDeepCopy, COMPLETION_TIMEOUT, true);
 
     for (int i = 1; i <= NUM_TRANSIENT_RUNS; i++) {
       var outputKey =

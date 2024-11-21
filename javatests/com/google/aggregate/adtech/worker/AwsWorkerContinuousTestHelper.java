@@ -156,7 +156,7 @@ public class AwsWorkerContinuousTestHelper {
                 false,
                 outputDomainBucketName,
                 outputDomainPrefix,
-                /* reportErrorThresholdPercentage= */ 100,
+                /* reportErrorThresholdPercentage= */ 0,
                 /* inputReportCount= */ Optional.empty(),
                 /* filteringIds= */ Optional.empty()))
         .build();
@@ -182,7 +182,7 @@ public class AwsWorkerContinuousTestHelper {
                 debugRun,
                 outputDomainBucketName,
                 outputDomainPrefix,
-                /* reportErrorThresholdPercentage= */ 100,
+                /* reportErrorThresholdPercentage= */ 0,
                 /* inputReportCount= */ Optional.empty(),
                 /* filteringIds= */ Optional.empty()))
         .build();
