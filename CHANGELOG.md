@@ -12,12 +12,20 @@
     `AggregatedFacts` in memory in AVRO format files.
 -   Updated Aggregation Service sizing guidance with the latests benchmark results.
 
+## [2.8.1](https://github.com/privacysandbox/aggregation-service/compare/v2.8.0...v2.8.1) (2024-11-20)
+
+-   [AWS Only] Added a fix to address the reduced volume size of new AMIs by setting it to 8 GB.
+
 ## [2.8.0](https://github.com/privacysandbox/aggregation-service/compare/v2.7.0...v2.8.0) (2024-09-11)
 
 -   Increased read threads in Aggregation Service to match the number of CPUs.
 -   Enabled worker instance OTel logs - processed job's id and worker health status.
 -   [GCP only] Updated the GCP image build target to "worker_mp_gcp_prod". Note: This change would
     impact only if you build your own image.
+
+## [2.7.2](https://github.com/privacysandbox/aggregation-service/compare/v2.7.1...v2.7.2) (2024-11-20)
+
+-   [AWS Only] Added a fix to address the reduced volume size of new AMIs by setting it to 8 GB.
 
 ## [2.7.1](https://github.com/privacysandbox/aggregation-service/compare/v2.7.0...v2.7.1) (2024-09-20)
 
@@ -29,6 +37,10 @@
 -   Added support for aggregating reports belonging to multiple reporting origins under the same
     reporting site in a single aggregation job.
 -   [GCP Only] Updated coordinator endpoints to new Google/Third-Party coordinator pair.
+
+## [2.6.1](https://github.com/privacysandbox/aggregation-service/compare/v2.6.0...v2.6.1) (2024-11-20)
+
+-   [AWS Only] Added a fix to address the reduced volume size of new AMIs by setting it to 8 GB.
 
 ## [2.6.0](https://github.com/privacysandbox/aggregation-service/compare/v2.5.0...v2.6.0) (2024-07-19)
 
