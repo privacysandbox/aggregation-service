@@ -124,6 +124,11 @@ public final class Annotations {
   @Retention(RUNTIME)
   public @interface ParallelAggregatedFactNoising {}
 
+  @BindingAnnotation
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface DontConsumeBudgetInDebugRunEnabled {}
+
   /** Annotation for the custom ForkJoin thread pool. */
   @BindingAnnotation
   @Target({FIELD, PARAMETER, METHOD})

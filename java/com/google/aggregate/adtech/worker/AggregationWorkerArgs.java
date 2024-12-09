@@ -454,6 +454,11 @@ public final class AggregationWorkerArgs {
       description = "Flag to enable parallel aggregated fact noising.")
   private boolean parallelAggregatedFactNoisingEnabled = false;
 
+  @Parameter(
+      names = "--dont_consume_budget_in_debug_run_enabled",
+      description = "Flag to enable the logic that skips budget consumption in debug runs.")
+  private boolean dontConsumeBudgetInDebugRunEnabled = false;
+
   ClientConfigSelector getClientConfigSelector() {
     return clientConfigSelector;
   }
@@ -758,5 +763,9 @@ public final class AggregationWorkerArgs {
 
   public boolean isParallelAggregatedFactNoisingEnabled() {
     return parallelAggregatedFactNoisingEnabled;
+  }
+
+  public boolean isDontConsumeBudgetInDebugRunEnabled() {
+    return dontConsumeBudgetInDebugRunEnabled;
   }
 }

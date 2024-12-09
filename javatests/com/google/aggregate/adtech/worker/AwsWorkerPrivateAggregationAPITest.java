@@ -149,9 +149,10 @@ public class AwsWorkerPrivateAggregationAPITest {
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
 
-    // Verify debug job result
+    // Verify debug job result. Debug job doesn't check privacy budget, so the return code should
+    // be success.
     assertThat(resultDebug.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
     assertThat(resultDebug.get("result_info").get("error_summary").get("error_counts").isEmpty())
         .isTrue();
 
@@ -245,9 +246,10 @@ public class AwsWorkerPrivateAggregationAPITest {
     // assert that aggregated facts count is at least equal to number of domain keys
     assertThat(aggregatedFacts.size()).isAtLeast(20000);
 
-    // Verify debug job result
+    // Verify debug job result. Debug job doesn't check privacy budget, so the return code should
+    // be success.
     assertThat(resultDebug.get("result_info").get("return_code").asText())
-        .isEqualTo(AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
     assertThat(resultDebug.get("result_info").get("error_summary").get("error_counts").isEmpty())
         .isTrue();
 

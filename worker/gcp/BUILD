@@ -72,6 +72,7 @@ worker_gcp_deployment(
         "--parallel_summary_upload_enabled",
         "--streaming_output_domain_processing_enabled",
         "--parallel_fact_noising_enabled",
+        "--dont_consume_budget_in_debug_run_enabled",
         "--otel_logs_enabled",
     ],
     entrypoint = [

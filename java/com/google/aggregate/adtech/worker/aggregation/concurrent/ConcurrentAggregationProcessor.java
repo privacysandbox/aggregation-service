@@ -37,6 +37,7 @@ import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyStri
 
 import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
+import com.google.aggregate.adtech.worker.Annotations.DontConsumeBudgetInDebugRunEnabled;
 import com.google.aggregate.adtech.worker.Annotations.NonBlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.ReportErrorThresholdPercentage;
 import com.google.aggregate.adtech.worker.Annotations.StreamingOutputDomainProcessing;
@@ -146,6 +147,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   private final OTelConfiguration oTelConfiguration;
   private final double defaultReportErrorThresholdPercentage;
   private final Boolean streamingOutputDomainProcessing;
+  private final boolean dontConsumeBudgetInDebugRunEnabled;
 
   @Inject
   ConcurrentAggregationProcessor(
@@ -164,7 +166,8 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       @ReportErrorThresholdPercentage double defaultReportErrorThresholdPercentage,
-      @StreamingOutputDomainProcessing Boolean streamingOutputDomainProcessing) {
+      @StreamingOutputDomainProcessing Boolean streamingOutputDomainProcessing,
+      @DontConsumeBudgetInDebugRunEnabled boolean dontConsumeBudgetInDebugRunEnabled) {
     this.reportDecrypterAndValidator = reportDecrypterAndValidator;
     this.aggregationEngineFactory = aggregationEngineFactory;
     this.outputDomainProcessor = outputDomainProcessor;
@@ -181,6 +184,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     this.oTelConfiguration = oTelConfiguration;
     this.defaultReportErrorThresholdPercentage = defaultReportErrorThresholdPercentage;
     this.streamingOutputDomainProcessing = streamingOutputDomainProcessing;
+    this.dontConsumeBudgetInDebugRunEnabled = dontConsumeBudgetInDebugRunEnabled;
   }
 
   /** Processor responsible for performing aggregation. */
@@ -293,10 +297,12 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
 
       AggregationWorkerReturnCode jobCode = SUCCESS;
       if (debugRun) {
-        try {
-          consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
-        } catch (AggregationJobProcessException e) {
-          jobCode = AggregationWorkerReturnCode.getDebugEquivalent(e.getCode());
+        if (!dontConsumeBudgetInDebugRunEnabled) {
+          try {
+            consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
+          } catch (AggregationJobProcessException e) {
+            jobCode = AggregationWorkerReturnCode.getDebugEquivalent(e.getCode());
+          }
         }
 
         logResults(aggregatedResults, job, /* isDebugRun= */ true);

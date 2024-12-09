@@ -24,11 +24,11 @@ PROTOBUF_CORE_VERSION = "3.25.2"
 
 PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
 
-COORDINATOR_VERSION = "v1.12.0-rc01"  # version updated on 2024-10-23
+COORDINATOR_VERSION = "v1.13.0-rc01"  # version updated on 2024-12-06
 
 JACKSON_VERSION = "2.16.1"
 
-AUTO_VALUE_VERSION = "1.7.4"
+AUTO_VALUE_VERSION = "1.10.1"
 
 AWS_SDK_VERSION = "2.21.16"
 
@@ -79,9 +79,7 @@ git_repository(
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/shared_libraries:coordinator.patch",
-        "//build_defs/shared_libraries:pbs_client.patch",
         "//build_defs/shared_libraries:rules_pkg_build_fix.patch",
-        "//build_defs/shared_libraries:v1.13-adtech-setup-premission.patch",
         "//build_defs/shared_libraries:v1.13-ebs_size_increase.patch",
     ],
     tag = COORDINATOR_VERSION,
@@ -179,7 +177,7 @@ maven_install(
         "io.github.resilience4j:resilience4j-core:1.7.1",
         "io.github.resilience4j:resilience4j-retry:1.7.1",
         "junit:junit:4.13.2",
-        "org.apache.avro:avro:1.11.3",
+        "org.apache.avro:avro:1.12.0",
         "org.apache.commons:commons-compress:1.26.2",
         "org.apache.commons:commons-math3:3.6.1",
         "org.apache.httpcomponents:httpcore:4.4.16",
@@ -218,7 +216,7 @@ maven_install(
         "com.google.crypto.tink:tink:1.13.0",
         "com.google.crypto.tink:tink-gcpkms:1.9.0",
         "com.google.oauth-client:google-oauth-client:1.35.0",
-        "io.netty:netty-codec-http:4.1.114.Final",
+        "io.netty:netty-codec-http:4.1.115.Final",
     ] + OTEL_ARTIFACTS,
     maven_install_json = "//:maven_install.json",
     repositories = [

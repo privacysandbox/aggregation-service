@@ -26,6 +26,7 @@ import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.DontConsumeBudgetInDebugRunEnabled;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.InstanceId;
@@ -126,6 +127,9 @@ public final class LocalWorkerModule extends AbstractModule {
     bind(Boolean.class)
         .annotatedWith(StreamingOutputDomainProcessing.class)
         .toInstance(localWorkerArgs.isStreamingOutputDomainProcessingEnabled());
+    bind(boolean.class)
+        .annotatedWith(DontConsumeBudgetInDebugRunEnabled.class)
+        .toInstance(localWorkerArgs.isDontConsumeBudgetInDebugRunEnabled());
     bind(boolean.class).annotatedWith(BenchmarkMode.class).toInstance(false);
     bind(Path.class)
         .annotatedWith(LocalFileJobHandlerPath.class)
