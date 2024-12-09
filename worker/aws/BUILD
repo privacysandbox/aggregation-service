@@ -121,6 +121,7 @@ PROD_ENCLAVE_ARGS = [
     "--parallel_summary_upload_enabled",
     "--streaming_output_domain_processing_enabled",
     "--parallel_fact_noising_enabled",
+    "--dont_consume_budget_in_debug_run_enabled",
     "--otel_logs_enabled",
 ]
 # Check the documentation for the worker_aws_deployment macro for details on

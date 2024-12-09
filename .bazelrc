@@ -7,3 +7,9 @@ build --java_runtime_version=remotejdk_11
 # -XX:+PerfDisableSharedMem to force JVM uses regular memory instead.
 # -XX:-UsePerfData to disable /tmp/hsperfdata references.  We don't use the perf data here so we disable it
 build --jvmopt="-XX:-UsePerfData"
+
+# Kythe indexing -- for xrefs in codesearch
+build:kythe --keep_going
+build:kythe --experimental_extra_action_top_level_only
+build:kythe --experimental_action_listener=@kythe_release//:extract_kzip_java
+build:kythe --experimental_action_listener=@kythe_release//:extract_kzip_protobuf

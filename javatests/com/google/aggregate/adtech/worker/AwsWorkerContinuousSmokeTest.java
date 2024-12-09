@@ -16,8 +16,8 @@
 
 package com.google.aggregate.adtech.worker;
 
-import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRIVACY_BUDGET_EXHAUSTED;
+import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.SUCCESS;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.AWS_S3_BUCKET_REGION;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.KOKORO_BUILD_ID;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.getOutputFileName;
@@ -378,7 +378,7 @@ public class AwsWorkerContinuousSmokeTest {
             /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
-    assertResponseForCode(createJobRequest, AggregationWorkerReturnCode.SUCCESS);
+    assertResponseForCode(createJobRequest, SUCCESS);
 
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =
@@ -573,8 +573,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     var inputKey =
         String.format(
-            "%s/%s/test-inputs/10k_test_input_fledge/",
-            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-inputs/10k_test_input_fledge/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/20k_test_domain_fledge.avro",
@@ -681,7 +680,9 @@ public class AwsWorkerContinuousSmokeTest {
             /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName() + "_request_1",
             /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
             /* outputDomainPrefix= */ Optional.of(domainKey));
-    assertResponseForCode(createJobRequest1, DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED);
+    // Even though privacy budget is exhausted, debug runs don't check budget, so the return code
+    // should be success.
+    assertResponseForCode(createJobRequest1, SUCCESS);
     CreateJobRequest createJobRequest2 =
         createJobRequest1.toBuilder()
             .setJobRequestId(
@@ -690,8 +691,7 @@ public class AwsWorkerContinuousSmokeTest {
 
     JsonNode result = submitJobAndWaitForResult(createJobRequest2, COMPLETION_TIMEOUT);
 
-    assertThat(result.get("result_info").get("return_code").asText())
-        .isEqualTo(DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
+    assertThat(result.get("result_info").get("return_code").asText()).isEqualTo(SUCCESS.name());
     assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
         .isTrue();
   }
@@ -791,7 +791,8 @@ public class AwsWorkerContinuousSmokeTest {
     // The Constant Noising adds 0 noise enabling the testing of the contribution filtering.
 
     // The source data from which the input reports are generated has 50k reports with 50k unique
-    // contribution ids. These are divided equally among 5 ids [0, 5, 65536, 4294967296, 18446744073709551615].
+    // contribution ids. These are divided equally among 5 ids [0, 5, 65536, 4294967296,
+    // 18446744073709551615].
     // Filtering on any one of these ids should have all except 10k contribution keys filtered out.
 
     String inputKey =

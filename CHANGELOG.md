@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0](https://github.com/privacysandbox/aggregation-service/compare/v2.9.1...v2.10.0) (2024-12-08)
+
+-   Updated debug mode to no longer consume budget.
+-   Upgraded dependent packages to address critical/high image vulnerabilities.
+-   Upgraded control plane shared library dependency to
+    [v1.13.0-rc01](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.13.0-rc01).
+
 ## [2.9.1](https://github.com/privacysandbox/aggregation-service/compare/v2.9.0...v2.9.1) (2024-11-20)
 
 -   [AWS Only] Added a fix to address the reduced volume size of new AMIs by setting it to 8 GB.

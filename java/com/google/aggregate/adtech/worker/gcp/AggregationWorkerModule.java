@@ -26,6 +26,7 @@ import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.DontConsumeBudgetInDebugRunEnabled;
 import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUpload;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
@@ -338,6 +339,9 @@ public final class AggregationWorkerModule extends AbstractModule {
     bind(boolean.class)
         .annotatedWith(StreamingOutputDomainProcessing.class)
         .toInstance(args.isStreamingOutputDomainProcessingEnabled());
+    bind(boolean.class)
+        .annotatedWith(DontConsumeBudgetInDebugRunEnabled.class)
+        .toInstance(args.isDontConsumeBudgetInDebugRunEnabled());
 
     // Parameter to set key cache. This is a test only flag.
     bind(Long.class)

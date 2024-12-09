@@ -27,7 +27,7 @@ public final class ClientVersionUtils {
   static final String VERSION_PREFIX_STRING = "aggregation-service/";
 
   // File paths adapted for different test environments (unit/e2e).
-  private static final String[] VERSION_FILE_PATHS = {
+  static String[] VERSION_FILE_PATHS = {
     "/generated_version_file.txt", // Root directory
     "./generated_version_file.txt", // Current working directory
   };

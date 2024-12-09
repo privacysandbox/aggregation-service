@@ -60,6 +60,7 @@ import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.DomainOptional;
+import com.google.aggregate.adtech.worker.Annotations.DontConsumeBudgetInDebugRunEnabled;
 import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse;
 import com.google.aggregate.adtech.worker.Annotations.EnableThresholding;
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
@@ -215,6 +216,7 @@ public class ConcurrentAggregationProcessorTest {
   @Inject SharedInfoSerdes sharedInfoSerdes;
   @Inject AvroOutputDomainWriterFactory domainWriterFactory;
   @Inject OutputDomainProcessorHelper outputDomainProcessorHelper;
+  @Inject FeatureFlags featureFlags;
   @Inject private PrivacyBudgetKeyGeneratorFactory privacyBudgetKeyGeneratorFactory;
   private Path outputDomainDirectory;
   private Path reportsDirectory;
@@ -245,6 +247,7 @@ public class ConcurrentAggregationProcessorTest {
     fakeValidator.setReportIdShouldReturnError(ImmutableSet.of());
 
     outputDomainProcessorHelper.setStreamingOutputDomainProcessing(streamingOutputDomainTestParam);
+    featureFlags.reset();
   }
 
   private EncryptedReport generateEncryptedReportWithVersion(
@@ -1551,8 +1554,7 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void process_withQueriedFilteringId_filtersForTheGivenIds()
-      throws Exception {
+  public void process_withQueriedFilteringId_filtersForTheGivenIds() throws Exception {
     Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
     Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
     EncryptedReport reportWithoutId =
@@ -1956,8 +1958,7 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
-  public void aggregate_withDebugRunAndPrivacyBudgetFailure_succeedsWithErrorCode()
-      throws Exception {
+  public void aggregate_withDebugRun_succeedsWithPbsErrorCode_whenFlagDisabled() throws Exception {
     ImmutableMap<String, String> jobParams = ImmutableMap.of(JOB_PARAM_DEBUG_RUN, "true");
     // Set debug run params in job.
     ctx =
@@ -1973,11 +1974,10 @@ public class ConcurrentAggregationProcessorTest {
         new FakePrivacyBudgetingServiceBridge();
     // Privacy Budget failure via thrown exception
     fakePrivacyBudgetingServiceBridge.setShouldThrow();
-    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.createHourTruncatedUnit(
-            "1", Instant.ofEpochMilli(0), "https://example.foo.com"),
-        1);
-    // Missing budget for the second report.
+    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
+    PrivacyBudgetUnit privacyBudgetUnit2 = getPrivacyBudgetUnit(encryptedReports1.get(1));
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit2, 1);
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
     fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
@@ -1989,9 +1989,11 @@ public class ConcurrentAggregationProcessorTest {
         .isEqualTo(AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_ERROR.name());
   }
 
-  /** Test that worker completes with success if debug run despite Privacy Budget exhausted */
   @Test
-  public void aggregateDebug_withPrivacyBudgetExhausted() throws Exception {
+  public void aggregate_withDebugRun_succeedsAndDoesntCallPbs_whenFlagEnabled() throws Exception {
+    // Enable feature flag.
+    featureFlags.setDontConsumeBudgetInDebugRunEnabled(true);
+
     ImmutableMap<String, String> jobParams = ImmutableMap.of(JOB_PARAM_DEBUG_RUN, "true");
     // Set debug run params in job.
     ctx =
@@ -2005,10 +2007,44 @@ public class ConcurrentAggregationProcessorTest {
 
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
-    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(
-        PrivacyBudgetUnit.createHourTruncatedUnit(
-            "1", Instant.ofEpochMilli(0), "https://example.foo.com"),
-        1);
+    // Privacy Budget failure via thrown exception
+    fakePrivacyBudgetingServiceBridge.setShouldThrow();
+    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
+    PrivacyBudgetUnit privacyBudgetUnit2 = getPrivacyBudgetUnit(encryptedReports1.get(1));
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit2, 1);
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+
+    JobResult result = processor.get().process(ctx);
+
+    // PBS shouldn't have been called to consume budget, because this is a debug run.
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isEmpty();
+
+    assertThat(result.resultInfo().getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
+  }
+
+  /** Test that worker completes with success if debug run despite Privacy Budget exhausted */
+  @Test
+  public void aggregate_withDebugRun_succeedsWithBudgetExhaustedErrorCode_whenFlagDisabled()
+      throws Exception {
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JOB_PARAM_DEBUG_RUN, "true");
+    // Set debug run params in job.
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -2019,6 +2055,42 @@ public class ConcurrentAggregationProcessorTest {
     // Return code should be SUCCESS, return message should match the would-be error
     assertThat(result.resultInfo().getReturnCode())
         .isEqualTo(AggregationWorkerReturnCode.DEBUG_SUCCESS_WITH_PRIVACY_BUDGET_EXHAUSTED.name());
+  }
+
+  @Test
+  public void aggregate_withDebugRun_succeedsDespitePrivacyBudgetExhausted() throws Exception {
+    // Enable feature flag.
+    featureFlags.setDontConsumeBudgetInDebugRunEnabled(true);
+
+    ImmutableMap<String, String> jobParams = ImmutableMap.of(JOB_PARAM_DEBUG_RUN, "true");
+    // Set debug run params in job.
+    ctx =
+        ctx.toBuilder()
+            .setRequestInfo(
+                ctx.requestInfo().toBuilder()
+                    .putAllJobParameters(
+                        combineJobParams(ctx.requestInfo().getJobParametersMap(), jobParams))
+                    .build())
+            .build();
+
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
+    // Missing budget for the second report.
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    fakeValidator.setNextShouldReturnError(ImmutableList.of(false, false, false, false).iterator());
+
+    JobResult result = processor.get().process(ctx);
+
+    // PBS shouldn't have been called to consume budget, because this is a debug run.
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isEmpty();
+
+    // Return code should be SUCCESS, even though report 2 doesn't have budget, because this is a
+    // debug run.
+    assertThat(result.resultInfo().getReturnCode())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
   }
 
   private RequestInfo getRequestInfoWithInputDataBucketName(
@@ -2208,6 +2280,23 @@ public class ConcurrentAggregationProcessorTest {
     }
   }
 
+  private static class FeatureFlags {
+
+    private boolean dontConsumeBudgetInDebugRunEnabled = false;
+
+    private boolean isDontConsumeBudgetInDebugRunEnabled() {
+      return dontConsumeBudgetInDebugRunEnabled;
+    }
+
+    private void setDontConsumeBudgetInDebugRunEnabled(boolean dontConsumeBudgetInDebugRunEnabled) {
+      this.dontConsumeBudgetInDebugRunEnabled = dontConsumeBudgetInDebugRunEnabled;
+    }
+
+    private void reset() {
+      dontConsumeBudgetInDebugRunEnabled = false;
+    }
+  }
+
   public static Job generateJob(
       String id, Optional<String> attributionReportTo, Optional<String> reportingSite) {
     if (attributionReportTo.isEmpty() && reportingSite.isEmpty()) {
@@ -2250,6 +2339,7 @@ public class ConcurrentAggregationProcessorTest {
   private static final class TestEnv extends AbstractModule {
 
     OutputDomainProcessorHelper helper = new OutputDomainProcessorHelper();
+    FeatureFlags flags = new FeatureFlags();
 
     @Override
     protected void configure() {
@@ -2309,6 +2399,7 @@ public class ConcurrentAggregationProcessorTest {
 
       bind(AvroResultsSchemaSupplier.class).toInstance(new AvroResultsSchemaSupplier());
       bind(AvroDebugResultsSchemaSupplier.class).toInstance(new AvroDebugResultsSchemaSupplier());
+      bind(FeatureFlags.class).toInstance(flags);
     }
 
     @Provides
@@ -2405,6 +2496,12 @@ public class ConcurrentAggregationProcessorTest {
     @CustomForkJoinThreadPool
     ListeningExecutorService provideCustomForkJoinThreadPool() {
       return newDirectExecutorService();
+    }
+
+    @Provides
+    @DontConsumeBudgetInDebugRunEnabled
+    boolean provideDontConsumeBudgetInDebugRunEnabled() {
+      return flags.isDontConsumeBudgetInDebugRunEnabled();
     }
   }
 }
