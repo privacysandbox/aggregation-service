@@ -45,9 +45,13 @@ fi
 if ! [[ -d ${CONTROL_PLANE_REPO_DIR} ]]; then
   git clone https://github.com/privacysandbox/coordinator-services-and-shared-libraries "${CONTROL_PLANE_REPO_DIR}" || true
 fi
-git -C "${CONTROL_PLANE_REPO_DIR}" checkout "${CONTROL_PLANE_SHARED_LIBRARIES_VERSION}"
+# restore changes in control plane repo
+git -C "${CONTROL_PLANE_REPO_DIR}" restore .
+# update control plane repo
+git -C "${CONTROL_PLANE_REPO_DIR}" fetch origin "${CONTROL_PLANE_SHARED_LIBRARIES_VERSION}"
+git -C "${CONTROL_PLANE_REPO_DIR}" checkout FETCH_HEAD
 git -C "${CONTROL_PLANE_REPO_DIR}" clean -df
-git -C "${CONTROL_PLANE_REPO_DIR}" reset --hard HEAD
+# patch control plane repo if any patches exist
 for patch in ${WORKSPACE_DIR}/build_defs/shared_libraries/*.patch; do
   git -C "${CONTROL_PLANE_REPO_DIR}" apply --reject --whitespace=fix "${patch}"
 done

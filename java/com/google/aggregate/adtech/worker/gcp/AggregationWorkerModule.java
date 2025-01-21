@@ -60,6 +60,7 @@ import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
+import com.google.aggregate.util.ClientVersionUtils;
 import com.google.cloud.MetadataConfig;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -72,6 +73,7 @@ import com.google.inject.TypeLiteral;
 import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
 import com.google.privacysandbox.otel.Annotations.GrpcOtelCollectorEndpoint;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.Annotations.GcsEndpointUrl;
+import com.google.scp.operator.cpio.configclient.Annotations.TrustedServicesClientVersion;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorARoleArn;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorBRoleArn;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorKmsArnParameter;
@@ -198,7 +200,6 @@ public final class AggregationWorkerModule extends AbstractModule {
         bind(String.class).annotatedWith(ScaleInHookParameter.class).toInstance("");
         break;
       case AWS:
-        break;
       case GCP:
         break;
     }
@@ -282,6 +283,9 @@ public final class AggregationWorkerModule extends AbstractModule {
       bind(String.class)
           .annotatedWith(CoordinatorBPrivacyBudgetServiceAuthEndpoint.class)
           .toInstance(args.getCoordinatorBPrivacyBudgetingServiceAuthEndpoint());
+      bind(String.class)
+          .annotatedWith(TrustedServicesClientVersion.class)
+          .toInstance(ClientVersionUtils.getServiceClientVersion());
       install(args.getPbsclientSelector().getDistributedPrivacyBudgetClientModule());
     }
     install(new PrivacyBudgetKeyGeneratorModule());

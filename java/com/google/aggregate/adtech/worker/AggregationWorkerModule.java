@@ -60,6 +60,7 @@ import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBrid
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.shared.mapper.TimeObjectMapper;
+import com.google.aggregate.util.ClientVersionUtils;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -76,6 +77,7 @@ import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientMod
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3UsePartialRequests;
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorARegionBindingOverride;
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorBRegionBindingOverride;
+import com.google.scp.operator.cpio.configclient.Annotations.TrustedServicesClientVersion;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorARoleArn;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorBRoleArn;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorKmsArnParameter;
@@ -345,6 +347,9 @@ public final class AggregationWorkerModule extends AbstractModule {
       bind(String.class)
           .annotatedWith(CoordinatorBPrivacyBudgetServiceAuthEndpoint.class)
           .toInstance(args.getCoordinatorBPrivacyBudgetServiceAuthEndpoint());
+      bind(String.class)
+          .annotatedWith(TrustedServicesClientVersion.class)
+          .toInstance(ClientVersionUtils.getServiceClientVersion());
       install(new AwsPbsClientModule());
     }
     install(new PrivacyBudgetKeyGeneratorModule());
@@ -455,7 +460,7 @@ public final class AggregationWorkerModule extends AbstractModule {
     if (!Strings.isNullOrEmpty(args.getFilteringIds())) {
       jobParametersBuilder.put(JobUtils.JOB_PARAM_FILTERING_IDS, args.getFilteringIds());
     }
-    return () -> (jobParametersBuilder.build());
+    return jobParametersBuilder::build;
   }
 
   @Provides

@@ -70,6 +70,9 @@ POST
     // "folder1/shard_domain.avro" and "folder1/shard/folder2/domain.avro".
     // It is recommended to keep the number of shards between the number of CPUs
     // available to the enclave and 1000.
+    // Only keys in the domain file are written to the summary report.
+    // More details on domain keys can be found here:
+    // https://developers.google.com/privacy-sandbox/private-advertising/aggregation-service/privacy-protection-report-strategy#pre-declared_aggregation_keys.
     "output_domain_blob_prefix": <string>,
 
     // Domain file bucket.
@@ -378,7 +381,9 @@ aggregatable reports using collected data.
 ```
 
 Additionally a domain file is needed to declare all expected aggregation keys for aggregating the
-aggregatable reports (keys not listed in the domain file won't be aggregated)
+aggregatable reports (keys not listed in the domain file won't be aggregated). More details on
+domain keys can be found
+[here](https://developers.google.com/privacy-sandbox/private-advertising/aggregation-service/privacy-protection-report-strategy#pre-declared_aggregation_keys).
 
 #### [output_domain.avsc](/protocol/avro/output_domain.avsc)
 

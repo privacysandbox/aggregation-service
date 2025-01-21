@@ -196,6 +196,32 @@ public class AwsWorkerContinuousTestHelper {
         .build();
   }
 
+  public static CreateJobRequest createJobRequestWithMultipleInputPrefixes(
+      String inputDataBlobBucket,
+      List<String> inputDataBlobPrefixes,
+      String outputDataBlobBucket,
+      String outputDataBlobPrefix,
+      String jobId,
+      Optional<String> outputDomainBucketName,
+      Optional<String> outputDomainPrefix) {
+    ImmutableMap<String, String> jobParams =
+        getJobParamsWithReportingSite(
+            false,
+            outputDomainBucketName,
+            outputDomainPrefix,
+            /* reportErrorThresholdPercentage= */ 100,
+            /* inputReportCount= */ Optional.empty());
+    return CreateJobRequest.newBuilder()
+        .setJobRequestId(jobId)
+        .setInputDataBucketName(inputDataBlobBucket)
+        .addAllInputDataBlobPrefixes(inputDataBlobPrefixes)
+        .setOutputDataBucketName(outputDataBlobBucket)
+        .setOutputDataBlobPrefix(outputDataBlobPrefix)
+        .setPostbackUrl("fizz.com/api/buzz")
+        .putAllJobParameters(jobParams)
+        .build();
+  }
+
   public static CreateJobRequest createJobRequestWithAttributionReportTo(
       String inputDataBlobBucket,
       String inputDataBlobPrefix,

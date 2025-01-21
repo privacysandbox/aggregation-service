@@ -160,12 +160,13 @@ public abstract class OutputDomainProcessor {
         .flatMap(
             dataLocation ->
                 processOutputDomainShard(
-                    dataLocation,
-                    aggregationEngine,
-                    noisedAggregationRunner,
-                    requestScopedNoiseApplier,
-                    domainKeySet,
-                    debugRun),
+                        dataLocation,
+                        aggregationEngine,
+                        noisedAggregationRunner,
+                        requestScopedNoiseApplier,
+                        domainKeySet,
+                        debugRun)
+                    .subscribeOn(Schedulers.from(nonBlockingThreadPool)),
             /* delayErrors= */ false,
             NUM_READ_THREADS,
             MAX_DOMAIN_READ_BUFFER_SIZE)
@@ -174,11 +175,12 @@ public abstract class OutputDomainProcessor {
         .flatMap(
             summaryFacts ->
                 processDomainSummaryFacts(
-                    ImmutableList.copyOf(summaryFacts),
-                    shardCounter.addAndGet(1),
-                    debugRun,
-                    summaryReportAvros,
-                    debugSummaryReportAvros),
+                        ImmutableList.copyOf(summaryFacts),
+                        shardCounter.addAndGet(1),
+                        debugRun,
+                        summaryReportAvros,
+                        debugSummaryReportAvros)
+                    .subscribeOn(Schedulers.from(blockingThreadPool)),
             NUM_PROCESS_THREADS)
         .blockingSubscribe();
 
@@ -206,17 +208,19 @@ public abstract class OutputDomainProcessor {
                 }
                 return reportOnlyFact;
               })
+          .subscribeOn(Schedulers.from(nonBlockingThreadPool))
           .buffer(OutputShardFileHelper.getMaxRecordsPerShard())
           .flatMap(
               summaryFacts ->
                   processReportOnlyFacts(
-                      ImmutableList.copyOf(summaryFacts),
-                      shardCounter.addAndGet(1),
-                      debugRun,
-                      debugPrivacyEpsilon,
-                      noisedAggregationRunner,
-                      summaryReportAvros,
-                      debugSummaryReportAvros))
+                          ImmutableList.copyOf(summaryFacts),
+                          shardCounter.addAndGet(1),
+                          debugRun,
+                          debugPrivacyEpsilon,
+                          noisedAggregationRunner,
+                          summaryReportAvros,
+                          debugSummaryReportAvros)
+                      .subscribeOn(Schedulers.from(blockingThreadPool)))
           .blockingSubscribe();
     }
 
@@ -303,8 +307,7 @@ public abstract class OutputDomainProcessor {
               aggregationEngine.remove(domainKey);
 
               return aggregatedFact;
-            })
-        .subscribeOn(Schedulers.from(blockingThreadPool));
+            });
   }
 
   /**

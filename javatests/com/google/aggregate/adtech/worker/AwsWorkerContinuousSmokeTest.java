@@ -46,6 +46,7 @@ import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.Crea
 import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.Before;
@@ -247,7 +248,8 @@ public class AwsWorkerContinuousSmokeTest {
    * will fail and come up in the error counts.
    */
   @Test
-  public void createJobE2ETestWithSomeReportsHavingDifferentReportingOrigins() throws Exception {
+  public void createJobE2ETestWithSomeReportsHavingReportingOriginsFromDifferentSites()
+      throws Exception {
     var inputKey =
         String.format(
             "%s/%s/test-inputs/different-site/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -291,6 +293,54 @@ public class AwsWorkerContinuousSmokeTest {
                 .get("category")
                 .asText())
         .isEqualTo(ErrorCounter.REPORTING_SITE_MISMATCH.name());
+
+    // Read output avro from s3.
+    ImmutableList<AggregatedFact> aggregatedFacts =
+        readResultsFromS3(
+            s3BlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            getOutputFileName(outputKey));
+
+    assertThat(aggregatedFacts.size()).isGreaterThan(10);
+  }
+
+  /**
+   * This test includes sending a job with reports residing under multiple different prefixes in the
+   * blob storage. The reports are split under 3 prefixes and those prefixes are provided as a list
+   * to CreateJob API.
+   */
+  @Test
+  public void createJobE2ETestWithMultipleInputDataPrefixes() throws Exception {
+    var inputKey1 =
+        String.format("%s/%s/test-inputs/prefix-1/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var inputKey2 =
+        String.format("%s/%s/test-inputs/prefix-2/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var inputKey3 =
+        String.format("%s/%s/test-inputs/prefix-3/report_shard_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var domainKey =
+        String.format(
+            "%s/%s/test-inputs/10k_test_domain.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var outputKey =
+        String.format(
+            "%s/%s/test-outputs/10k_test_output_multiple_input_prefixes.avro",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        AwsWorkerContinuousTestHelper.createJobRequestWithMultipleInputPrefixes(
+            getTestDataBucket(),
+            List.of(inputKey1, inputKey2, inputKey3),
+            getTestDataBucket(),
+            outputKey,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
+            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
+            /* outputDomainPrefix= */ Optional.of(domainKey));
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
+    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
+        .isTrue();
 
     // Read output avro from s3.
     ImmutableList<AggregatedFact> aggregatedFacts =

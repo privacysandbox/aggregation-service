@@ -87,12 +87,14 @@ import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobSto
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.model.JobResult;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
+import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.AccessControlException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -224,16 +226,20 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
 
     @Var ImmutableList<DataLocation> dataShards;
     @Var ImmutableList<DataLocation> outputDomainShards;
+    RequestInfo requestInfo = job.requestInfo();
     try {
-      DataLocation reportsLocation =
-          BlobStorageClient.getDataLocation(
-              job.requestInfo().getInputDataBucketName(),
-              job.requestInfo().getInputDataBlobPrefix());
-      dataShards = findShards(reportsLocation);
+      List<String> inputDataBlobPrefixes;
+      if (!requestInfo.getInputDataBlobPrefixesList().isEmpty()) {
+        inputDataBlobPrefixes = requestInfo.getInputDataBlobPrefixesList();
+      } else {
+        inputDataBlobPrefixes = ImmutableList.of(requestInfo.getInputDataBlobPrefix());
+      }
+      dataShards = findShards(requestInfo.getInputDataBucketName(), inputDataBlobPrefixes);
 
       if (dataShards.isEmpty()) {
         throw new AggregationJobProcessException(
-            INPUT_DATA_READ_FAILED, "No report shards found for location: " + reportsLocation);
+            INPUT_DATA_READ_FAILED,
+            "No report shards found for location: " + inputDataBlobPrefixes);
       }
 
       outputDomainShards =
@@ -447,8 +453,6 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     try {
       try (Timer t =
           oTelConfiguration.createDebugTimerStarted("pbs_latency", toJobKeyString(job.jobKey()))) {
-        final String reportingOrigin =
-            job.requestInfo().getJobParametersMap().get(JOB_PARAM_ATTRIBUTION_REPORT_TO);
         missingPrivacyBudgetUnits =
             privacyBudgetingServiceBridge.consumePrivacyBudget(budgetsToConsume, claimedIdentity);
       }
@@ -489,26 +493,31 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     }
   }
 
-  private ImmutableList<DataLocation> findShards(DataLocation reportsLocation) {
-    try {
-      ImmutableList<String> shardBlobs = blobStorageClient.listBlobs(reportsLocation);
+  private ImmutableList<DataLocation> findShards(String bucket, List<String> inputPrefixes) {
+    List<String> shardBlobs = new LinkedList<>();
+    inputPrefixes.parallelStream()
+        .map(inputPrefix -> BlobStorageClient.getDataLocation(bucket, inputPrefix))
+        .map(
+            dataLocation -> {
+              try {
+                return blobStorageClient.listBlobs(dataLocation);
+              } catch (BlobStorageClientException e) {
+                throw new ConcurrentShardReadException(e);
+              }
+            })
+        .forEach(shardBlobs::addAll);
 
-      logger.info("Reports shards detected by blob storage client: " + shardBlobs);
+    logger.info("Reports shards detected by blob storage client: " + shardBlobs);
 
-      BlobStoreDataLocation blobsPrefixLocation = reportsLocation.blobStoreDataLocation();
+    ImmutableList<DataLocation> shards =
+        shardBlobs.stream()
+            .map(shard -> BlobStoreDataLocation.create(bucket, shard))
+            .map(DataLocation::ofBlobStoreDataLocation)
+            .collect(toImmutableList());
 
-      ImmutableList<DataLocation> shards =
-          shardBlobs.stream()
-              .map(shard -> BlobStoreDataLocation.create(blobsPrefixLocation.bucket(), shard))
-              .map(DataLocation::ofBlobStoreDataLocation)
-              .collect(toImmutableList());
+    logger.info("Reports shards to be used: " + shards);
 
-      logger.info("Reports shards to be used: " + shards);
-
-      return shards;
-    } catch (BlobStorageClientException e) {
-      throw new ConcurrentShardReadException(e);
-    }
+    return shards;
   }
 
   private Flowable<EncryptedReport> readData(DataLocation shard) {

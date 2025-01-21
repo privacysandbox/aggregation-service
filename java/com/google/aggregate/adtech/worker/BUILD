@@ -205,6 +205,7 @@ java_library(
         "//java/com/google/aggregate/privacy/noise/testing",
         "//java/com/google/aggregate/shared",
         "//java/com/google/aggregate/shared/mapper",
+        "//java/com/google/aggregate/util",
         "//java/external:aws_apache_http",
         "//java/external:aws_http_client_spi",
         "//java/external:aws_regions",

@@ -51,6 +51,7 @@ java_library(
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/com/google/aggregate/privacy/noise/testing",
         "//java/com/google/aggregate/shared/mapper",
+        "//java/com/google/aggregate/util",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
         "//java/external:clients_blobstorageclient_gcp",
