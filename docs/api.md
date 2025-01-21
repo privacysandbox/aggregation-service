@@ -57,6 +57,9 @@ POST
   // If "output_data_blob_prefix" includes the Avro file extension (.avro),
   // the output shard names will also include the Avro file extension at
   // the end.
+  // If the Aggregation job returns the error code PRIVACY_BUDGET_EXHAUSTED,
+  // a JSON file with debugging information will be written in
+  // output_data_bucket_name at the output_data_blob_prefix.
   "output_data_blob_prefix": <string>,
 
   // Storage bucket for output data.
