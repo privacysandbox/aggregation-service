@@ -76,7 +76,6 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
   private final String instanceID;
   private static final String METRIC_NAMESPACE = "scp/worker";
   private static final String JOB_ERROR_METRIC_NAME = "WorkerJobError";
-  private static final String JOB_COMPLETION_METRIC_NAME = "WorkerJobCompletion";
 
   @Inject
   WorkerPullWorkService(
@@ -157,7 +156,6 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
           jobResult = jobProcessor.process(currentJob);
         }
         jobClient.markJobCompleted(jobResult);
-        recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
       } catch (AggregationJobProcessException e) {
         processAggregationJobProcessException(e, jobClient, job.get());
       } catch (Exception e) {
@@ -207,7 +205,6 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     try {
       JobResult jobResult = jobResultHelper.createJobResultOnException(job, e);
       jobClient.markJobCompleted(jobResult);
-      recordWorkerJobMetric(JOB_COMPLETION_METRIC_NAME, "Success");
     } catch (Exception ex) {
       logger.error("Exception while processing AggregationJobProcessException :", ex.getMessage());
       processException(ex, jobClient, job);

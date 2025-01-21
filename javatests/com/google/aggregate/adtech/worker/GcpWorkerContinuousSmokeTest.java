@@ -51,12 +51,13 @@ import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.Crea
 import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
@@ -65,6 +66,7 @@ import org.junit.runners.JUnit4;
 public final class GcpWorkerContinuousSmokeTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+  @Rule public final TestName name = new TestName();
 
   @Inject GcsBlobStorageClient gcsBlobStorageClient;
   @Inject AvroResultsFileReader avroResultsFileReader;
@@ -374,7 +376,8 @@ public final class GcpWorkerContinuousSmokeTest {
    * will fail and come up in the error counts.
    */
   @Test
-  public void createJobE2ETestWithSomeReportsHavingDifferentReportingOrigins() throws Exception {
+  public void createJobE2ETestWithSomeReportsHavingReportingOriginsFromDifferentSites()
+      throws Exception {
     var inputDataPrefix = String.format("%s/test-inputs/different-site/", KOKORO_BUILD_ID);
     var domainDataPrefix =
         String.format(
@@ -422,6 +425,48 @@ public final class GcpWorkerContinuousSmokeTest {
             getTestDataBucket(),
             outputDataPrefix + OUTPUT_DATA_PREFIX_NAME);
     assertThat(aggregatedFacts.size()).isAtLeast(5000);
+  }
+
+  /**
+   * This test includes sending a job with reports residing under multiple different prefixes in the
+   * blob storage. The reports are split under 3 prefixes and those prefixes are provided as a list
+   * to CreateJob API.
+   */
+  @Test
+  public void createJobE2ETestWithMultipleInputDataPrefixes() throws Exception {
+    var inputKey1 = String.format("%s/test-inputs/prefix-1/", KOKORO_BUILD_ID);
+    var inputKey2 = String.format("%s/test-inputs/prefix-2/", KOKORO_BUILD_ID);
+    var inputKey3 = String.format("%s/test-inputs/prefix-3/report_shard_2.avro", KOKORO_BUILD_ID);
+    var domainKey = String.format("%s/test-inputs/10k_test_domain.avro", KOKORO_BUILD_ID);
+    var outputDataPrefix =
+        String.format(
+            "%s/test-outputs/10k_test_output_multiple_input_prefixes.avro.result", KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        SmokeTestBase.createJobRequestWithMultipleInputPrefixes(
+            getTestDataBucket(),
+            List.of(inputKey1, inputKey2, inputKey3),
+            getTestDataBucket(),
+            outputDataPrefix,
+            /* jobId= */ getClass().getSimpleName() + "::" + name.getMethodName(),
+            /* outputDomainBucketName= */ Optional.of(getTestDataBucket()),
+            /* outputDomainPrefix= */ Optional.of(domainKey));
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
+    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
+        .isTrue();
+
+    // Read output avro from s3.
+    ImmutableList<AggregatedFact> aggregatedFacts =
+        readResultsFromCloud(
+            gcsBlobStorageClient,
+            avroResultsFileReader,
+            getTestDataBucket(),
+            outputDataPrefix + OUTPUT_DATA_PREFIX_NAME);
+
+    assertThat(aggregatedFacts.size()).isGreaterThan(10);
   }
 
   /*
@@ -545,7 +590,7 @@ public final class GcpWorkerContinuousSmokeTest {
             ImpersonatedCredentials.newBuilder()
                 .setSourceCredentials(GoogleCredentials.getApplicationDefault())
                 .setTargetPrincipal(getTestServiceAccount())
-                .setScopes(Arrays.asList("https://www.googleapis.com/auth/devstorage.read_write"))
+                .setScopes(List.of("https://www.googleapis.com/auth/devstorage.read_write"))
                 .build();
       } catch (IOException e) {
         throw new RuntimeException("Invalid credentials", e);

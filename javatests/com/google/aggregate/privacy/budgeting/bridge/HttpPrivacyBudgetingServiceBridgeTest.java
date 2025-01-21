@@ -22,7 +22,6 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.acai.Acai;
 import com.google.acai.TestScoped;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
-import com.google.aggregate.util.ClientVersionUtils;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
@@ -125,7 +124,6 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                     ImmutableList.of(ORIGIN_2_UNITS, ORIGIN_1_UNITS))
                 .claimedIdentity(CLAIMED_IDENTITY)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
-                .trustedServicesClientVersion(ClientVersionUtils.getServiceClientVersion())
                 .build());
   }
 
@@ -146,7 +144,6 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                 .reportingOriginToPrivacyBudgetUnitsList(ImmutableList.of(ORIGIN_1_UNITS))
                 .claimedIdentity(CLAIMED_IDENTITY)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
-                .trustedServicesClientVersion(ClientVersionUtils.getServiceClientVersion())
                 .build());
   }
 
@@ -168,7 +165,6 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                     ImmutableList.of(ORIGIN_1_UNITS, ORIGIN_2_UNITS))
                 .claimedIdentity(CLAIMED_IDENTITY)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
-                .trustedServicesClientVersion(ClientVersionUtils.getServiceClientVersion())
                 .build());
   }
 

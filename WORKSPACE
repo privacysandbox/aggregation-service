@@ -24,7 +24,7 @@ PROTOBUF_CORE_VERSION = "3.25.2"
 
 PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
 
-COORDINATOR_VERSION = "v1.13.0-rc01"  # version updated on 2024-12-06
+COORDINATOR_VERSION = "v1.14.0-rc01"  # version updated on 2024-12-11
 
 JACKSON_VERSION = "2.16.1"
 
@@ -79,8 +79,7 @@ git_repository(
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/shared_libraries:coordinator.patch",
-        "//build_defs/shared_libraries:rules_pkg_build_fix.patch",
-        "//build_defs/shared_libraries:v1.13-ebs_size_increase.patch",
+        "//build_defs/shared_libraries:rules_boost_mirror.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",
@@ -279,10 +278,10 @@ protobuf_deps()
 
 http_archive(
     name = "rules_pkg",
-    sha256 = "a89e203d3cf264e564fcb96b6e06dd70bc0557356eb48400ce4b5d97c2c3720d",
+    sha256 = "d20c951960ed77cb7b341c2a59488534e494d5ad1d30c4818c736d57772a9fef",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
-        "https://github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/1.0.1/rules_pkg-1.0.1.tar.gz",
+        "https://github.com/bazelbuild/rules_pkg/releases/download/1.0.1/rules_pkg-1.0.1.tar.gz",
     ],
 )
 

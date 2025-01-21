@@ -221,17 +221,26 @@ public class ConcurrentAggregationProcessorTest {
   private Path outputDomainDirectory;
   private Path reportsDirectory;
   private Path invalidReportsDirectory;
+  private Path reportsDirectoryWithChildPaths;
+  private Path childPath1;
+  private Path childPath2;
+  private Path childPath3;
   private Job ctx;
   private Job ctxInvalidReport;
+  private Job ctxWithPrefixList;
   private JobResult expectedJobResult;
   private ResultInfo.Builder resultInfoBuilder;
   private ImmutableList<EncryptedReport> encryptedReports1;
   private ImmutableList<EncryptedReport> encryptedReports2;
+  private ImmutableList<EncryptedReport> encryptedReports3;
+  private ImmutableList<EncryptedReport> encryptedReports4;
+  private ImmutableList<EncryptedReport> encryptedReports5;
   private final String reportId1 = String.valueOf(UUID.randomUUID());
   private final String reportId2 = String.valueOf(UUID.randomUUID());
   private final String reportId3 = String.valueOf(UUID.randomUUID());
   private final String reportId4 = String.valueOf(UUID.randomUUID());
   private final String reportId5 = String.valueOf(UUID.randomUUID());
+  private final String reportId6 = String.valueOf(UUID.randomUUID());
 
   // Run all tests with streamingOutputDomain enabled and disabled.
   @TestParameter boolean streamingOutputDomainTestParam;
@@ -295,10 +304,19 @@ public class ConcurrentAggregationProcessorTest {
     outputDomainDirectory = testWorkingDir.getRoot().toPath().resolve("output_domain");
     reportsDirectory = testWorkingDir.getRoot().toPath().resolve("reports");
     invalidReportsDirectory = testWorkingDir.getRoot().toPath().resolve("invalid-reports");
+    reportsDirectoryWithChildPaths =
+        testWorkingDir.getRoot().toPath().resolve("dir-with-child-paths");
+    childPath1 = reportsDirectoryWithChildPaths.resolve("child-path-1");
+    childPath2 = reportsDirectoryWithChildPaths.resolve("child-path-2");
+    childPath3 = reportsDirectoryWithChildPaths.resolve("child-path-3");
 
     Files.createDirectory(outputDomainDirectory);
     Files.createDirectory(reportsDirectory);
     Files.createDirectory(invalidReportsDirectory);
+    Files.createDirectory(reportsDirectoryWithChildPaths);
+    Files.createDirectory(childPath1);
+    Files.createDirectory(childPath2);
+    Files.createDirectory(childPath3);
 
     ctx = generateJob("foo", Optional.of("https://example.foo.com"), Optional.empty());
     ctx =
@@ -323,6 +341,21 @@ public class ConcurrentAggregationProcessorTest {
                     ctxInvalidReport.requestInfo(), invalidReportsDirectory))
             .build();
 
+    // Only add child-path 1 and child-path-2 to prefix list. Tests will indirectly assert that
+    // child-path-3 content is not read.
+    ctxWithPrefixList =
+        generateJob("foo", Optional.of("https://example.foo.com"), Optional.empty());
+    ImmutableList<String> inputPrefixList =
+        ImmutableList.of(childPath1.getFileName().toString(), childPath2.getFileName().toString());
+    ctxWithPrefixList =
+        ctxWithPrefixList.toBuilder()
+            .setRequestInfo(
+                getRequestInfoWithPrefixList(
+                    ctxWithPrefixList.requestInfo(),
+                    reportsDirectoryWithChildPaths,
+                    inputPrefixList))
+            .build();
+
     EncryptedReport firstReport = generateEncryptedReport(1, reportId1);
     EncryptedReport secondReport = generateEncryptedReport(2, reportId2);
 
@@ -330,6 +363,9 @@ public class ConcurrentAggregationProcessorTest {
     EncryptedReport thirdReport = generateEncryptedReport(1, reportId3);
     // fourthReport is same as secondReport but has new report id
     EncryptedReport fourthReport = generateEncryptedReport(2, reportId4);
+
+    EncryptedReport fifthReport = generateEncryptedReport(3, reportId5);
+    EncryptedReport sixthReport = generateEncryptedReport(4, reportId6);
 
     encryptedReports1 = ImmutableList.of(firstReport, secondReport);
     encryptedReports2 = ImmutableList.of(thirdReport, fourthReport);
@@ -342,6 +378,13 @@ public class ConcurrentAggregationProcessorTest {
     writeReports(
         invalidReportsDirectory.resolve("invalid_reports.avro"),
         ImmutableList.of(invalidEncryptedReport));
+
+    encryptedReports3 = ImmutableList.of(firstReport, secondReport);
+    encryptedReports4 = ImmutableList.of(fifthReport, sixthReport);
+    encryptedReports5 = ImmutableList.of(thirdReport, fourthReport);
+    writeReports(childPath1.resolve("reports_1.avro"), encryptedReports3);
+    writeReports(childPath2.resolve("reports_2.avro"), encryptedReports4);
+    writeReports(childPath3.resolve("reports_3.avro"), encryptedReports5);
   }
 
   @Test
@@ -1045,6 +1088,60 @@ public class ConcurrentAggregationProcessorTest {
 
     assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
     assertThat(ex.getMessage()).contains("Exception while reading domain input data.");
+  }
+
+  @Test
+  public void aggregate_withInputPrefixList() throws Exception {
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(10));
+
+    JobResult jobResultProcessor = processor.get().process(ctxWithPrefixList);
+
+    // Only child-path 1 and child-path-2 have been added to the prefix list. Tests should
+    // indirectly assert that
+    // child-path-3 content was not read.
+    assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+    ImmutableList<AggregatedFact> expectedFacts =
+        ImmutableList.of(
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(1), /* metric= */ 11, /* unnoisedMetric= */ 1L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(2), /* metric= */ 14, /* unnoisedMetric= */ 4L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(3), /* metric= */ 19, /* unnoisedMetric= */ 9L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(4), /* metric= */ 26, /* unnoisedMetric= */ 16L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+        .containsExactlyElementsIn(expectedFacts);
+  }
+
+  @Test
+  public void aggregate_withInputPrefixList_readFailure_throwsException() throws Exception {
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(10));
+    ImmutableList<String> inputPrefixList =
+        ImmutableList.of(
+            childPath1.getFileName().toString(),
+            "/fake/non-existent/path",
+            childPath2.getFileName().toString());
+    ctxWithPrefixList =
+        ctxWithPrefixList.toBuilder()
+            .setRequestInfo(
+                getRequestInfoWithPrefixList(
+                    ctxWithPrefixList.requestInfo(),
+                    reportsDirectoryWithChildPaths,
+                    inputPrefixList))
+            .build();
+
+    AggregationJobProcessException ex =
+        assertThrows(
+            AggregationJobProcessException.class, () -> processor.get().process(ctxWithPrefixList));
+
+    assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
+    assertThat(ex.getMessage()).contains("Exception while reading reports input data.");
+    assertThat(ex.getCause().getMessage()).contains("BlobStorageClientException");
   }
 
   @Test
@@ -2102,6 +2199,19 @@ public class ConcurrentAggregationProcessorTest {
         // Simulating shards of input.
         .setInputDataBucketName(inputReportDirectory.toAbsolutePath().toString())
         .setInputDataBlobPrefix("")
+        .build();
+  }
+
+  private RequestInfo getRequestInfoWithPrefixList(
+      RequestInfo requestInfo, Path inputReportDirectory, ImmutableList<String> inputPrefixList) {
+    Map<String, String> jobParameters = new HashMap<>(requestInfo.getJobParametersMap());
+    jobParameters.put("report_error_threshold_percentage", "100");
+    return requestInfo.toBuilder()
+        .putAllJobParameters(jobParameters)
+        // Simulating shards of input.
+        .setInputDataBucketName(inputReportDirectory.toAbsolutePath().toString())
+        .setInputDataBlobPrefix("")
+        .addAllInputDataBlobPrefixes(inputPrefixList)
         .build();
   }
 

@@ -1,5 +1,14 @@
 # Changelog
 
+# [2.11.0](https://github.com/privacysandbox/aggregation-service/compare/v2.10.0...v2.11.0) (2025-01-21)
+
+-   Added support for a new optional field "input_data_blob_prefixes" in CreateJob API. This field
+    accepts a list of input prefixes which point to the locations where input reports are to be read
+    from.
+-   Removed the defunct WorkerJobCompletion metric that was not actively managed.
+-   Upgraded control plane shared library dependency to
+    [1.14-rc01](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.14.0-rc01).
+
 ## [2.10.0](https://github.com/privacysandbox/aggregation-service/compare/v2.9.1...v2.10.0) (2024-12-08)
 
 -   Updated debug mode to no longer consume budget.
