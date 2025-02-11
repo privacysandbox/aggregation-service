@@ -94,7 +94,8 @@ import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.AccessControlException;
-import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -494,7 +495,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   }
 
   private ImmutableList<DataLocation> findShards(String bucket, List<String> inputPrefixes) {
-    List<String> shardBlobs = new LinkedList<>();
+    List<String> shardBlobs = Collections.synchronizedList(new ArrayList<>(inputPrefixes.size()));
     inputPrefixes.parallelStream()
         .map(inputPrefix -> BlobStorageClient.getDataLocation(bucket, inputPrefix))
         .map(
