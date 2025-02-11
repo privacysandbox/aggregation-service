@@ -83,6 +83,8 @@ git_repository(
         "//build_defs/shared_libraries:rules_pkg_build_fix.patch",
         "//build_defs/shared_libraries:v1.13-adtech-setup-premission.patch",
         "//build_defs/shared_libraries:v1.13-ebs_size_increase.patch",
+        "//build_defs/shared_libraries:rules_boost_mirror.patch",
+        "//build_defs/shared_libraries:upgrade_glibc.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",
