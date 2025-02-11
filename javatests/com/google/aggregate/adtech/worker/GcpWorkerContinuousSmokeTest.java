@@ -85,7 +85,7 @@ public final class GcpWorkerContinuousSmokeTest {
   the size of summary report facts.
    */
   @Test
-  public void createJobE2ETest() throws Exception {
+  public void createJobE2ETestSmokeTest() throws Exception {
     String inputDataPrefix = String.format("%s/test-inputs/10k_test_input_1/", KOKORO_BUILD_ID);
     String domainDataPrefix =
         String.format("%s/test-inputs/10k_test_domain_1.avro", KOKORO_BUILD_ID);
