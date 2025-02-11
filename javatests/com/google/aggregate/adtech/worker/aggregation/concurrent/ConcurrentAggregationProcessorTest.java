@@ -178,7 +178,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1142,6 +1144,48 @@ public class ConcurrentAggregationProcessorTest {
     assertThat(ex.getCode()).isEqualTo(INPUT_DATA_READ_FAILED);
     assertThat(ex.getMessage()).contains("Exception while reading reports input data.");
     assertThat(ex.getCause().getMessage()).contains("BlobStorageClientException");
+  }
+
+  @Test
+  public void aggregate_withInputPrefixList_excessiveInputPrefixes() throws Exception {
+    fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(10));
+    List<String> excessiveInputPrefixes = new LinkedList<>();
+    Collections.nCopies(
+            100,
+            ImmutableList.of(
+                childPath1.getFileName().toString(), childPath2.getFileName().toString()))
+        .forEach(excessiveInputPrefixes::addAll);
+    ImmutableList<String> inputPrefixList = ImmutableList.copyOf(excessiveInputPrefixes);
+    ctxWithPrefixList =
+        ctxWithPrefixList.toBuilder()
+            .setRequestInfo(
+                getRequestInfoWithPrefixList(
+                    ctxWithPrefixList.requestInfo(),
+                    reportsDirectoryWithChildPaths,
+                    inputPrefixList))
+            .build();
+
+    JobResult jobResultProcessor = processor.get().process(ctxWithPrefixList);
+    // Only child-path 1 and child-path-2 have been added to the prefix list. Tests should
+    // indirectly assert that
+    // child-path-3 content was not read.
+    assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
+    ImmutableList<AggregatedFact> expectedFacts =
+            ImmutableList.of(
+                    AggregatedFact.create(
+                            /* bucket= */ createBucketFromInt(1), /* metric= */ 11, /* unnoisedMetric= */ 1L),
+                    AggregatedFact.create(
+                            /* bucket= */ createBucketFromInt(2), /* metric= */ 14, /* unnoisedMetric= */ 4L),
+                    AggregatedFact.create(
+                            /* bucket= */ createBucketFromInt(3), /* metric= */ 19, /* unnoisedMetric= */ 9L),
+                    AggregatedFact.create(
+                            /* bucket= */ createBucketFromInt(4), /* metric= */ 26, /* unnoisedMetric= */ 16L));
+    if (streamingOutputDomainTestParam) {
+      expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
+    }
+
+    assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
+            .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test

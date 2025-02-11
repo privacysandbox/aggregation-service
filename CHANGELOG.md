@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.11.1](https://github.com/privacysandbox/aggregation-service/compare/v2.11.0...v2.11.1) (2025-02-05)
+
+-   Updated dependencies to address security vulnerabilities.
+-   Added a fix: Made the input shards lookup operation thread-safe to allow for parallel lookup
+    across multiple input prefix paths.
+
 # [2.11.0](https://github.com/privacysandbox/aggregation-service/compare/v2.10.0...v2.11.0) (2025-01-21)
 
 -   Added support for a new optional field "input_data_blob_prefixes" in CreateJob API. This field
