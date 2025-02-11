@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.10.1](https://github.com/privacysandbox/aggregation-service/compare/v2.10.0...v2.10.1) (2025-02-05)
+
+-   Updated dependencies to address security vulnerabilities.
+
 ## [2.10.0](https://github.com/privacysandbox/aggregation-service/compare/v2.9.1...v2.10.0) (2024-12-08)
 
 -   Updated debug mode to no longer consume budget.
@@ -36,7 +40,7 @@
 
 ## [2.7.1](https://github.com/privacysandbox/aggregation-service/compare/v2.7.0...v2.7.1) (2024-09-20)
 
--   [GCP Only] Added a version in GCP VPC serverless connector module to fix 'Invalid type
+-   [GCP Only] Added a version in GCP VPC serverless connector module to fix ' Invalid type
     specification' error.
 
 ## [2.7.0](https://github.com/privacysandbox/aggregation-service/compare/v2.6.0...v2.7.0) (2024-08-01)
@@ -429,7 +433,7 @@
 ### Changes
 
 -   The
-    [`no-duplicate`](https://github.com/WICG/attribution-reporting-api/blob/main/AGGREGATION_SERVICE_TEE.md#no-duplicates-rule)
+    [ `no-duplicate`](https://github.com/WICG/attribution-reporting-api/blob/main/AGGREGATION_SERVICE_TEE.md#no-duplicates-rule)
     rule for privacy budget is not enforced anymore but will be enforced in the future. We recommend
     you design your systems with the `no-duplicate` rule in consideration.
 -   Added support for relative paths in LocalTestingTool binary
