@@ -130,6 +130,7 @@ java_library(
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model:privacy_budget_debugging_model",
         "//java/com/google/aggregate/adtech/worker/model/serdes",
         "//java/com/google/aggregate/privacy/noise/model",
         "//java/external:clients_blobstorageclient_model",

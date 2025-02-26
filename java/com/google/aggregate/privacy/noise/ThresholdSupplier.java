@@ -18,10 +18,7 @@ package com.google.aggregate.privacy.noise;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.aggregate.privacy.noise.Annotations.Threshold;
-import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.inject.Inject;
-import java.util.function.Supplier;
 
 /**
  * Threshold Supplier computes the threshold using the privacy parameters l1sensitivity, epsilon and
@@ -30,23 +27,17 @@ import java.util.function.Supplier;
  * calculated as scale * (epsilon + ln(1/delta)). The privacy analysis is out of scope for this
  * code.
  */
-@Threshold
-public class ThresholdSupplier implements Supplier<Double> {
-
-  private final PrivacyParameters privacyParameters;
+public class ThresholdSupplier {
 
   @Inject
-  public ThresholdSupplier(Supplier<PrivacyParameters> privacyParametersSupplier) {
-    this.privacyParameters = privacyParametersSupplier.get();
-  }
+  public ThresholdSupplier() {}
 
-  @Override
-  public Double get() {
-    checkArgument(
-        privacyParameters.getDelta() > 0 && privacyParameters.getDelta() < 1,
-        "Delta should be greater than zero and less than 1");
-    double scale = privacyParameters.getL1Sensitivity() / privacyParameters.getEpsilon();
-    double tempValue = privacyParameters.getEpsilon() + Math.log(1 / privacyParameters.getDelta());
+  public Double get(JobScopedPrivacyParams privacyParams) {
+    double delta = privacyParams.laplaceDp().delta();
+    double epsilon = privacyParams.laplaceDp().epsilon();
+    checkArgument(delta > 0 && delta < 1, "Delta should be greater than zero and less than 1");
+    double scale = privacyParams.laplaceDp().l1Sensitivity() / epsilon;
+    double tempValue = epsilon + Math.log(1 / delta);
     return scale * tempValue;
   }
 }

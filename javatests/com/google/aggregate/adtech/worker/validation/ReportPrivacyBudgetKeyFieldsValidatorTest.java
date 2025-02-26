@@ -21,7 +21,6 @@ import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_RE
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_1_0;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;

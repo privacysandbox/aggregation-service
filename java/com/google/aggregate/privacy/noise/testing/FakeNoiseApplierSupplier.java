@@ -16,6 +16,7 @@
 
 package com.google.aggregate.privacy.noise.testing;
 
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams;
 import com.google.aggregate.privacy.noise.NoiseApplier;
 import com.google.auto.value.AutoValue;
 import java.util.Iterator;
@@ -47,7 +48,7 @@ public final class FakeNoiseApplierSupplier implements Supplier<NoiseApplier> {
   public abstract static class FakeNoiseApplier implements NoiseApplier {
 
     @Override
-    public Long noiseMetric(Long metric) {
+    public Long noiseMetric(Long metric, JobScopedPrivacyParams unused) {
       return metric + nextValueNoiseToAdd().get().next();
     }
 

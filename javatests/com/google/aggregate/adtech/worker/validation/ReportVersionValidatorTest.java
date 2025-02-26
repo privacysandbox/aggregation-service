@@ -20,7 +20,6 @@ import static com.google.aggregate.adtech.worker.model.ErrorCounter.UNSUPPORTED_
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.google.aggregate.adtech.worker.model.ErrorCounter;

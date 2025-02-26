@@ -19,21 +19,16 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "noise",
     srcs = [
-        "Annotations.java",
-        "DiscreteNoise.java",
         "DpNoiseApplier.java",
-        "DpNoiseParamsFactory.java",
-        "DpNoiseParamsModule.java",
         "DpNoisedAggregationModule.java",
-        "LaplaceDiscreteNoise.java",
         "NoiseApplier.java",
         "NoisedAggregationRunner.java",
         "NoisedAggregationRunnerImpl.java",
         "ThresholdSupplier.java",
-        "ThresholdSupplierModule.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [
+        ":params",
         "//java/com/google/aggregate/adtech/worker:annotations",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/privacy/noise/model",
@@ -45,5 +40,25 @@ java_library(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",
+    ],
+)
+
+java_library(
+    name = "params",
+    srcs = [
+        "JobScopedPrivacyParams.java",
+        "JobScopedPrivacyParamsFactory.java",
+    ],
+    javacopts = ["-Xep:Var"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker:return_code",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:guice",
+        "//java/external:operator_protos",
+        "//java/external:slf4j",
     ],
 )

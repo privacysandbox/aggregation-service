@@ -20,11 +20,13 @@ http_archive(
 # `$ bazel run @unpinned_maven//:pin` and include `maven_install.json` in your change.
 
 # Declare explicit protobuf version, to override any implicit dependencies.
-PROTOBUF_CORE_VERSION = "3.25.2"
+PROTOBUF_CORE_VERSION = "28.3"
 
-PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
+PROTOBUF_JAVA_VERSION_PREFIX = "4."
 
-COORDINATOR_VERSION = "v1.14.0-rc01"  # version updated on 2024-12-11
+PROTOBUF_SHA_256 = "7c3ebd7aaedd86fa5dc479a0fda803f602caaf78d8aff7ce83b89e1b8ae7442a"
+
+COORDINATOR_VERSION = "v1.18.0-rc01"  # version updated on 2025-02-24
 
 JACKSON_VERSION = "2.16.1"
 
@@ -38,7 +40,7 @@ GOOGLE_GAX_VERSION = "2.38.0"
 
 AUTO_SERVICE_VERSION = "1.1.1"
 
-OTEL_VERSION = "1.38.0"
+OTEL_VERSION = "1.43.0"
 
 load("@rules_jvm_external//:repositories.bzl", "rules_jvm_external_deps")
 
@@ -79,10 +81,6 @@ git_repository(
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
     patches = [
         "//build_defs/shared_libraries:coordinator.patch",
-        "//build_defs/shared_libraries:rules_pkg_build_fix.patch",
-        "//build_defs/shared_libraries:rules_boost_mirror.patch",
-        "//build_defs/shared_libraries:upgrade_glibc.patch",
-        "//build_defs/shared_libraries:adtech_setup.patch",
     ],
     tag = COORDINATOR_VERSION,
     workspace_file = "@shared_libraries_workspace//file",
@@ -103,7 +101,7 @@ OTEL_ARTIFACTS = [
     "io.opentelemetry:opentelemetry-sdk-logs:" + OTEL_VERSION,
     "io.opentelemetry:opentelemetry-sdk-trace:" + OTEL_VERSION,
     "io.opentelemetry.contrib:opentelemetry-aws-xray:" + OTEL_VERSION,
-    "com.google.cloud.opentelemetry:exporter-metrics:0.31.0",
+    "com.google.cloud.opentelemetry:exporter-metrics:0.33.0",
     # Note from https://github.com/open-telemetry/semantic-conventions-java:
     # Although this is for stable semantic conventions, the artifact still has the -alpha and comes with no
     # compatibility guarantees. The goal is to mark this artifact stable.
@@ -146,15 +144,15 @@ maven_install(
         "com.google.auto.value:auto-value-annotations:" + AUTO_VALUE_VERSION,
         "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
         "com.google.code.findbugs:jsr305:3.0.2",
-        "com.google.cloud:google-cloud-kms:2.37.0",
-        "com.google.cloud:google-cloud-secretmanager:2.34.0",
-        "com.google.cloud:google-cloud-pubsub:1.126.2",
-        "com.google.cloud:google-cloud-storage:2.32.1",
-        "com.google.cloud:google-cloud-spanner:6.56.0",
-        "com.google.cloud:google-cloud-compute:1.44.0",
-        "com.google.cloud:google-cloud-logging:1.92.0",
-        "com.google.api.grpc:proto-google-cloud-logging-v2:0.109.0",
-        "com.google.api.grpc:proto-google-cloud-compute-v1:1.44.0",
+        "com.google.cloud:google-cloud-logging:3.21.2",
+        "com.google.cloud:google-cloud-kms:2.60.0",
+        "com.google.cloud:google-cloud-pubsub:1.136.1",
+        "com.google.cloud:google-cloud-storage:2.48.0",
+        "com.google.cloud:google-cloud-spanner:6.86.0",
+        "com.google.cloud:google-cloud-secretmanager:2.57.0",
+        "com.google.cloud:google-cloud-compute:1.67.0",
+        "com.google.api.grpc:proto-google-cloud-logging-v2:0.110.2",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.67.0",
         "com.google.cloud.functions:functions-framework-api:1.1.0",
         "commons-logging:commons-logging:1.3.0",
         "com.google.api.grpc:proto-google-common-protos:2.34.0",
@@ -165,15 +163,15 @@ maven_install(
         "io.reactivex.rxjava3:rxjava:3.1.8",
         "com.google.cloud:google-cloud-monitoring:3.35.0",
         "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.35.0",
-        "com.google.protobuf:protobuf-java:" + PROTOBUF_CORE_VERSION,
-        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
         "com.google.guava:guava:33.0.0-jre",
         "com.google.guava:guava-testlib:33.0.0-jre",
         "com.google.jimfs:jimfs:1.3.0",
         "com.google.testparameterinjector:test-parameter-injector:1.15",
-        "com.google.truth.extensions:truth-java8-extension:1.3.0",
-        "com.google.truth.extensions:truth-proto-extension:1.3.0",
-        "com.google.truth:truth:1.3.0",
+        "com.google.truth.extensions:truth-java8-extension:1.4.2",
+        "com.google.truth.extensions:truth-proto-extension:1.4.2",
+        "com.google.truth:truth:1.4.2",
         "com.jayway.jsonpath:json-path:2.9.0",
         "javax.inject:javax.inject:1",
         "io.github.resilience4j:resilience4j-core:1.7.1",
@@ -217,8 +215,10 @@ maven_install(
         "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
         "com.google.crypto.tink:tink:1.13.0",
         "com.google.crypto.tink:tink-gcpkms:1.9.0",
-        "com.google.oauth-client:google-oauth-client:1.35.0",
+        "com.google.oauth-client:google-oauth-client:1.37.0",
+        "com.google.auth:google-auth-library-oauth2-http:1.31.0",
         "io.netty:netty-codec-http:4.1.115.Final",
+        "com.google.cloud:google-cloud-iamcredentials:2.57.0",
     ] + OTEL_ARTIFACTS,
     maven_install_json = "//:maven_install.json",
     repositories = [
@@ -234,9 +234,9 @@ pinned_maven_install()
 
 http_archive(
     name = "rules_java",
-    sha256 = "3121a00588b1581bd7c1f9b550599629e5adcc11ba9c65f482bbd5cfe47fdf30",
+    sha256 = "a9690bc00c538246880d5c83c233e4deb83fe885f54c21bb445eb8116a180b83",
     urls = [
-        "https://github.com/bazelbuild/rules_java/releases/download/7.3.2/rules_java-7.3.2.tar.gz",
+        "https://github.com/bazelbuild/rules_java/releases/download/7.12.2/rules_java-7.12.2.tar.gz",
     ],
 )
 
@@ -280,11 +280,31 @@ protobuf_deps()
 #############
 
 http_archive(
-    name = "rules_pkg",
-    sha256 = "a89e203d3cf264e564fcb96b6e06dd70bc0557356eb48400ce4b5d97c2c3720d",
+    name = "rules_cc",
+    sha256 = "abc605dd850f813bb37004b77db20106a19311a96b2da1c92b789da529d28fe1",
+    strip_prefix = "rules_cc-0.0.17",
+    urls = ["https://github.com/bazelbuild/rules_cc/releases/download/0.0.17/rules_cc-0.0.17.tar.gz"],
+)
+
+http_archive(
+    name = "rules_python",
+    sha256 = "62ddebb766b4d6ddf1712f753dac5740bea072646f630eb9982caa09ad8a7687",
+    strip_prefix = "rules_python-0.39.0",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
-        "https://github.com/bazelbuild/rules_pkg/releases/download/0.5.1/rules_pkg-0.5.1.tar.gz",
+        "https://github.com/bazelbuild/rules_python/releases/download/0.39.0/rules_python-0.39.0.tar.gz",
+    ],
+)
+
+load("@rules_python//python:repositories.bzl", "py_repositories")
+
+py_repositories()
+
+http_archive(
+    name = "rules_pkg",
+    sha256 = "cad05f864a32799f6f9022891de91ac78f30e0fa07dc68abac92a628121b5b11",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_pkg/releases/download/1.0.0/rules_pkg-1.0.0.tar.gz",
+        "https://github.com/bazelbuild/rules_pkg/releases/download/1.0.0/rules_pkg-1.0.0.tar.gz",
     ],
 )
 
@@ -415,12 +435,6 @@ http_archive(
     urls = ["https://github.com/google/googletest/archive/e2239ee6043f73722e7aa812a459f54a28552929.zip"],
 )
 
-http_archive(
-    name = "rules_cc",
-    strip_prefix = "rules_cc-daf6ace7cfeacd6a83e9ff2ed659f416537b6c74",
-    urls = ["https://github.com/bazelbuild/rules_cc/archive/daf6ace7cfeacd6a83e9ff2ed659f416537b6c74.zip"],
-)
-
 ###############
 # Proto rules #
 ###############
@@ -525,12 +539,6 @@ http_archive(
         "https://github.com/bazelbuild/buildtools/archive/refs/tags/4.2.2.tar.gz",
     ],
 )
-
-# Declare explicit protobuf version and hash, to override any implicit dependencies.
-# Please update both while upgrading to new versions.
-PROTOBUF_CORE_VERSION = "3.25.2"
-
-PROTOBUF_SHA_256 = "3c83e4301b968d0b4f29a0c29c0b3cde1da81d790ffd344b111c523ba1954392"
 
 ##########################
 # SDK Dependencies Rules #

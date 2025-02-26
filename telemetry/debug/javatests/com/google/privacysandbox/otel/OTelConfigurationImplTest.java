@@ -204,7 +204,7 @@ public final class OTelConfigurationImplTest {
 
       assertThat(metric.getName()).isEqualTo(gaugeName);
       assertThat(metric.getUnit()).isEqualTo("percent");
-      assertThat(point.getValue()).isNotNull();
+      assertThat(point.getValue()).isFinite();
       assertThat(point.getValue()).isEqualTo(expectedMemoryRatio.get(i));
     }
   }
@@ -216,7 +216,7 @@ public final class OTelConfigurationImplTest {
 
     assertThat(metric.getName()).isEqualTo(name);
     assertThat(metric.getUnit()).isEqualTo(unit);
-    assertThat(point.getValue()).isNotNull();
+    assertThat(point.getValue()).isFinite();
   }
 
   @Test

@@ -1,0 +1,29 @@
+{
+  "privacy_budget_exhausted_info" : {
+    "aggregatable_input_budget_consumption_info" : [ {
+      "aggregateable_input_budget_id" : {
+        "filtering_id" : 1,
+        "relevant_shared_info" : {
+          "api" : "attribution-reporting",
+          "attribution_destination" : "destination.com",
+          "reporting_origin" : "adtech.com",
+          "scheduled_report_time" : 1609459200.000000000,
+          "source_registration_time" : 1609459200.000000000,
+          "version" : "1.0"
+        }
+      }
+    }, {
+      "aggregateable_input_budget_id" : {
+        "filtering_id" : 1,
+        "relevant_shared_info" : {
+          "api" : "attribution-reporting",
+          "attribution_destination" : "destination.com",
+          "reporting_origin" : "adtech2.com",
+          "scheduled_report_time" : 1609459200.000000000,
+          "source_registration_time" : 1609459200.000000000,
+          "version" : "1.0"
+        }
+      }
+    } ]
+  }
+}

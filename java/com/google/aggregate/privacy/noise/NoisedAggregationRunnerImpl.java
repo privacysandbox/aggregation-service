@@ -21,14 +21,11 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.aggregate.adtech.worker.Annotations.CustomForkJoinThreadPool;
 import com.google.aggregate.adtech.worker.Annotations.ParallelAggregatedFactNoising;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.privacy.noise.Annotations.Threshold;
 import com.google.aggregate.privacy.noise.model.NoisedAggregationResult;
-import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.google.common.math.DoubleMath;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.errorprone.annotations.Var;
 import com.google.inject.Inject;
 import java.util.List;
 import java.util.Optional;
@@ -42,58 +39,42 @@ import java.util.function.Supplier;
 public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunner {
   private static final double TOLERANCE = 0.0001;
   private final Supplier<NoiseApplier> noiseApplierSupplier;
-  private final Supplier<PrivacyParameters> privacyParams;
-  private final Supplier<Double> thresholdSupplier;
+  private final ThresholdSupplier thresholdSupplier;
   private final Optional<ListeningExecutorService> noisingForkJoinPool;
 
   @Inject
   NoisedAggregationRunnerImpl(
       Supplier<NoiseApplier> noiseApplierSupplier,
-      Supplier<PrivacyParameters> privacyParams,
-      @Threshold Supplier<Double> thresholdSupplier,
+      ThresholdSupplier thresholdSupplier,
       @ParallelAggregatedFactNoising boolean parallelNoising,
       @CustomForkJoinThreadPool ListeningExecutorService forkJoinPool) {
     this.noiseApplierSupplier = noiseApplierSupplier;
-    this.privacyParams = privacyParams;
     this.thresholdSupplier = thresholdSupplier;
     this.noisingForkJoinPool = parallelNoising ? Optional.of(forkJoinPool) : Optional.empty();
   }
 
   @Override
   public NoisedAggregationResult createResultSet(
-      List<AggregatedFact> facts, Optional<Double> debugPrivacyEpsilon) {
-    final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
-        getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
-
-    return NoisedAggregationResult.create(
-        requestScopedPrivacyParamsSupplier.get(), ImmutableList.copyOf(facts));
+      List<AggregatedFact> facts, JobScopedPrivacyParams privacyParams) {
+    return NoisedAggregationResult.create(privacyParams, ImmutableList.copyOf(facts));
   }
 
   @Override
   public ImmutableList<AggregatedFact> thresholdAggregatedFacts(
-      List<AggregatedFact> aggregatedFacts, Optional<Double> debugPrivacyEpsilon) {
-    final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
-        getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
-    final Supplier<Double> requestScopedThresholdSupplier =
-        getScopedThreshold(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
-    double threshold = requestScopedThresholdSupplier.get();
+      List<AggregatedFact> aggregatedFacts, JobScopedPrivacyParams privacyParams) {
+    double threshold = thresholdSupplier.get(privacyParams);
 
     return threshold(aggregatedFacts, threshold);
   }
 
   @Override
   public NoisedAggregationResult threshold(
-      Iterable<AggregatedFact> aggregatedFacts, Optional<Double> debugPrivacyEpsilon) {
-    final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
-        getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
-    final Supplier<Double> requestScopedThresholdSupplier =
-        getScopedThreshold(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
-    double threshold = requestScopedThresholdSupplier.get();
+      Iterable<AggregatedFact> aggregatedFacts, JobScopedPrivacyParams privacyParams) {
+    double threshold = thresholdSupplier.get(privacyParams);
 
     ImmutableList<AggregatedFact> thresholdedFacts = threshold(aggregatedFacts, threshold);
 
-    return NoisedAggregationResult.create(
-        requestScopedPrivacyParamsSupplier.get(), thresholdedFacts);
+    return NoisedAggregationResult.create(privacyParams, thresholdedFacts);
   }
 
   /*
@@ -103,13 +84,8 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
    */
   @Override
   public NoisedAggregationResult noise(
-      Iterable<AggregatedFact> aggregatedFact, Optional<Double> debugPrivacyEpsilon) {
-    final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
-        getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
-    final Supplier<NoiseApplier> requestScopedNoiseApplier =
-        getScopedNoiseApplier(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
-
-    @Var ImmutableList<AggregatedFact> noisedFacts;
+      Iterable<AggregatedFact> aggregatedFact, JobScopedPrivacyParams privacyParams) {
+    ImmutableList<AggregatedFact> noisedFacts;
     if (this.noisingForkJoinPool.isPresent()) {
       try {
         noisedFacts =
@@ -119,7 +95,7 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
                     () ->
                         Streams.stream(aggregatedFact)
                             .parallel()
-                            .map(fact -> noiseSingleFact(fact, requestScopedNoiseApplier))
+                            .map(fact -> noiseSingleFact(fact, privacyParams))
                             .collect(toImmutableList()))
                 .get();
       } catch (InterruptedException | ExecutionException e) {
@@ -128,22 +104,11 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
     } else {
       noisedFacts =
           Streams.stream(aggregatedFact)
-              .map((fact -> noiseSingleFact(fact, requestScopedNoiseApplier)))
+              .map((fact -> noiseSingleFact(fact, privacyParams)))
               .collect(toImmutableList());
     }
 
-    return NoisedAggregationResult.create(requestScopedPrivacyParamsSupplier.get(), noisedFacts);
-  }
-
-  public AggregatedFact noiseSingleFact(
-      AggregatedFact aggregatedFact, Supplier<NoiseApplier> scopedNoiseApplier) {
-    return noiseSingleFact(aggregatedFact, scopedNoiseApplier.get());
-  }
-
-  public Supplier<NoiseApplier> getRequestScopedNoiseApplier(Optional<Double> debugPrivacyEpsilon) {
-    final Supplier<PrivacyParameters> requestScopedPrivacyParamsSupplier =
-        getScopedPrivacyParamSupplier(debugPrivacyEpsilon);
-    return getScopedNoiseApplier(debugPrivacyEpsilon, requestScopedPrivacyParamsSupplier);
+    return NoisedAggregationResult.create(privacyParams, noisedFacts);
   }
 
   private ImmutableList<AggregatedFact> threshold(
@@ -156,46 +121,12 @@ public final class NoisedAggregationRunnerImpl implements NoisedAggregationRunne
         .collect(toImmutableList());
   }
 
-  private AggregatedFact noiseSingleFact(AggregatedFact aggregatedFact, NoiseApplier noiseApplier) {
+  @Override
+  public AggregatedFact noiseSingleFact(
+      AggregatedFact aggregatedFact, JobScopedPrivacyParams privacyParams) {
     long unnoisedMetric = aggregatedFact.getMetric();
     aggregatedFact.setUnnoisedMetric(Optional.of(unnoisedMetric));
-    aggregatedFact.setMetric(noiseApplier.noiseMetric(unnoisedMetric));
+    aggregatedFact.setMetric(noiseApplierSupplier.get().noiseMetric(unnoisedMetric, privacyParams));
     return aggregatedFact;
-  }
-
-  private Supplier<PrivacyParameters> getScopedPrivacyParamSupplier(
-      Optional<Double> debugPrivacyEpsilon) {
-    if (debugPrivacyEpsilon.isPresent()) {
-      PrivacyParameters globalPrivacyParams = privacyParams.get();
-      PrivacyParameters overridenPrivacyParams =
-          PrivacyParameters.newBuilder()
-              .setDelta(globalPrivacyParams.getDelta())
-              .setL1Sensitivity(globalPrivacyParams.getL1Sensitivity())
-              .setEpsilon(debugPrivacyEpsilon.get())
-              .build();
-      return () -> overridenPrivacyParams;
-    }
-    return privacyParams;
-  }
-
-  private Supplier<NoiseApplier> getScopedNoiseApplier(
-      Optional<Double> debugPrivacyEpsilon,
-      Supplier<PrivacyParameters> scopedPrivacyParametersSupplier) {
-    // TODO find better way of per request dependencies
-    if (debugPrivacyEpsilon.isPresent() && noiseApplierSupplier.get() instanceof DpNoiseApplier) {
-      NoiseApplier overridenNoiseSupplier =
-          new DpNoiseApplier(DpNoiseParamsFactory.ofLaplace(scopedPrivacyParametersSupplier.get()));
-      return () -> overridenNoiseSupplier;
-    }
-    return noiseApplierSupplier;
-  }
-
-  private Supplier<Double> getScopedThreshold(
-      Optional<Double> debugPrivacyEpsilon,
-      Supplier<PrivacyParameters> scopedPrivacyParametersSupplier) {
-    if (debugPrivacyEpsilon.isPresent()) {
-      return () -> new ThresholdSupplier(scopedPrivacyParametersSupplier).get();
-    }
-    return thresholdSupplier;
   }
 }

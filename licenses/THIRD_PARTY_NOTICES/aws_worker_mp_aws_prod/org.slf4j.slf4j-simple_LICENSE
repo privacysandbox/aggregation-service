@@ -6,11 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SLF4J License</title>
     <script type="text/javascript">prefix='';</script>
-
 </head>
 <body onLoad="enableMenuEventListeners(); hljs.highlightAll(); decorate();">
 
-<script src="templates/header3.js" type="text/javascript"></script>
+  <script src="templates/header3.js" type="text/javascript"></script>
 
 
   <div id="content">
@@ -26,7 +25,7 @@
   </p>
 
   <div class="source">
- Copyright (c) 2004-2023 QOS.ch
+ Copyright (c) 2004-2025 QOS.ch
  All rights reserved.
 
  Permission is hereby granted, free  of charge, to any person obtaining

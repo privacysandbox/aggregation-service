@@ -17,7 +17,6 @@
 package com.google.aggregate.privacy.budgeting.bridge;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.common.collect.ImmutableList;

@@ -17,8 +17,8 @@ load("@rules_java//java:defs.bzl", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
-    name = "AggregationEngineTest",
-    srcs = ["AggregationEngineTest.java"],
+    name = "KeyAggregationEngineTest",
+    srcs = ["KeyAggregationEngineTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/aggregation/engine",
         "//java/com/google/aggregate/adtech/worker/model",

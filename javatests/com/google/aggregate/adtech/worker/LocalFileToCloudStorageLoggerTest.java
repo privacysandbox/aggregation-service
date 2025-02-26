@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
@@ -29,15 +30,20 @@ import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUploa
 import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.LocalFileToCloudStorageLogger.ResultWorkingDirectory;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
+import com.google.aggregate.adtech.worker.model.AggregatableInputBudgetConsumptionInfo;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetExhaustedInfo;
+import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
+import com.google.aggregate.adtech.worker.model.serdes.PrivacyBudgetExhaustedInfoSerdes;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
 import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.avro.LocalAvroDebugResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.avro.LocalAvroResultFileWriter;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReader;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
@@ -45,8 +51,10 @@ import com.google.aggregate.protocol.avro.AvroDebugResultsRecord;
 import com.google.aggregate.protocol.avro.AvroDebugResultsSchemaSupplier;
 import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
+import com.google.common.primitives.UnsignedLong;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.AbstractModule;
@@ -54,6 +62,7 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
+import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import com.google.scp.operator.cpio.blobstorageclient.testing.FSBlobStorageClient;
 import com.google.scp.operator.cpio.jobclient.model.Job;
 import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
@@ -62,9 +71,12 @@ import java.math.BigInteger;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -82,6 +94,8 @@ import org.mockito.ArgumentMatchers;
 public class LocalFileToCloudStorageLoggerTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
+
+  @Inject PrivacyBudgetExhaustedInfoSerdes privacyBudgetExhaustedInfoSerdes;
 
   private final Job ctx = FakeJobGenerator.generate("abc123");
 
@@ -117,6 +131,53 @@ public class LocalFileToCloudStorageLoggerTest {
           AggregatedFact.create(BigInteger.valueOf(3456), 700L, 90L, annotationDomainOnly),
           AggregatedFact.create(BigInteger.valueOf(3789), 90L, 80L, annotationReportOnly),
           AggregatedFact.create(BigInteger.valueOf(4123), 100L, 70L, annotationReportOnly));
+
+  private static final Instant TIME = Instant.ofEpochSecond(1609459200);
+  private static final UnsignedLong FILTERING_ID_1 = UnsignedLong.valueOf(1);
+  private static final UnsignedLong FILTERING_ID_2 = UnsignedLong.valueOf(2);
+  private static final SharedInfo SHARED_INFO_1 =
+      SharedInfo.builder()
+          .setApi(SharedInfo.ATTRIBUTION_REPORTING_API)
+          .setDestination("destination.com")
+          .setVersion(SharedInfo.LATEST_VERSION)
+          .setReportId(UUID.randomUUID().toString())
+          .setReportingOrigin("adtech.com")
+          .setScheduledReportTime(TIME)
+          .setSourceRegistrationTime(TIME)
+          .build();
+
+  private static final SharedInfo SHARED_INFO_2 =
+      SharedInfo.builder()
+          .setApi(SharedInfo.ATTRIBUTION_REPORTING_API)
+          .setDestination("destination.com")
+          .setVersion(SharedInfo.LATEST_VERSION)
+          .setReportId(UUID.randomUUID().toString())
+          .setReportingOrigin("adtech2.com")
+          .setScheduledReportTime(TIME)
+          .setSourceRegistrationTime(TIME)
+          .build();
+
+  private static final AggregatableInputBudgetConsumptionInfo info1 =
+      AggregatableInputBudgetConsumptionInfo.builder()
+          .setPrivacyBudgetKeyInput(
+              PrivacyBudgetKeyInput.builder()
+                  .setSharedInfo(SHARED_INFO_1)
+                  .setFilteringId(FILTERING_ID_1)
+                  .build())
+          .build();
+
+  private static final AggregatableInputBudgetConsumptionInfo info2 =
+      AggregatableInputBudgetConsumptionInfo.builder()
+          .setPrivacyBudgetKeyInput(
+              PrivacyBudgetKeyInput.builder()
+                  .setSharedInfo(SHARED_INFO_2)
+                  .setFilteringId(FILTERING_ID_2)
+                  .build())
+          .build();
+  private static final PrivacyBudgetExhaustedInfo privacyBudgetExhaustedInfo =
+      PrivacyBudgetExhaustedInfo.builder()
+          .setAggregatableInputBudgetConsumptionInfos(ImmutableSet.of(info1, info2))
+          .build();
 
   // Under test
   @Inject private Provider<LocalFileToCloudStorageLogger> localFileToCloudStorageLogger;
@@ -479,6 +540,50 @@ public class LocalFileToCloudStorageLoggerTest {
     assertThat(recordCountPerShard.get(1)).isEqualTo(3);
     assertThat(recordCountPerShard.get(2)).isEqualTo(3);
     assertThat(recordCountPerShard.get(3)).isEqualTo(1);
+  }
+
+  @Test
+  public void writePrivacyBudgetExhaustedDebuggingInformation_succeeds() {
+    OutputShardFileHelper.setOutputShardFileSizeBytes(100_000_000L);
+
+    localFileToCloudStorageLogger
+        .get()
+        .writePrivacyBudgetExhaustedDebuggingInformation(
+            privacyBudgetExhaustedInfo, ctx, "privacy_budget_exhausted_debugging_info.json");
+
+    Optional<PrivacyBudgetExhaustedInfo> privacyBudgetExhaustedInfoOptional = Optional.empty();
+    try {
+      privacyBudgetExhaustedInfoOptional =
+          privacyBudgetExhaustedInfoSerdes.convert(
+              Files.readString(blobStorageClient.getLastWrittenFile()));
+    } catch (IOException e) {
+      fail("IOException while reading file from local cloud storage - " + e.getMessage());
+    }
+
+    assertThat(privacyBudgetExhaustedInfoOptional.isPresent()).isTrue();
+    assertThat(privacyBudgetExhaustedInfoOptional.get()).isEqualTo(privacyBudgetExhaustedInfo);
+  }
+
+  @Test
+  public void writePrivacyBudgetExhaustedDebuggingInformation_InvalidS3BucketThrowsException()
+      throws Exception {
+    OutputShardFileHelper.setOutputShardFileSizeBytes(100_000_000L);
+
+    doThrow(new BlobStorageClientException("mock exception"))
+        .when(blobStorageClient)
+        .putBlob(ArgumentMatchers.any(), ArgumentMatchers.any());
+
+    Assert.assertThrows(
+        ResultLogException.class,
+        () ->
+            localFileToCloudStorageLogger
+                .get()
+                .writePrivacyBudgetExhaustedDebuggingInformation(
+                    privacyBudgetExhaustedInfo,
+                    ctx,
+                    "privacy_budget_exhausted_debugging_info.json"));
+
+    reset(blobStorageClient);
   }
 
   private void logResultsTest() throws Exception {

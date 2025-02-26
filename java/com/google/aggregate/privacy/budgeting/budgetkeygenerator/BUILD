@@ -30,6 +30,8 @@ java_library(
         "//java/external:autovalue_annotations",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:jackson_annotations",
+        "//java/external:jackson_core",
         "//java/external:javax_inject",
     ],
 )
@@ -53,6 +55,8 @@ java_library(
         "//java/external:autovalue_annotations",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:jackson_annotations",
+        "//java/external:jackson_core",
         "//java/external:javax_inject",
     ],
 )

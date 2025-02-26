@@ -17,7 +17,6 @@
 package com.google.aggregate.adtech.worker.model.serdes.cbor;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

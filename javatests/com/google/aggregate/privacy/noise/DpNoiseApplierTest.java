@@ -19,17 +19,14 @@ package com.google.aggregate.privacy.noise;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.acai.Acai;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDelta;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingDistribution;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingEpsilon;
-import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingL1Sensitivity;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Provides;
+import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
+import java.util.function.Supplier;
 import javax.inject.Singleton;
 import org.junit.Rule;
 import org.junit.Test;
@@ -41,13 +38,17 @@ public class DpNoiseApplierTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
 
+  @Inject JobScopedPrivacyParamsFactory jobScopedPrivacyParamsFactory;
   @Inject DpNoiseApplier noiseApplier;
 
   @Test
-  public void noiseDoesNotCrash() {
+  public void noiseDoesNotCrash() throws Exception {
+    JobScopedPrivacyParams privacyParams =
+        jobScopedPrivacyParamsFactory.fromRequestInfo(RequestInfo.newBuilder().build());
+
     // This test does not validate result. It passes if value is noised without throwing any
     // exceptions.
-    Long noisedValue = noiseApplier.noiseMetric(100L);
+    Long noisedValue = noiseApplier.noiseMetric(100L, privacyParams);
 
     assertThat(noisedValue).isNotNull();
   }
@@ -56,27 +57,20 @@ public class DpNoiseApplierTest {
 
     @Override
     protected void configure() {
-      install(new DpNoiseParamsModule());
       bind(NoiseApplier.class).to(DpNoiseApplier.class);
-
-      // Privacy parameters
-      bind(Distribution.class)
-          .annotatedWith(NoisingDistribution.class)
-          .toInstance(Distribution.LAPLACE);
-      bind(double.class).annotatedWith(NoisingEpsilon.class).toInstance(0.1);
-      bind(long.class).annotatedWith(NoisingL1Sensitivity.class).toInstance(4L);
-      bind(double.class).annotatedWith(NoisingDelta.class).toInstance(5.00);
     }
 
     @Provides
     @Singleton
-    PrivacyParameters provideNoiseParameters(PrivacyParametersSupplier privacyParametersSupplier) {
-      return privacyParametersSupplier.get().toBuilder()
-          .setNoiseParameters(
-              NoiseParameters.newBuilder().setDistribution(Distribution.LAPLACE).build())
-          .setEpsilon(1)
-          .setL1Sensitivity(4)
-          .build();
+    Supplier<PrivacyParameters> provideDefaultNoiseParameters() {
+      return () ->
+          PrivacyParameters.newBuilder()
+              .setNoiseParameters(
+                  NoiseParameters.newBuilder().setDistribution(Distribution.LAPLACE).build())
+              .setEpsilon(1)
+              .setL1Sensitivity(4)
+              .setDelta(5.0)
+              .build();
     }
   }
 }

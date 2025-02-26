@@ -54,7 +54,7 @@ java_binary(
     srcs = glob(["*.java"]),
     main_class = "com.google.aggregate.tools.privacybudgetutil.aws.AwsPrivacyBudgetUnitExtraction",
     resources = [
-        "//licenses/THIRD_PARTY_NOTICES/aws_privacy_budget_unit_extraction_tool:licenses",
+        "//licenses/THIRD_PARTY_NOTICES/aws_privacy_budget_unit_extraction_tool_release:licenses",
     ],
     deps = [
         ":lib",

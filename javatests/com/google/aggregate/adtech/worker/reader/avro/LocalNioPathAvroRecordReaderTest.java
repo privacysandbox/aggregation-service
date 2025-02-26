@@ -18,7 +18,6 @@ package com.google.aggregate.adtech.worker.reader.avro;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static java.nio.file.StandardOpenOption.CREATE;
 import static org.junit.Assert.assertThrows;
 

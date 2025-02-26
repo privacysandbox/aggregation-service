@@ -21,22 +21,26 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
-import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import java.util.List;
 
-/** AutoValue to store aggregation result after noising and associated {@code PrivacyParameters} */
+/**
+ * AutoValue to store aggregation result after noising and associated {@code
+ * JobScopedPrivacyParameters}
+ */
 @AutoValue
 public abstract class NoisedAggregationResult {
 
   public static NoisedAggregationResult create(
-      PrivacyParameters privacyParameters, ImmutableList<AggregatedFact> noisedAggregatedFacts) {
+      JobScopedPrivacyParams privacyParameters,
+      ImmutableList<AggregatedFact> noisedAggregatedFacts) {
     return new AutoValue_NoisedAggregationResult(privacyParameters, noisedAggregatedFacts);
   }
 
-  public abstract PrivacyParameters privacyParameters();
+  public abstract JobScopedPrivacyParams privacyParameters();
 
   public abstract ImmutableList<AggregatedFact> noisedAggregatedFacts();
 

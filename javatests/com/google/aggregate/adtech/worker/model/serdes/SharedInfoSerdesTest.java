@@ -18,13 +18,14 @@ package com.google.aggregate.adtech.worker.model.serdes;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.ATTRIBUTION_REPORTING_DEBUG_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
+import static com.google.aggregate.adtech.worker.model.SharedInfo.PROTECTED_AUDIENCE_API;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SHARED_STORAGE_API;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertFalse;
 
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
+import com.google.aggregate.adtech.worker.model.Views;
 import com.google.inject.AbstractModule;
 import java.time.Instant;
 import java.util.Optional;
@@ -443,6 +444,78 @@ public class SharedInfoSerdesTest {
                 .setReportingOrigin("https://example.com")
                 .setScheduledReportTime(Instant.ofEpochSecond(1648673933))
                 .build());
+  }
+
+  @Test
+  public void convertWithView_usedInPrivacyBudgeting_ARA() {
+    SharedInfo sharedInfo =
+        SharedInfo.builder()
+            .setVersion(LATEST_VERSION)
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setReportId("21abd97f-73e8-4b88-9389-a9fee6abda5e")
+            .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
+            .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
+            .setSourceRegistrationTime(Instant.EPOCH)
+            .setScheduledReportTime(Instant.ofEpochSecond(1234486400))
+            .build();
+
+    String serialized =
+        sharedInfoSerdes.doBackwardWithView(
+            Optional.ofNullable(sharedInfo), Views.UsedInPrivacyBudgeting.class);
+
+    assertThat(serialized)
+        .isEqualTo(
+            "{\"api\":\"attribution-reporting\",\"attribution_destination\":\"https://conversion.test\","
+                + "\"reporting_origin\":\"https://report.test\",\"scheduled_report_time\":1234486400.000000000,"
+                + "\"source_registration_time\":0.0,\"version\":\"1.0\"}");
+  }
+
+  @Test
+  public void convertWithVoew_usedInPrivacyBudgeting_ARA_debugMode() {
+    SharedInfo sharedInfo =
+        SharedInfo.builder()
+            .setVersion(LATEST_VERSION)
+            .setApi(ATTRIBUTION_REPORTING_API)
+            .setReportId("21abd97f-73e8-4b88-9389-a9fee6abda5e")
+            .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
+            .setDestination(DESTINATION_CHROME_GOLDEN_REPORT)
+            .setSourceRegistrationTime(Instant.EPOCH)
+            .setScheduledReportTime(Instant.ofEpochSecond(1234486400))
+            .setReportDebugMode(true)
+            .build();
+
+    String serialized =
+        sharedInfoSerdes.doBackwardWithView(
+            Optional.ofNullable(sharedInfo), Views.UsedInPrivacyBudgeting.class);
+
+    // debug_mode is not included in serialized shared_info
+    assertThat(serialized)
+        .isEqualTo(
+            "{\"api\":\"attribution-reporting\",\"attribution_destination\":\"https://conversion.test\","
+                + "\"reporting_origin\":\"https://report.test\",\"scheduled_report_time\":1234486400.000000000,"
+                + "\"source_registration_time\":0.0,\"version\":\"1.0\"}");
+  }
+
+  @Test
+  public void convertWithView_usedInPrivacyBudgeting_PAA() {
+    SharedInfo sharedInfo =
+        SharedInfo.builder()
+            .setVersion(LATEST_VERSION)
+            .setApi(PROTECTED_AUDIENCE_API)
+            .setReportId("21abd97f-73e8-4b88-9389-a9fee6abda5e")
+            .setReportingOrigin(REPORTING_ORIGIN_CHROME_GOLDEN_REPORT)
+            .setScheduledReportTime(Instant.ofEpochSecond(1234486400))
+            .build();
+
+    String serialized =
+        sharedInfoSerdes.doBackwardWithView(
+            Optional.ofNullable(sharedInfo), Views.UsedInPrivacyBudgeting.class);
+
+    assertThat(serialized)
+        .isEqualTo(
+            "{\"api\":\"protected-audience\","
+                + "\"reporting_origin\":\"https://report.test\",\"scheduled_report_time\":1234486400.000000000,"
+                + "\"version\":\"1.0\"}");
   }
 
   private static final class TestEnv extends AbstractModule {}

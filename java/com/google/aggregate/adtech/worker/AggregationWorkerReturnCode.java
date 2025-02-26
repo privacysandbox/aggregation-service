@@ -20,7 +20,7 @@ package com.google.aggregate.adtech.worker;
 public enum AggregationWorkerReturnCode {
   /**
    * Unable to process the job because the user exhausted the allocated budget to aggregate the
-   * reports in this batch. This can happen if some reports were already processed in an earlier
+   * reports in this batch. This can happen if some Shared IDs were already processed in an earlier
    * batch. This error is not transient and the job cannot be retried.
    */
   PRIVACY_BUDGET_EXHAUSTED,

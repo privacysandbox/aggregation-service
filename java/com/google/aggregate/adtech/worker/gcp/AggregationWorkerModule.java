@@ -74,6 +74,7 @@ import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
 import com.google.privacysandbox.otel.Annotations.GrpcOtelCollectorEndpoint;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.Annotations.GcsEndpointUrl;
 import com.google.scp.operator.cpio.configclient.Annotations.TrustedServicesClientVersion;
+import com.google.scp.operator.cpio.configclient.common.OperatorClientConfig;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorARoleArn;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorBRoleArn;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorKmsArnParameter;
@@ -107,7 +108,6 @@ import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceIdO
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceNameOverride;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpProjectIdOverride;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpZoneOverride;
-import com.google.scp.shared.clients.configclient.gcp.GcpOperatorClientConfig;
 import com.google.scp.shared.clients.configclient.model.WorkerParameter;
 import com.google.scp.shared.mapper.TimeObjectMapper;
 import java.nio.file.FileSystem;
@@ -212,8 +212,8 @@ public final class AggregationWorkerModule extends AbstractModule {
         .annotatedWith(GcpInstanceNameOverride.class)
         .toInstance(args.getGcpInstanceNameOverride());
     bind(String.class).annotatedWith(GcpZoneOverride.class).toInstance(args.getGcpZoneOverride());
-    GcpOperatorClientConfig.Builder clientConfigBuilder =
-        GcpOperatorClientConfig.builder()
+    OperatorClientConfig.Builder clientConfigBuilder =
+        OperatorClientConfig.builder()
             .setCoordinatorAServiceAccountToImpersonate(args.getCoordinatorAServiceAccount())
             .setCoordinatorAWipProvider(args.getCoordinatorAWipProvider())
             .setUseLocalCredentials(args.getCoordinatorAWipProvider().isEmpty())
@@ -221,7 +221,7 @@ public final class AggregationWorkerModule extends AbstractModule {
                 args.getPrimaryEncryptionKeyServiceBaseUrl())
             .setCoordinatorAEncryptionKeyServiceCloudfunctionUrl(
                 args.getPrimaryEncryptionKeyServiceCloudfunctionUrl());
-    GcpOperatorClientConfig.builder()
+    OperatorClientConfig.builder()
         .setCoordinatorAServiceAccountToImpersonate(args.getCoordinatorAServiceAccount())
         .setCoordinatorAWipProvider(args.getCoordinatorAWipProvider())
         .setUseLocalCredentials(args.getCoordinatorAWipProvider().isEmpty());
@@ -236,7 +236,7 @@ public final class AggregationWorkerModule extends AbstractModule {
           .setCoordinatorBEncryptionKeyServiceCloudfunctionUrl(
               args.getSecondaryEncryptionKeyServiceCloudfunctionUrl());
     }
-    bind(GcpOperatorClientConfig.class).toInstance(clientConfigBuilder.build());
+    bind(OperatorClientConfig.class).toInstance(clientConfigBuilder.build());
     install(args.getLifeCycleClientSelector().getLifecycleModule());
     install(args.getMetricCycleClientSelector().getMetricModule());
 

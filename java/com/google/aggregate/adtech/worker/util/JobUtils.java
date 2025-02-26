@@ -41,6 +41,8 @@ public final class JobUtils {
 
   public static final String JOB_PARAM_REPORTING_SITE = "reporting_site";
 
+  public static final String JOB_PARAM_DEBUG_PRIVACY_EPSILON = "debug_privacy_epsilon";
+
   private static final UnsignedLong FILTERING_ID_DEFAULT = UnsignedLong.ZERO;
 
   /**

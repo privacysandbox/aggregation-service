@@ -19,6 +19,6 @@ package com.google.aggregate.privacy.noise;
 /** Applies noise to aggregation result. */
 public interface NoiseApplier {
 
-  /** Noise aggregated metric */
-  Long noiseMetric(Long metric);
+  /** Noise aggregated metric using the given privacy parameters. */
+  Long noiseMetric(Long metric, JobScopedPrivacyParams privacyParams);
 }

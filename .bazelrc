@@ -1,3 +1,4 @@
+common --noenable_bzlmod
 common --@io_bazel_rules_docker//transitions:enable=false
 build --sandbox_add_mount_pair=/tmp
 build --java_language_version=11

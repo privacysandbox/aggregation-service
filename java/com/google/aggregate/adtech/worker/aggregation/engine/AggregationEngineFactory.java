@@ -19,6 +19,7 @@ package com.google.aggregate.adtech.worker.aggregation.engine;
 import static com.google.common.collect.Sets.newConcurrentHashSet;
 
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorFactory;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.MapMaker;
@@ -40,8 +41,8 @@ public class AggregationEngineFactory {
     this.privacyBudgetKeyGeneratorFactory = privacyBudgetKeyGeneratorFactory;
   }
 
-  /** Creates AggregationEngine object with queried filteringId. */
-  public AggregationEngine create(ImmutableSet<UnsignedLong> filteringIds) {
+  /** Creates KeyAggregationEngine object with queried filteringId. */
+  public AggregationEngine createKeyAggregationEngine(ImmutableSet<UnsignedLong> filteringIds) {
     // Number of logical cores available to the JVM is used to hint the concurrent map maker. Any
     // number will work, this is just a hint that is passed to the map maker, but different values
     // may result in different performance.
@@ -53,6 +54,9 @@ public class AggregationEngineFactory {
 
     ConcurrentMap<BigInteger, LongAdder> aggregationMap =
         new MapMaker().concurrencyLevel(concurrentMapConcurrencyHint).makeMap();
+    ConcurrentMap<PrivacyBudgetingServiceBridge.PrivacyBudgetUnit, PrivacyBudgetKeyInput>
+        privacyBudgetUnitToPrivacyBudgetKeyInput =
+            new MapMaker().concurrencyLevel(concurrentMapConcurrencyHint).makeMap();
     Set<PrivacyBudgetingServiceBridge.PrivacyBudgetUnit> privacyBudgetUnits =
         newConcurrentHashSet();
     Set<UUID> reportIdSet = newConcurrentHashSet();
@@ -61,11 +65,12 @@ public class AggregationEngineFactory {
       throw new IllegalStateException("Filtering Id cannot be empty.");
     }
 
-    return new AggregationEngine(
+    return new KeyAggregationEngine(
         privacyBudgetKeyGeneratorFactory,
         aggregationMap,
-        privacyBudgetUnits,
+        privacyBudgetUnitToPrivacyBudgetKeyInput,
         reportIdSet,
-        filteringIds);
+        filteringIds,
+        privacyBudgetUnits);
   }
 }

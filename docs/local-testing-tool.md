@@ -37,7 +37,7 @@ cd aggregation-service
 Download the local testing tool with the below command.
 
 ```sh
-VERSION=$(cat VERSION); curl -f -o LocalTestingTool_$VERSION.jar https://aggregation-service-published-artifacts.s3.amazonaws.com/aggregation-service/$VERSION/LocalTestingTool_$VERSION.jar
+VERSION=$(cat VERSION); curl -f -o LocalTestingTool_$VERSION.jar https://storage.googleapis.com/aggregation-service-published-artifacts/aggregation-service/$VERSION/LocalTestingTool_$VERSION.jar
 ```
 
 You'll need [Java JRE](https://adoptium.net/) installed to use the tool.

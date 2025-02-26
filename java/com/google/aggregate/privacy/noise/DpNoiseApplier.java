@@ -16,51 +16,32 @@
 
 package com.google.aggregate.privacy.noise;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
-import com.google.aggregate.privacy.noise.Annotations.DpValue;
-import com.google.aggregate.privacy.noise.DpNoiseParamsFactory.LaplaceNoiseParams;
-import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.inject.Inject;
-import java.util.OptionalDouble;
+import com.google.privacy.differentialprivacy.DiscreteLaplaceNoise;
 
 /** {@link NoiseApplier} implementation using Google's Differential Privacy library. */
 public final class DpNoiseApplier implements NoiseApplier {
 
-  private final DpNoiseParamsFactory valueNoiseParams;
+  private final DiscreteLaplaceNoise laplaceNoise;
 
   @Inject
-  DpNoiseApplier(@DpValue DpNoiseParamsFactory valueNoiseParams) {
-    this.valueNoiseParams = valueNoiseParams;
+  DpNoiseApplier() {
+    this.laplaceNoise = new DiscreteLaplaceNoise();
   }
 
   @Override
-  public Long noiseMetric(Long metric) {
-    return noise(metric, valueNoiseParams);
-  }
-
-  private static Long noise(Long rawValue, DpNoiseParamsFactory noiseParams) {
-    checkArgument(
-        noiseParams.distribution().equals(Distribution.LAPLACE),
-        "Only Laplace noising distribution supported. Got: " + noiseParams.distribution());
-
-    LaplaceNoiseParams laplaceNoiseParams = noiseParams.laplace();
-    return laplaceNoiseParams
-        .noise()
-        .addNoise(rawValue, laplaceNoiseParams.l1Sensitivity(), laplaceNoiseParams.epsilon());
-  }
-
-  /**
-   * Interface to hold differential privacy noise related parameters.
-   *
-   * <p>TODO: Move this interface under model.
-   */
-  public interface DpNoiseParams {
-
-    double epsilon();
-
-    OptionalDouble delta();
-
-    long l1Sensitivity();
+  public Long noiseMetric(Long metric, JobScopedPrivacyParams privacyParams) {
+    switch (privacyParams.mechanism()) {
+      case LAPLACE_DP:
+        return laplaceNoise.addNoise(
+            metric,
+            privacyParams.laplaceDp().l1Sensitivity(),
+            privacyParams.laplaceDp().epsilon(),
+            /* delta= */ null);
+      default:
+        throw new IllegalStateException(
+            "Could not apply noise for unknown differential privacy mechanism: "
+                + privacyParams.mechanism());
+    }
   }
 }
