@@ -17,6 +17,7 @@
 package com.google.aggregate.adtech.worker.model.serdes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.aggregate.shared.mapper.TimeObjectMapper;
@@ -40,6 +41,10 @@ public final class SharedInfoSerdes extends Converter<String, Optional<SharedInf
   @Inject
   SharedInfoSerdes(TimeObjectMapper objectMapper) {
     objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, true);
+    // Setting DEFAULT_VIEW_INCLUSION false, to not include properties in serialization by default.
+    objectMapper.configure(MapperFeature.DEFAULT_VIEW_INCLUSION, false);
+    // Setting SORT_PROPERTIES_ALPHABETICALLY to serialize sharedInfo in fixed order.
+    objectMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
     this.objectMapper = objectMapper;
   }
 
@@ -80,6 +85,22 @@ public final class SharedInfoSerdes extends Converter<String, Optional<SharedInf
         return objectMapper.writeValueAsString(sharedInfo.get());
       } catch (JsonProcessingException ignored) {
         // Ignore exceptions and instead return empty string if deserialization fails
+      }
+    }
+    logger.warn("Failed to serialize shared_info to JSON String. Value was: " + sharedInfo);
+    return "";
+  }
+
+  protected String doBackwardWithView(Optional<SharedInfo> sharedInfo, Class<?> view) {
+    if (sharedInfo.isPresent()) {
+      try {
+        return objectMapper.writerWithView(view).writeValueAsString(sharedInfo.get());
+      } catch (JsonProcessingException exception) {
+        logger.warn(
+            String.format(
+                "Exception while serializing shared_info with view %s. shared_info was: %s. Error"
+                    + " message: %s",
+                view.getName(), sharedInfo, exception.getMessage()));
       }
     }
     logger.warn("Failed to serialize shared_info to JSON String. Value was: " + sharedInfo);

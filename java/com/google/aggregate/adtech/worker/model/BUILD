@@ -33,6 +33,7 @@ java_library(
         "Report.java",
         "SharedInfo.java",
         "Version.java",
+        "Views.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [
@@ -47,5 +48,23 @@ java_library(
         "//java/external:jackson_databind",
         "//java/external:operator_protos",
         "//java/external:shared_model",
+    ],
+)
+
+java_library(
+    name = "privacy_budget_debugging_model",
+    srcs = [
+        "AggregatableInputBudgetConsumptionInfo.java",
+        "PrivacyBudgetExhaustedInfo.java",
+    ],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
+        "//java/external:autovalue",
+        "//java/external:autovalue_annotations",
+        "//java/external:guava",
+        "//java/external:jackson_annotations",
+        "//java/external:jackson_core",
+        "//java/external:jackson_databind",
     ],
 )

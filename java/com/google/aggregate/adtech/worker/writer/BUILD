@@ -22,3 +22,10 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = ["//java/com/google/aggregate/adtech/worker/model"],
 )
+
+java_library(
+    name = "privacy_budget_exhausted_info_writer",
+    srcs = ["PrivacyBudgetExhaustedInfoWriter.java"],
+    javacopts = ["-Xep:Var"],
+    deps = ["//java/com/google/aggregate/adtech/worker/model:privacy_budget_debugging_model"],
+)

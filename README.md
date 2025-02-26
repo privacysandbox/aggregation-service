@@ -33,9 +33,10 @@ and other use cases, read the
 
 ## Support
 
-You can reach out to us for support through creating issues on this repository or sending us an
-email at aggregation-service-support\<at>google.com. This address is monitored and only visible to
-selected support staff.
+For product questions, discussing features, and providing feedback, you can create an issue on this
+repository. For requesting technical troubleshooting support if you're facing an error while
+deploying, maintaining, or running jobs with Aggregation Service, use this
+[Technical Support Form](https://support.google.com/faqs/contact/privacysandbox_aggregation_service).
 
 ## License
 

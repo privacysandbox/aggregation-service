@@ -30,8 +30,11 @@ import com.google.aggregate.adtech.worker.Annotations.EnableParallelSummaryUploa
 import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetExhaustedInfo;
 import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
+import com.google.aggregate.adtech.worker.writer.PrivacyBudgetExhaustedInfoWriter.FileWriteException;
+import com.google.aggregate.adtech.worker.writer.json.LocalPrivacyBudgetExhaustedInfoWriter;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
@@ -41,8 +44,10 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.BindingAnnotation;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
+import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.jobclient.model.Job;
+import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.nio.file.Files;
@@ -66,11 +71,14 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
   private final BlobStorageClient blobStorageClient;
   private final Path workingDirectory;
   private final ListeningExecutorService blockingThreadPool;
+  private final LocalPrivacyBudgetExhaustedInfoWriter localPrivacyBudgetExhaustedInfoWriter;
+  public static final String AVRO_EXTENSION = ".avro";
 
   @Inject
   LocalFileToCloudStorageLogger(
       @ResultWriter LocalResultFileWriter localResultFileWriter,
       @DebugWriter LocalResultFileWriter localDebugResultFileWriter,
+      LocalPrivacyBudgetExhaustedInfoWriter localPrivacyBudgetExhaustedInfoWriter,
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       BlobStorageClient blobStorageClient,
       @ResultWorkingDirectory Path workingDirectory,
@@ -85,6 +93,7 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
       this.blockingThreadPool =
           MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
     }
+    this.localPrivacyBudgetExhaustedInfoWriter = localPrivacyBudgetExhaustedInfoWriter;
   }
 
   @Override
@@ -204,6 +213,38 @@ public final class LocalFileToCloudStorageLogger implements ResultLogger {
       throw new ResultLogException(e);
     } catch (ExecutionException e) {
       throw new ResultLogException(e.getCause());
+    }
+  }
+
+  /*
+   * Write PrivacyBudgetExhaustedInfo in a JSON file locally and upload it to cloud storage.
+   * */
+  @Override
+  public String writePrivacyBudgetExhaustedDebuggingInformation(
+      PrivacyBudgetExhaustedInfo privacyBudgetExhaustedDebuggingInfo,
+      Job ctx,
+      String privacyBudgetExhaustedInfoFileName) {
+    try {
+      Path localFilepath = Paths.get(privacyBudgetExhaustedInfoFileName);
+      localPrivacyBudgetExhaustedInfoWriter.writePrivacyBudgetExhaustedInfo(
+          privacyBudgetExhaustedDebuggingInfo, localFilepath);
+      String outputDataBlobBucket = ctx.requestInfo().getOutputDataBucketName();
+      String outputDataBlobPrefix = ctx.requestInfo().getOutputDataBlobPrefix();
+      // remove trailing ".avro" from outputDataBlobPrefix for privacy budget exhausted debugging
+      // information file prefix.
+      if (outputDataBlobPrefix.endsWith(AVRO_EXTENSION)) {
+        outputDataBlobPrefix =
+            outputDataBlobPrefix.substring(
+                0, outputDataBlobPrefix.length() - AVRO_EXTENSION.length());
+      }
+      outputDataBlobPrefix = outputDataBlobPrefix + "/" + privacyBudgetExhaustedInfoFileName;
+
+      DataLocation resultLocation = getDataLocation(outputDataBlobBucket, outputDataBlobPrefix);
+      blobStorageClient.putBlob(resultLocation, localFilepath);
+      Files.deleteIfExists(localFilepath);
+      return outputDataBlobBucket + "/" + outputDataBlobPrefix;
+    } catch (FileWriteException | IOException | BlobStorageClientException e) {
+      throw new ResultLogException(e);
     }
   }
 

@@ -26,9 +26,10 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.PRI
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.RESULT_WRITE_ERROR;
 import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.UNSUPPORTED_REPORT_VERSION;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_ATTRIBUTION_REPORT_TO;
-import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_PRIVACY_EPSILON;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_DEBUG_RUN;
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.JOB_PARAM_REPORTING_SITE;
+import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX;
+import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.NUM_REPORTS_WITH_ERRORS;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_0_1;
@@ -36,6 +37,7 @@ import static com.google.aggregate.adtech.worker.model.SharedInfo.VERSION_1_0;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_SUCCESS_WITH_ERRORS_MESSAGE;
+import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_DEBUG_PRIVACY_EPSILON;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_FILTERING_IDS;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_INPUT_REPORT_COUNT;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
@@ -114,15 +116,16 @@ import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKe
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorFactory;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
-import com.google.aggregate.privacy.noise.Annotations.Threshold;
 import com.google.aggregate.privacy.noise.NoiseApplier;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunnerImpl;
+import com.google.aggregate.privacy.noise.ThresholdSupplier;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule.ConstantNoiseApplier;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier.FakeNoiseApplier;
+import com.google.aggregate.privacy.noise.testing.FakeThresholdSupplier;
 import com.google.aggregate.protocol.avro.AvroDebugResultsSchemaSupplier;
 import com.google.aggregate.protocol.avro.AvroOutputDomainReaderFactory;
 import com.google.aggregate.protocol.avro.AvroOutputDomainRecord;
@@ -203,6 +206,11 @@ public class ConcurrentAggregationProcessorTest {
   private static final Instant REQUEST_PROCESSING_STARTED_AT =
       Instant.parse("2019-10-01T08:29:24.00Z");
   private static final Instant REQUEST_UPDATED_AT = Instant.parse("2019-10-01T08:29:24.00Z");
+
+  private static final String INPUT_DATA_BLOB_PREFIX = "dataHandle";
+  private static final String INPUT_DATA_BUCKET_NAME = "bucket";
+  private static final String OUTPUT_DATA_BLOB_PREFIX = "dataHandle";
+  private static final String OUTPUT_DATA_BUCKET_NAME = "bucket";
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
   @Rule public final TemporaryFolder testWorkingDir = new TemporaryFolder();
@@ -1171,21 +1179,21 @@ public class ConcurrentAggregationProcessorTest {
     // child-path-3 content was not read.
     assertThat(jobResultProcessor).isEqualTo(expectedJobResult);
     ImmutableList<AggregatedFact> expectedFacts =
-            ImmutableList.of(
-                    AggregatedFact.create(
-                            /* bucket= */ createBucketFromInt(1), /* metric= */ 11, /* unnoisedMetric= */ 1L),
-                    AggregatedFact.create(
-                            /* bucket= */ createBucketFromInt(2), /* metric= */ 14, /* unnoisedMetric= */ 4L),
-                    AggregatedFact.create(
-                            /* bucket= */ createBucketFromInt(3), /* metric= */ 19, /* unnoisedMetric= */ 9L),
-                    AggregatedFact.create(
-                            /* bucket= */ createBucketFromInt(4), /* metric= */ 26, /* unnoisedMetric= */ 16L));
+        ImmutableList.of(
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(1), /* metric= */ 11, /* unnoisedMetric= */ 1L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(2), /* metric= */ 14, /* unnoisedMetric= */ 4L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(3), /* metric= */ 19, /* unnoisedMetric= */ 9L),
+            AggregatedFact.create(
+                /* bucket= */ createBucketFromInt(4), /* metric= */ 26, /* unnoisedMetric= */ 16L));
     if (streamingOutputDomainTestParam) {
       expectedFacts.forEach(expectedFact -> expectedFact.setUnnoisedMetric(Optional.empty()));
     }
 
     assertThat(resultLogger.getMaterializedAggregationResults().getMaterializedAggregations())
-            .containsExactlyElementsIn(expectedFacts);
+        .containsExactlyElementsIn(expectedFacts);
   }
 
   @Test
@@ -1945,6 +1953,95 @@ public class ConcurrentAggregationProcessorTest {
   }
 
   @Test
+  public void aggregate_withNoPrivacyBudget_writesPrivacyBudgetDebuggingInfo() {
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    // No budget given, i.e. all the budgets are depleted for this test.
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    String expectedPrivacyBudgetExhaustedDebuggingInformationFileName =
+        PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX + ctx.createTime() + ".json";
+    String expectedPrivacyBudgetExhaustedDebuggingInformationFilePath =
+        ctx.requestInfo().getOutputDataBucketName()
+            + "/"
+            + ctx.requestInfo().getOutputDataBlobPrefix();
+
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.get().process(ctx));
+
+    assertThat(ex.getCode()).isEqualTo(PRIVACY_BUDGET_EXHAUSTED);
+    assertThat(ex.getMessage())
+        .isEqualTo(
+            String.format(
+                PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE,
+                expectedPrivacyBudgetExhaustedDebuggingInformationFilePath,
+                expectedPrivacyBudgetExhaustedDebuggingInformationFileName));
+    assertThat(resultLogger.getInMemoryPrivacyBudgetExhaustedInfo()).isNotNull();
+  }
+
+  @Test
+  public void
+      process_withConsecutiveJobsAndSameFilteringIds_throwsPrivacyExhausted_writesPrivacyBudgetDebuggingInfo()
+          throws Exception {
+    Fact factWithoutId1 = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
+    EncryptedReport reportWithoutId =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(
+                ImmutableList.of(factWithoutId1), VERSION_0_1));
+
+    Fact factWithId =
+        Fact.builder()
+            .setBucket(new BigInteger("22222"))
+            .setValue(11)
+            .setId(UnsignedLong.valueOf(12))
+            .build();
+    EncryptedReport reportWithIds =
+        getEncryptedReport(
+            FakeReportGenerator.generateWithFactList(ImmutableList.of(factWithId), "1.0"));
+    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+
+    UnsignedLong filteringIdJob = UnsignedLong.valueOf(1963698);
+
+    ImmutableSet<PrivacyBudgetUnit> expectedPrivacyBudgetUnitsJobs =
+        ImmutableSet.of(
+            getPrivacyBudgetUnit(reportWithoutId, filteringIdJob),
+            getPrivacyBudgetUnit(reportWithIds, filteringIdJob));
+    FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
+        new FakePrivacyBudgetingServiceBridge();
+    expectedPrivacyBudgetUnitsJobs.stream()
+        .forEach(pbu -> fakePrivacyBudgetingServiceBridge.setPrivacyBudget(pbu, /* budget= */ 1));
+    privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
+        fakePrivacyBudgetingServiceBridge);
+    String expectedPrivacyBudgetExhaustedDebuggingInformationFileName =
+        PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX + ctx.createTime() + ".json";
+    String expectedPrivacyBudgetExhaustedDebuggingInformationFilePath =
+        ctx.requestInfo().getOutputDataBucketName()
+            + "/"
+            + ctx.requestInfo().getOutputDataBlobPrefix();
+
+    Job job =
+        getJobWithGivenJobParams(
+            /* jobParams= */ ImmutableMap.of(JOB_PARAM_FILTERING_IDS, filteringIdJob.toString()));
+    processor.get().process(job);
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent()).isPresent();
+    assertThat(fakePrivacyBudgetingServiceBridge.getLastBudgetsToConsumeSent().get())
+        .containsExactlyElementsIn(expectedPrivacyBudgetUnitsJobs);
+
+    AggregationJobProcessException ex =
+        assertThrows(AggregationJobProcessException.class, () -> processor.get().process(job));
+
+    assertThat(ex.getCode()).isEqualTo(PRIVACY_BUDGET_EXHAUSTED);
+    assertThat(ex.getMessage())
+        .isEqualTo(
+            String.format(
+                PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE,
+                expectedPrivacyBudgetExhaustedDebuggingInformationFilePath,
+                expectedPrivacyBudgetExhaustedDebuggingInformationFileName));
+    assertThat(resultLogger.getInMemoryPrivacyBudgetExhaustedInfo()).isNotNull();
+  }
+
+  @Test
   public void aggregate_withPrivacyBudgeting() throws Exception {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
@@ -2460,10 +2557,10 @@ public class ConcurrentAggregationProcessorTest {
     RequestInfo.Builder requestInfoBuilder =
         RequestInfo.newBuilder()
             .setJobRequestId(id)
-            .setInputDataBlobPrefix("dataHandle")
-            .setInputDataBucketName("bucket")
-            .setOutputDataBlobPrefix("dataHandle")
-            .setOutputDataBucketName("bucket")
+            .setInputDataBlobPrefix(INPUT_DATA_BLOB_PREFIX)
+            .setInputDataBucketName(INPUT_DATA_BUCKET_NAME)
+            .setOutputDataBlobPrefix(OUTPUT_DATA_BLOB_PREFIX)
+            .setOutputDataBucketName(OUTPUT_DATA_BUCKET_NAME)
             .setPostbackUrl("http://postback.com");
     RequestInfo requestInfo;
     if (attributionReportTo.isPresent()) {
@@ -2616,9 +2713,8 @@ public class ConcurrentAggregationProcessorTest {
     }
 
     @Provides
-    @Threshold
-    Supplier<Double> provideThreshold() {
-      return () -> 0.0;
+    ThresholdSupplier provideThreshold() {
+      return new FakeThresholdSupplier(0.0);
     }
 
     @Provides

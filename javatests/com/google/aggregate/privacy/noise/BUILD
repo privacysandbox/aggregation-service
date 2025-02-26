@@ -23,7 +23,9 @@ java_test(
         "//java/com/google/aggregate/adtech/worker:annotations",
         "//java/com/google/aggregate/adtech/worker/configs",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/privacy/noise",
+        "//java/com/google/aggregate/privacy/noise:params",
         "//java/com/google/aggregate/privacy/noise/model",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/com/google/aggregate/privacy/noise/testing",
@@ -31,6 +33,7 @@ java_test(
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:operator_protos",
     ],
 )
 
@@ -41,28 +44,33 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/configs",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/privacy/noise",
+        "//java/com/google/aggregate/privacy/noise:params",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/com/google/aggregate/privacy/noise/testing",
-        "//java/com/google/aggregate/privacy/noise/testing:noise_tester_java_proto",
         "//java/external:acai",
         "//java/external:differential_privacy",
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:operator_protos",
     ],
 )
 
 java_test(
-    name = "DpNoiseParamsFactoryTest",
-    srcs = ["DpNoiseParamsFactoryTest.java"],
+    name = "JobScopedPrivacyParamsFactoryTest",
+    srcs = ["JobScopedPrivacyParamsFactoryTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/configs",
+        "//java/com/google/aggregate/adtech/worker/exceptions",
+        "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/privacy/noise",
+        "//java/com/google/aggregate/privacy/noise:params",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/external:acai",
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",
+        "//java/external:operator_protos",
     ],
 )
 
@@ -72,6 +80,7 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/configs",
         "//java/com/google/aggregate/privacy/noise",
+        "//java/com/google/aggregate/privacy/noise:params",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/external:google_truth",
         "//java/external:guava",

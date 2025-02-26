@@ -367,3 +367,20 @@ values:_
 coordinator_a_impersonate_service_account = "a-opallowedusr@ps-msmt-coord-prd-g3p-svcacc.iam.gserviceaccount.com"
 coordinator_b_impersonate_service_account = "b-opallowedusr@ps-prod-msmt-type2-e541.iam.gserviceaccount.com"
 ```
+
+## Troubleshooting
+
+-   After successfully deploying the Aggregation Service, if the submitted jobs remain in a
+    'RECEIVED' state, check for the following error message in the VM's
+    [serial log](https://cloud.google.com/compute/docs/troubleshooting/viewing-serial-port-output#cloud-logging):
+
+```txt
+Error: Failed to fetch OIDC token: failed to retreive service attestation service
+token: failed to get principle token: failed to get impersonated token for [a-opverifiedusr@ps-msmt-coord-prd-g3p-wif.iam.gserviceaccount.com | b-opverifiedusr@ps-prod-msmt-type2-e541.iam.gserviceaccount.com].
+Status code: 403
+Message: Permission 'iam.serviceAccounts.getOpenIdToken' denied on resource (or it may not exist)
+```
+
+It points to an incomplete Service Account (SA) onboarding. If you encounter this situation, verify
+that your SA onboarding was successfully completed and that your deployment is using the onboarded
+SA account.

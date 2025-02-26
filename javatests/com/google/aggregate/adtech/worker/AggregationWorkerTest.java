@@ -17,7 +17,6 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static com.google.common.util.concurrent.Service.State.TERMINATED;
 

@@ -1,0 +1,304 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""
+Bazel module.
+"""
+
+module(
+    name = "privacy_sandbox_aggregation_service",
+    version = "2.11.0",
+)
+
+bazel_dep(name = "gazelle", version = "0.42.0", repo_name = "bazel_gazelle")
+bazel_dep(name = "googletest", version = "1.14.0", repo_name = "com_google_googletest")
+bazel_dep(name = "grpc-java", version = "1.69.0", repo_name = "io_grpc_grpc_java")
+bazel_dep(name = "protobuf", version = "29.3", repo_name = "com_google_protobuf")
+bazel_dep(name = "rpmpack", version = "0.6.0", repo_name = "com_github_google_rpmpack")
+bazel_dep(name = "rules_cc", version = "0.0.17")
+bazel_dep(name = "rules_go", version = "0.52.0", repo_name = "io_bazel_rules_go")
+bazel_dep(name = "rules_java", version = "7.12.2")
+bazel_dep(name = "rules_jvm_external", version = "6.7")
+bazel_dep(name = "rules_pkg", version = "1.0.1")
+bazel_dep(name = "rules_proto", version = "6.0.0")
+bazel_dep(name = "rules_python", version = "1.1.0")
+bazel_dep(name = "grpc", version = "1.69.0", repo_name = "com_github_grpc_grpc")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+
+http_archive(
+    name = "terraform",
+    build_file_content = """
+package(default_visibility = ["//visibility:public"])
+exports_files(["terraform"])
+""",
+    sha256 = "728b6fbcb288ad1b7b6590585410a98d3b7e05efe4601ef776c37e15e9a83a96",
+    url = "https://releases.hashicorp.com/terraform/1.2.3/terraform_1.2.3_linux_amd64.zip",
+)
+
+http_archive(
+    name = "packer",
+    build_file_content = """
+package(default_visibility = ["//visibility:public"])
+exports_files(["packer"])
+""",
+    sha256 = "57d0411e578aea62918d36ed186951139d5d49d44b76e5666d1fbf2427b385ae",
+    url = "https://releases.hashicorp.com/packer/1.8.6/packer_1.8.6_linux_amd64.zip",
+)
+
+http_archive(
+    name = "google-cloud-sdk",
+    build_file_content = """
+package(default_visibility = ["//visibility:public"])
+exports_files(["google-cloud-sdk"])
+""",
+    # latest from https://cloud.google.com/storage/docs/gsutil_install#linux as of 2021-12-16
+    sha256 = "94328b9c6559a1b7ec2eeaab9ef0e4702215e16e8327c5b99718750526ae1efe",
+    url = "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-367.0.0-linux-x86_64.tar.gz",
+)
+
+# TODO: Migrate to BCR
+# https://github.com/bazelbuild/bazel-central-registry/pull/2742
+http_archive(
+    name = "com_github_googleapis_google_cloud_cpp",
+    sha256 = "358e3b6277a71634de7b7cb1cef14b728f6af6e450fbc9b0e5847882729b32ea",
+    strip_prefix = "google-cloud-cpp-c7242253b17a1754e06444bd042849ec101729c8",
+    urls = ["https://github.com/googleapis/google-cloud-cpp/archive/c7242253b17a1754e06444bd042849ec101729c8.zip"],  # 2024-06-11
+)
+
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+http_file(
+    name = "google_java_format",
+    downloaded_file_path = "google-java-format.jar",
+    sha256 = "9d404cf6fe5f6aa7672693a3301ef2a22016ba540eca5d835be43104b71eb5d6",
+    urls = ["https://github.com/google/google-java-format/releases/download/v1.10.0/google-java-format-1.10.0-all-deps.jar"],
+)
+
+http_file(
+    name = "bazelisk",
+    downloaded_file_path = "bazelisk",
+    executable = True,
+    sha256 = "84e946ed8537eaaa4d540df338a593e373e70c5ddca9f2f49e1aaf3a04bdd6ca",
+    urls = ["https://github.com/bazelbuild/bazelisk/releases/download/v1.14.0/bazelisk-linux-amd64"],
+)
+
+bazel_dep(name = "googleapis", version = "0.0.0-20240819-fe8ba054a", repo_name = "com_google_googleapis")
+archive_override(
+    module_name = "googleapis",
+    integrity = "sha256-BRPw9Ar2O9Bdx4nKzDNKts7CfMidtZZVfLLf6JGUY+Q=",
+    patch_strip = 1,
+    # Patch module support into googleapis
+    patches = ["//build_defs:googleapis.patch"],
+    strip_prefix = "googleapis-fe8ba054ad4f7eca946c2d14a63c3f07c0b586a0",
+    urls = [
+        "https://github.com/googleapis/googleapis/archive/fe8ba054ad4f7eca946c2d14a63c3f07c0b586a0.tar.gz",
+    ],
+)
+
+switched_rules = use_extension("@com_google_googleapis//:extensions.bzl", "switched_rules")
+switched_rules.use_languages(
+    cc = True,
+    grpc = True,
+    java = True,
+)
+use_repo(switched_rules, "com_google_googleapis_imports")
+
+go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+go_sdk.download(version = "1.24.0")
+
+go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
+go_deps.module(
+    path = "github.com/bazelbuild/buildtools",
+    sum = "h1:FGzENZi+SX9I7h9xvMtRA3rel8hCEfyzSixteBgn7MU=",
+    version = "v0.0.0-20240918101019-be1c24cc9a44",
+)
+
+# All *direct* Go dependencies of all `go.mod` files referenced by the `go.work`
+# file have to be listed explicitly.
+use_repo(
+    go_deps,
+    "com_github_bazelbuild_buildtools",
+)
+
+# IMPORTANT: If you added dependencies and/or updated dependency versions below, run
+# `$ bazel run @unpinned_maven//:pin` and include `maven_install.json` in your change.
+
+PROTOBUF_CORE_VERSION = "28.3"
+
+PROTOBUF_JAVA_VERSION_PREFIX = "4."
+
+PROTOBUF_SHA_256 = "7c3ebd7aaedd86fa5dc479a0fda803f602caaf78d8aff7ce83b89e1b8ae7442a"
+
+JACKSON_VERSION = "2.16.1"
+
+AUTO_VALUE_VERSION = "1.10.1"
+
+AWS_SDK_VERSION = "2.21.16"
+
+AWS_JAVA_SDK_VERSION = "1.12.772"
+
+GOOGLE_GAX_VERSION = "2.38.0"
+
+AUTO_SERVICE_VERSION = "1.1.1"
+
+OTEL_VERSION = "1.43.0"
+
+# IMPORTANT: If you added dependencies and/or updated dependency versions below, run
+# `$ bazel run @maven//:pin` and include `maven_install.json` in your change.
+OTEL_ARTIFACTS = [
+    "com.google.errorprone:error_prone_annotations:2.+",
+    "io.opentelemetry:opentelemetry-api:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-exporter-logging:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-exporter-logging-otlp:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-exporter-otlp:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-common:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-metrics:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-testing:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-logs:" + OTEL_VERSION,
+    "io.opentelemetry:opentelemetry-sdk-trace:" + OTEL_VERSION,
+    "io.opentelemetry.contrib:opentelemetry-aws-xray:" + OTEL_VERSION,
+    "com.google.cloud.opentelemetry:exporter-metrics:0.33.0",
+    # Note from https://github.com/open-telemetry/semantic-conventions-java:
+    # Although this is for stable semantic conventions, the artifact still has the -alpha and comes with no
+    # compatibility guarantees. The goal is to mark this artifact stable.
+    "io.opentelemetry.semconv:opentelemetry-semconv:1.27.0-alpha",
+    # As of adding, https://repo1.maven.org/maven2/io/opentelemetry/contrib/opentelemetry-gcp-resources/ only shows
+    # that alpha version is available.
+    "io.opentelemetry.contrib:opentelemetry-gcp-resources:" + OTEL_VERSION + "-alpha",
+    "io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:" + OTEL_VERSION,
+]
+
+maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+
+# IMPORTANT: If you added dependencies and/or updated dependency versions below, run
+# `$ bazel run @maven//:pin` and include `maven_install.json` in your change.
+
+maven.install(
+    name = "maven",
+    artifacts = [
+        "com.amazonaws:aws-lambda-java-core:1.2.3",
+        "com.amazonaws:aws-lambda-java-events:3.11.3",
+        "com.amazonaws:aws-lambda-java-events-sdk-transformer:3.1.0",
+        "com.amazonaws:aws-java-sdk-sqs:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-s3:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-kms:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-core:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-xray:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-logs:" + AWS_JAVA_SDK_VERSION,
+        "com.amazonaws:aws-java-sdk-cloudwatch:" + AWS_JAVA_SDK_VERSION,
+        "com.beust:jcommander:1.82",
+        "com.google.cloud.functions.invoker:java-function-invoker:1.1.0",
+        "com.google.inject:guice:5.1.0",
+        "com.google.inject.extensions:guice-testlib:5.1.0",
+        "com.fasterxml.jackson.core:jackson-annotations:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.core:jackson-core:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.core:jackson-databind:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.datatype:jackson-datatype-guava:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:" + JACKSON_VERSION,
+        "com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:" + JACKSON_VERSION,
+        "com.google.acai:acai:1.1",
+        "com.google.auto.factory:auto-factory:1.0.1",
+        "com.google.auto.service:auto-service-annotations:" + AUTO_SERVICE_VERSION,
+        "com.google.auto.service:auto-service:" + AUTO_SERVICE_VERSION,
+        "com.google.auto.value:auto-value-annotations:" + AUTO_VALUE_VERSION,
+        "com.google.auto.value:auto-value:" + AUTO_VALUE_VERSION,
+        "com.google.code.findbugs:jsr305:3.0.2",
+        "com.google.cloud:google-cloud-logging:3.21.2",
+        "com.google.cloud:google-cloud-kms:2.60.0",
+        "com.google.cloud:google-cloud-pubsub:1.136.1",
+        "com.google.cloud:google-cloud-storage:2.48.0",
+        "com.google.cloud:google-cloud-spanner:6.86.0",
+        "com.google.cloud:google-cloud-secretmanager:2.57.0",
+        "com.google.cloud:google-cloud-compute:1.67.0",
+        "com.google.api.grpc:proto-google-cloud-logging-v2:0.110.2",
+        "com.google.api.grpc:proto-google-cloud-compute-v1:1.67.0",
+        "com.google.cloud.functions:functions-framework-api:1.1.0",
+        "commons-logging:commons-logging:1.3.0",
+        "com.google.api.grpc:proto-google-common-protos:2.34.0",
+        "com.google.cloud:google-cloud-trace:2.35.0",
+        "com.google.api.grpc:proto-google-cloud-trace-v1:2.35.0",
+        "com.google.api:gax:" + GOOGLE_GAX_VERSION,
+        "com.google.http-client:google-http-client-jackson2:1.43.3",
+        "io.reactivex.rxjava3:rxjava:3.1.8",
+        "com.google.cloud:google-cloud-monitoring:3.35.0",
+        "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.35.0",
+        "com.google.protobuf:protobuf-java:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
+        "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
+        "com.google.guava:guava:33.0.0-jre",
+        "com.google.guava:guava-testlib:33.0.0-jre",
+        "com.google.jimfs:jimfs:1.3.0",
+        "com.google.testparameterinjector:test-parameter-injector:1.15",
+        "com.google.truth.extensions:truth-java8-extension:1.3.0",
+        "com.google.truth.extensions:truth-proto-extension:1.3.0",
+        "com.google.truth:truth:1.3.0",
+        "com.jayway.jsonpath:json-path:2.9.0",
+        "javax.inject:javax.inject:1",
+        "io.github.resilience4j:resilience4j-core:1.7.1",
+        "io.github.resilience4j:resilience4j-retry:1.7.1",
+        "junit:junit:4.13.2",
+        "org.apache.avro:avro:1.12.0",
+        "org.apache.commons:commons-compress:1.26.2",
+        "org.apache.commons:commons-math3:3.6.1",
+        "org.apache.httpcomponents:httpcore:4.4.16",
+        "org.apache.httpcomponents:httpclient:4.5.14",
+        "org.apache.httpcomponents.client5:httpclient5:5.3",
+        "org.apache.httpcomponents.core5:httpcore5:5.2.4",
+        "org.apache.httpcomponents.core5:httpcore5-h2:5.2.4",
+        "org.apache.logging.log4j:log4j-1.2-api:2.22.1",
+        "org.apache.logging.log4j:log4j-core:2.22.1",
+        "org.awaitility:awaitility:3.1.6",
+        "org.mock-server:mockserver-core:5.11.2",
+        "org.mock-server:mockserver-junit-rule:5.11.2",
+        "org.mock-server:mockserver-client-java:5.11.2",
+        "org.hamcrest:hamcrest-library:2.2",
+        "org.mockito:mockito-core:4.11.0",
+        "org.slf4j:slf4j-api:2.0.11",
+        "org.slf4j:slf4j-simple:2.0.11",
+        "org.slf4j:slf4j-log4j12:1.7.33",
+        "org.testcontainers:testcontainers:1.19.3",
+        "org.testcontainers:localstack:1.19.3",
+        "software.amazon.awssdk:aws-sdk-java:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:dynamodb-enhanced:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:dynamodb:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:ec2:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:regions:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:s3:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:s3-transfer-manager:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:aws-core:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:ssm:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:sts:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:sqs:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:url-connection-client:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:utils:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:auth:" + AWS_SDK_VERSION,
+        "software.amazon.awssdk:lambda:" + AWS_SDK_VERSION,
+        "com.google.crypto.tink:tink:1.13.0",
+        "com.google.crypto.tink:tink-gcpkms:1.9.0",
+        "com.google.oauth-client:google-oauth-client:1.37.0",
+        "com.google.auth:google-auth-library-oauth2-http:1.31.0",
+        "io.netty:netty-codec-http:4.1.115.Final",
+        "com.google.cloud:google-cloud-iamcredentials:2.57.0",
+    ] + OTEL_ARTIFACTS,
+    # Run `bazel run @maven//:pin` to regenerate.
+    lock_file = "//:maven_install_bzlmod.json",
+    repositories = [
+        "https://repo1.maven.org/maven2",
+        "https://maven.google.com",
+        "https://jcenter.bintray.com",
+    ],
+)
+use_repo(maven, "maven")

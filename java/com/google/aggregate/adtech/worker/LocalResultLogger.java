@@ -23,8 +23,11 @@ import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.LibraryAnnotations.LocalOutputDirectory;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetExhaustedInfo;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter.FileWriteException;
+import com.google.aggregate.adtech.worker.writer.PrivacyBudgetExhaustedInfoWriter;
+import com.google.aggregate.adtech.worker.writer.json.LocalPrivacyBudgetExhaustedInfoWriter;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
@@ -40,15 +43,18 @@ final class LocalResultLogger implements ResultLogger {
 
   private final LocalResultFileWriter localResultFileWriter;
   private final LocalResultFileWriter localDebugResultFileWriter;
+  private final LocalPrivacyBudgetExhaustedInfoWriter localPrivacyBudgetExhaustedInfoWriter;
   private final Path workingDirectory;
 
   @Inject
   public LocalResultLogger(
       @ResultWriter LocalResultFileWriter localResultFileWriter,
       @DebugWriter LocalResultFileWriter localDebugFileWriter,
+      LocalPrivacyBudgetExhaustedInfoWriter localPrivacyBudgetExhaustedInfoWriter,
       @LocalOutputDirectory Path localOutputDirectory) {
     this.localResultFileWriter = localResultFileWriter;
     this.localDebugResultFileWriter = localDebugFileWriter;
+    this.localPrivacyBudgetExhaustedInfoWriter = localPrivacyBudgetExhaustedInfoWriter;
     this.workingDirectory = localOutputDirectory;
   }
 
@@ -88,6 +94,20 @@ final class LocalResultLogger implements ResultLogger {
               localResultsFilePath,
               isDebugRun ? localDebugResultFileWriter : localResultFileWriter);
         });
+  }
+
+  @Override
+  public String writePrivacyBudgetExhaustedDebuggingInformation(
+      PrivacyBudgetExhaustedInfo privacyBudgetExhaustedDebuggingInfo,
+      Job ctx,
+      String privacyBudgetExhaustedInfoFileName) {
+    try {
+      localPrivacyBudgetExhaustedInfoWriter.writePrivacyBudgetExhaustedInfo(
+          privacyBudgetExhaustedDebuggingInfo, Paths.get(privacyBudgetExhaustedInfoFileName));
+      return privacyBudgetExhaustedInfoFileName;
+    } catch (PrivacyBudgetExhaustedInfoWriter.FileWriteException e) {
+      throw new ResultLogException(e);
+    }
   }
 
   private DataLocation writeFileBytes(

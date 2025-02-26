@@ -16,13 +16,10 @@
 
 package com.google.aggregate.privacy.noise.testing;
 
-import com.google.aggregate.privacy.noise.DpNoiseParamsModule;
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams;
 import com.google.aggregate.privacy.noise.NoiseApplier;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunnerImpl;
-import com.google.aggregate.privacy.noise.ThresholdSupplierModule;
-import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters;
-import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.util.function.Supplier;
@@ -33,8 +30,6 @@ public final class ConstantNoiseModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(new DpNoiseParamsModule());
-    install(new ThresholdSupplierModule());
     bind(NoisedAggregationRunner.class).to(NoisedAggregationRunnerImpl.class);
   }
 
@@ -62,11 +57,6 @@ public final class ConstantNoiseModule extends AbstractModule {
     return supplier;
   }
 
-  @Provides
-  NoiseParameters provideNoiseParameters(Supplier<PrivacyParameters> privacyParametersSupplier) {
-    return privacyParametersSupplier.get().getNoiseParameters();
-  }
-
   /** Noise applier that applies provides constant noise, always */
   public static final class ConstantNoiseApplier implements NoiseApplier {
 
@@ -77,7 +67,7 @@ public final class ConstantNoiseModule extends AbstractModule {
     }
 
     @Override
-    public Long noiseMetric(Long metric) {
+    public Long noiseMetric(Long metric, JobScopedPrivacyParams unused) {
       return metric + noise;
     }
   }

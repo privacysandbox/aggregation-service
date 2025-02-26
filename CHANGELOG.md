@@ -1,10 +1,19 @@
 # Changelog
 
-## [2.11.1](https://github.com/privacysandbox/aggregation-service/compare/v2.11.0...v2.11.1) (2025-02-05)
+# [2.12.0](https://github.com/privacysandbox/aggregation-service/compare/v2.11.0...v2.12.0) (2025-02-24)
 
--   Updated dependencies to address security vulnerabilities.
--   Added a fix: Made the input shards lookup operation thread-safe to allow for parallel lookup
-    across multiple input prefix paths.
+-   Added
+    [GCP troubleshooting documentation](https://github.com/privacysandbox/aggregation-service/blob/main/docs/gcp-aggregation-service.md)
+    for debugging 403 error commonly encountered by adtechs.
+-   Added feature to write privacy budget exhausted debugging information JSON file to cloud storage
+    in
+    [PRIVACY_BUDGET_EXHAUSTED](https://github.com/privacysandbox/aggregation-service/blob/main/docs/error-codes-and-mitigation.md)
+    scenarios.
+-   Updated the Error code and Mitigation documentation for PRIVACY_BUDGET_EXHAUSTED.
+-   Updated Aggregation Service support instructions in
+    [README](https://github.com/privacysandbox/aggregation-service/blob/main/README.md).
+-   Upgraded control plane shared library dependency to
+    [1.18-rc01](https://github.com/privacysandbox/coordinator-services-and-shared-libraries/releases/tag/v1.18.0-rc01).
 
 # [2.11.0](https://github.com/privacysandbox/aggregation-service/compare/v2.10.0...v2.11.0) (2025-01-21)
 

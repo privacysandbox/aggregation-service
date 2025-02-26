@@ -12,34 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_java//java:defs.bzl", "java_library", "java_proto_library")
-load("@rules_proto//proto:defs.bzl", "proto_library")
+load("@rules_java//java:defs.bzl", "java_library")
 
 package(default_visibility = ["//visibility:public"])
-
-proto_library(
-    name = "noise_tester_proto",
-    srcs = ["noise_tester.proto"],
-    deps = ["//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_proto"],
-)
-
-java_proto_library(
-    name = "noise_tester_java_proto",
-    deps = [
-        ":noise_tester_proto",
-    ],
-)
 
 java_library(
     name = "testing",
     srcs = [
         "ConstantNoiseModule.java",
         "FakeNoiseApplierSupplier.java",
+        "FakeThresholdSupplier.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [
-        ":noise_tester_java_proto",
         "//java/com/google/aggregate/privacy/noise",
+        "//java/com/google/aggregate/privacy/noise:params",
         "//java/com/google/aggregate/privacy/noise/proto:privacy_parameters_java_proto",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",

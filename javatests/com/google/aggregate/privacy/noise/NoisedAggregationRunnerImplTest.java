@@ -29,12 +29,14 @@ import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.Nois
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingEpsilon;
 import com.google.aggregate.adtech.worker.configs.PrivacyParametersSupplier.NoisingL1Sensitivity;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.privacy.noise.Annotations.Threshold;
+import com.google.aggregate.adtech.worker.util.JobUtils;
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams.LaplaceDpParams;
 import com.google.aggregate.privacy.noise.model.NoisedAggregationResult;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier.FakeNoiseApplier;
+import com.google.aggregate.privacy.noise.testing.FakeThresholdSupplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.AbstractModule;
@@ -42,8 +44,8 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
 import java.math.BigInteger;
-import java.util.Optional;
 import java.util.function.Supplier;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,13 +62,24 @@ public class NoisedAggregationRunnerImplTest {
   private static final AggregatedFact NOISED_FACT2 =
       AggregatedFact.create(BigInteger.valueOf(2), /* metric= */ 490, 500L);
 
+  private static final double DEFAULT_EPSILON = 0.1;
+  private static final long DEFAULT_L1_SENSITIVITY = 4;
+  private static final double DEFAULT_DELTA = 5.00;
+  private static final JobScopedPrivacyParams DEFAULT_PRIVACY_PARAMS =
+      JobScopedPrivacyParams.ofLaplace(
+          LaplaceDpParams.builder()
+              .setEpsilon(DEFAULT_EPSILON)
+              .setL1Sensitivity(DEFAULT_L1_SENSITIVITY)
+              .setDelta(DEFAULT_DELTA)
+              .build());
+
   @Rule public final Acai acai = new Acai(TestEnv.class);
 
   @Inject FakeNoiseApplierSupplier fakeNoiseApplierSupplier;
-  @Inject private CustomDeltaPrivacyParamsSupplier customDeltaPrivacyParamsSupplier;
   @Inject private FakeThresholdSupplier thresholdSupplier;
 
   // Under test.
+  @Inject private JobScopedPrivacyParamsFactory privacyParamsFactory;
   @Inject private Provider<NoisedAggregationRunner> noisedAggregationRunner;
   @Inject private NoisedAggregationRunnerFlagsHelper aggregationRunnerFlagsHelper;
 
@@ -78,19 +91,21 @@ public class NoisedAggregationRunnerImplTest {
   }
 
   @Test
-  public void noise() {
+  public void noise() throws Exception {
     thresholdSupplier.setThreshold(0);
 
     NoisedAggregationResult result =
         noiseAndThreshold(
-            getTestFacts(), /* doThreshold= */ true, /* debugPrivacyEpsilon= */ Optional.empty());
+            getTestFacts(),
+            /* doThreshold= */ true,
+            privacyParamsFactory.fromRequestInfo(RequestInfo.getDefaultInstance()));
 
-    assertThat(result.privacyParameters()).isEqualTo(customDeltaPrivacyParamsSupplier.get());
+    assertThat(result.privacyParameters()).isEqualTo(DEFAULT_PRIVACY_PARAMS);
     assertThat(result.noisedAggregatedFacts()).containsExactly(NOISED_FACT1, NOISED_FACT2);
   }
 
   @Test
-  public void noise_parallelNoisingEnabled() {
+  public void noise_parallelNoisingEnabled() throws Exception {
     thresholdSupplier.setThreshold(0);
     aggregationRunnerFlagsHelper.setParallelAggregatedFactNoisingEnabled(true);
     fakeNoiseApplierSupplier.setFakeNoiseApplier(
@@ -105,101 +120,117 @@ public class NoisedAggregationRunnerImplTest {
 
     NoisedAggregationResult result =
         noiseAndThreshold(
-            getTestFacts(), /* doThreshold= */ true, /* debugPrivacyEpsilon= */ Optional.empty());
+            getTestFacts(),
+            /* doThreshold= */ true,
+            privacyParamsFactory.fromRequestInfo(RequestInfo.getDefaultInstance()));
 
-    assertThat(result.privacyParameters()).isEqualTo(customDeltaPrivacyParamsSupplier.get());
+    assertThat(result.privacyParameters()).isEqualTo(DEFAULT_PRIVACY_PARAMS);
     assertThat(result.noisedAggregatedFacts()).containsExactly(noisedFact1, noisedFact2);
   }
 
   @Test
-  public void noise_noThresholding() {
+  public void noise_noThresholding() throws Exception {
     thresholdSupplier.setThreshold(10000);
 
     NoisedAggregationResult result =
         noiseAndThreshold(
-            getTestFacts(), /* doThreshold= */ false, /* debugPrivacyEpsilon= */ Optional.empty());
+            getTestFacts(),
+            /* doThreshold= */ false,
+            privacyParamsFactory.fromRequestInfo(RequestInfo.getDefaultInstance()));
 
-    assertThat(result.privacyParameters()).isEqualTo(customDeltaPrivacyParamsSupplier.get());
+    assertThat(result.privacyParameters()).isEqualTo(DEFAULT_PRIVACY_PARAMS);
     assertThat(result.noisedAggregatedFacts()).containsExactly(NOISED_FACT1, NOISED_FACT2);
   }
 
   @Test
-  public void threshold() {
+  public void threshold() throws Exception {
     thresholdSupplier.setThreshold(30);
 
     NoisedAggregationResult result =
         noiseAndThreshold(
-            getTestFacts(), /* doThreshold= */ true, /* debugPrivacyEpsilon= */ Optional.empty());
+            getTestFacts(),
+            /* doThreshold= */ true,
+            privacyParamsFactory.fromRequestInfo(RequestInfo.getDefaultInstance()));
 
-    assertThat(result.privacyParameters()).isEqualTo(customDeltaPrivacyParamsSupplier.get());
+    assertThat(result.privacyParameters()).isEqualTo(DEFAULT_PRIVACY_PARAMS);
     assertThat(result.noisedAggregatedFacts()).containsExactly(NOISED_FACT2);
   }
 
   @Test
-  public void countEqualToIntThreshold() {
+  public void countEqualToIntThreshold() throws Exception {
     thresholdSupplier.setThreshold(10);
 
     NoisedAggregationResult result =
         noiseAndThreshold(
-            getTestFacts(), /* doThreshold= */ true, /* debugPrivacyEpsilon= */ Optional.empty());
+            getTestFacts(),
+            /* doThreshold= */ true,
+            privacyParamsFactory.fromRequestInfo(RequestInfo.getDefaultInstance()));
 
-    assertThat(result.privacyParameters()).isEqualTo(customDeltaPrivacyParamsSupplier.get());
+    assertThat(result.privacyParameters()).isEqualTo(DEFAULT_PRIVACY_PARAMS);
     assertThat(result.noisedAggregatedFacts()).containsExactly(NOISED_FACT1, NOISED_FACT2);
   }
 
   @Test
-  public void countEqualToDoubleThreshold() {
+  public void countEqualToDoubleThreshold() throws Exception {
     thresholdSupplier.setThreshold(10.0001);
 
     NoisedAggregationResult result =
         noiseAndThreshold(
-            getTestFacts(), /* doThreshold= */ true, /* debugPrivacyEpsilon= */ Optional.empty());
+            getTestFacts(),
+            /* doThreshold= */ true,
+            privacyParamsFactory.fromRequestInfo(RequestInfo.getDefaultInstance()));
 
-    assertThat(result.privacyParameters()).isEqualTo(customDeltaPrivacyParamsSupplier.get());
+    assertThat(result.privacyParameters()).isEqualTo(DEFAULT_PRIVACY_PARAMS);
     assertThat(result.noisedAggregatedFacts()).containsExactly(NOISED_FACT1, NOISED_FACT2);
   }
 
   @Test
-  public void countLessThanDoubleThreshold() {
+  public void countLessThanDoubleThreshold() throws Exception {
     thresholdSupplier.setThreshold(25.0002);
 
     NoisedAggregationResult result =
         noiseAndThreshold(
-            getTestFacts(), /* doThreshold= */ true, /* debugPrivacyEpsilon= */ Optional.empty());
+            getTestFacts(),
+            /* doThreshold= */ true,
+            privacyParamsFactory.fromRequestInfo(RequestInfo.getDefaultInstance()));
 
-    assertThat(result.privacyParameters()).isEqualTo(customDeltaPrivacyParamsSupplier.get());
+    assertThat(result.privacyParameters()).isEqualTo(DEFAULT_PRIVACY_PARAMS);
     assertThat(result.noisedAggregatedFacts()).containsExactly(NOISED_FACT2);
   }
 
   @Test
-  public void testDebugEpsilonRequestScoped() {
+  public void testDebugEpsilonRequestScoped() throws Exception {
     thresholdSupplier.setThreshold(25.0002);
 
     NoisedAggregationResult result =
         noiseAndThreshold(
-            getTestFacts(), /* doThreshold= */ true, /* debugPrivacyEpsilon= */ Optional.of(0.2));
+            getTestFacts(),
+            /* doThreshold= */ true,
+            privacyParamsFactory.fromRequestInfo(
+                RequestInfo.newBuilder()
+                    .putJobParameters(JobUtils.JOB_PARAM_DEBUG_PRIVACY_EPSILON, "0.2")
+                    .build()));
 
     // debugEpsilon is not used with constant noise, but we can check that the epsilon is updated in
     // the privacy params.
-    assertThat(result.privacyParameters().getL1Sensitivity())
-        .isEqualTo(customDeltaPrivacyParamsSupplier.get().getL1Sensitivity());
-    assertThat(result.privacyParameters().getDelta())
-        .isEqualTo(customDeltaPrivacyParamsSupplier.get().getDelta());
-    assertThat(result.privacyParameters().getEpsilon()).isEqualTo(0.2);
+    assertThat(result.privacyParameters().laplaceDp().l1Sensitivity())
+        .isEqualTo(DEFAULT_L1_SENSITIVITY);
+    assertThat(result.privacyParameters().laplaceDp().delta()).isEqualTo(DEFAULT_DELTA);
+    assertThat(result.privacyParameters().laplaceDp().epsilon()).isEqualTo(0.2);
     assertThat(result.noisedAggregatedFacts()).containsExactly(NOISED_FACT2);
   }
 
   private NoisedAggregationResult noiseAndThreshold(
       ImmutableList<AggregatedFact> input,
       boolean doThreshold,
-      Optional<Double> debugPrivacyEpsilon) {
+      JobScopedPrivacyParams privacyParams) {
     NoisedAggregationResult noisedAggregationResult =
-        noisedAggregationRunner.get().noise(input, debugPrivacyEpsilon);
+        noisedAggregationRunner.get().noise(input, privacyParams);
 
     return doThreshold
         ? noisedAggregationRunner
             .get()
-            .threshold(noisedAggregationResult.noisedAggregatedFacts(), debugPrivacyEpsilon)
+            .threshold(noisedAggregationResult.noisedAggregatedFacts(), privacyParams)
         : noisedAggregationResult;
   }
 
@@ -210,49 +241,6 @@ public class NoisedAggregationRunnerImplTest {
         AggregatedFact.create(BigInteger.valueOf(2), /* metric= */ 500, /* unnoisedMetric= */ 500L);
 
     return ImmutableList.of(fact1, fact2);
-  }
-
-  /**
-   * Test implementation of {@code PrivacyParameters} supplier to allow delta to be modified for
-   * testing threshold.
-   */
-  private static final class CustomDeltaPrivacyParamsSupplier
-      implements Supplier<PrivacyParameters> {
-
-    private final PrivacyParametersSupplier privacyParams;
-    private double delta = 1e-5;
-
-    /**
-     * Supplies {@code PrivacyParameters} from text config in order to populate all required fields
-     * of the proto.
-     */
-    @Inject
-    private CustomDeltaPrivacyParamsSupplier(PrivacyParametersSupplier privacyParametersSupplier) {
-      privacyParams = privacyParametersSupplier;
-    }
-
-    @Override
-    public PrivacyParameters get() {
-      return privacyParams.get().toBuilder().setDelta(delta).build();
-    }
-
-    public void setDelta(double delta) {
-      this.delta = delta;
-    }
-  }
-
-  private static final class FakeThresholdSupplier implements Supplier<Double> {
-
-    private double threshold;
-
-    public void setThreshold(double threshold) {
-      this.threshold = threshold;
-    }
-
-    @Override
-    public Double get() {
-      return threshold;
-    }
   }
 
   private static final class NoisedAggregationRunnerFlagsHelper {
@@ -274,7 +262,6 @@ public class NoisedAggregationRunnerImplTest {
     @Override
     protected void configure() {
       bind(NoisedAggregationRunner.class).to(NoisedAggregationRunnerImpl.class);
-      bind(CustomDeltaPrivacyParamsSupplier.class).in(TestScoped.class);
       bind(FakeNoiseApplierSupplier.class).in(TestScoped.class);
       bind(FakeThresholdSupplier.class).in(TestScoped.class);
 
@@ -295,8 +282,7 @@ public class NoisedAggregationRunnerImplTest {
     }
 
     @Provides
-    Supplier<PrivacyParameters> providePrivacyParamConfig(
-        CustomDeltaPrivacyParamsSupplier supplier) {
+    Supplier<PrivacyParameters> provideDefaultPrivacyParams(PrivacyParametersSupplier supplier) {
       return supplier;
     }
 
@@ -307,8 +293,7 @@ public class NoisedAggregationRunnerImplTest {
     }
 
     @Provides
-    @Threshold
-    Supplier<Double> provideThreshold(FakeThresholdSupplier thresholdSupplier) {
+    ThresholdSupplier provideThreshold(FakeThresholdSupplier thresholdSupplier) {
       return thresholdSupplier;
     }
 

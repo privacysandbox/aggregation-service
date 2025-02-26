@@ -124,6 +124,7 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                     ImmutableList.of(ORIGIN_2_UNITS, ORIGIN_1_UNITS))
                 .claimedIdentity(CLAIMED_IDENTITY)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
+                .enableNewPbsClient(true)
                 .build());
   }
 
@@ -144,6 +145,7 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                 .reportingOriginToPrivacyBudgetUnitsList(ImmutableList.of(ORIGIN_1_UNITS))
                 .claimedIdentity(CLAIMED_IDENTITY)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
+                .enableNewPbsClient(true)
                 .build());
   }
 
@@ -165,6 +167,7 @@ public class HttpPrivacyBudgetingServiceBridgeTest {
                     ImmutableList.of(ORIGIN_1_UNITS, ORIGIN_2_UNITS))
                 .claimedIdentity(CLAIMED_IDENTITY)
                 .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
+                .enableNewPbsClient(true)
                 .build());
   }
 

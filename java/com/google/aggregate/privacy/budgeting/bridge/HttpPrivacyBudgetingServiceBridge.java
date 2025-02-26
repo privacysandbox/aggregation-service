@@ -67,6 +67,7 @@ public final class HttpPrivacyBudgetingServiceBridge implements PrivacyBudgeting
             .reportingOriginToPrivacyBudgetUnitsList(reportingOriginToPrivacyBudgetUnits)
             .claimedIdentity(claimedIdentity)
             .privacyBudgetLimit(DEFAULT_PRIVACY_BUDGET_LIMIT)
+            .enableNewPbsClient(true)
             .build();
 
     try {

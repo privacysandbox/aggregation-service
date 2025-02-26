@@ -19,7 +19,6 @@ package com.google.aggregate.adtech.worker.validation;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.ATTRIBUTION_REPORT_TO_MISMATCH;
 import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.ATTRIBUTION_REPORT_TO_MALFORMED;
 import static com.google.aggregate.adtech.worker.model.ErrorCounter.REPORTING_SITE_MISMATCH;
 

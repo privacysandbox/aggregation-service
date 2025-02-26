@@ -18,6 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetExhaustedInfo;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.jobclient.model.Job;
@@ -31,4 +32,16 @@ public interface ResultLogger {
 
   void logResultsAvros(
       ImmutableList<SummaryReportAvro> summaryReportAvros, Job ctx, boolean isDebugRun);
+
+  /**
+   * Writes PrivacyBudgetExhaustedInfo to persistent storage.
+   *
+   * @param privacyBudgetExhaustedDebuggingInfo the information to be written
+   * @param ctx the job context
+   * @param fileName the name of the file to write privacy budget debugging information to.
+   * @return String representing the complete path of the privacy budget debugging information file,
+   *     including bucket and prefix both.
+   */
+  String writePrivacyBudgetExhaustedDebuggingInformation(
+      PrivacyBudgetExhaustedInfo privacyBudgetExhaustedDebuggingInfo, Job ctx, String fileName);
 }

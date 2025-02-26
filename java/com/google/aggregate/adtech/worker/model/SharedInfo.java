@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonView;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.auto.value.AutoValue;
@@ -34,6 +35,9 @@ import java.util.Optional;
 /**
  * Plaintext shared_info from the report. Contains information the ad-tech can view but must also be
  * used by the aggregate service to process reports.
+ *
+ * <p>When introducing a new shared_info property that is included in privacy budgeting logic,
+ * ensure the new shared_info property is added to PrivacyBudgetKeyInput's hashCode() and equals().
  *
  * <p>Intended to match the spec here:
  *
@@ -77,25 +81,31 @@ public abstract class SharedInfo {
   public abstract Builder toBuilder();
 
   @JsonProperty("version")
+  @JsonView(Views.UsedInPrivacyBudgeting.class)
   public abstract String version();
 
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   @JsonProperty("api")
+  @JsonView(Views.UsedInPrivacyBudgeting.class)
   public abstract Optional<String> api();
 
   @JsonProperty("scheduled_report_time")
+  @JsonView(Views.UsedInPrivacyBudgeting.class)
   public abstract Instant scheduledReportTime();
 
   // Ad-tech eTLD+1
   @JsonProperty("reporting_origin")
+  @JsonView(Views.UsedInPrivacyBudgeting.class)
   public abstract String reportingOrigin();
 
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   @JsonProperty("attribution_destination")
+  @JsonView(Views.UsedInPrivacyBudgeting.class)
   public abstract Optional<String> destination();
 
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
   @JsonProperty("source_registration_time")
+  @JsonView(Views.UsedInPrivacyBudgeting.class)
   public abstract Optional<Instant> sourceRegistrationTime();
 
   @JsonInclude(JsonInclude.Include.NON_EMPTY)

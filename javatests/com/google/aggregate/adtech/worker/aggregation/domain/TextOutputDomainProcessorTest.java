@@ -44,16 +44,19 @@ import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorModule;
-import com.google.aggregate.privacy.noise.Annotations.Threshold;
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams;
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams.LaplaceDpParams;
 import com.google.aggregate.privacy.noise.NoiseApplier;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunnerImpl;
+import com.google.aggregate.privacy.noise.ThresholdSupplier;
 import com.google.aggregate.privacy.noise.model.NoisedAggregatedResultSet;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvroSet;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.aggregate.privacy.noise.proto.Params.PrivacyParameters;
 import com.google.aggregate.privacy.noise.testing.ConstantNoiseModule.ConstantNoiseApplier;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier;
+import com.google.aggregate.privacy.noise.testing.FakeThresholdSupplier;
 import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -88,6 +91,10 @@ import org.junit.runner.RunWith;
 @RunWith(TestParameterInjector.class)
 public class TextOutputDomainProcessorTest {
 
+  private static final JobScopedPrivacyParams DEFAULT_PRIVACY_PARAMS =
+      JobScopedPrivacyParams.ofLaplace(
+          LaplaceDpParams.builder().setEpsilon(10).setL1Sensitivity(1234).setDelta(0.01).build());
+
   @Rule public final TemporaryFolder testWorkingDir = new TemporaryFolder();
   @Rule public final Acai acai = new Acai(TestEnv.class);
   // Under test
@@ -109,7 +116,8 @@ public class TextOutputDomainProcessorTest {
         DataLocation.ofBlobStoreDataLocation(
             BlobStoreDataLocation.create(
                 /* bucket= */ outputDomainDirectory.toAbsolutePath().toString(), /* key= */ ""));
-    aggregationEngine = aggregationEngineFactory.create(ImmutableSet.of(UnsignedLong.ZERO));
+    aggregationEngine =
+        aggregationEngineFactory.createKeyAggregationEngine(ImmutableSet.of(UnsignedLong.ZERO));
     fakeNoiseApplierSupplier.setFakeNoiseApplier(new ConstantNoiseApplier(0));
   }
 
@@ -227,7 +235,7 @@ public class TextOutputDomainProcessorTest {
                 Optional.of(outputDomainLocation),
                 outputDomainProcessor.listShards(outputDomainLocation),
                 noisedAggregationRunner,
-                /* debugPrivacyEpsilon= */ Optional.empty(),
+                DEFAULT_PRIVACY_PARAMS,
                 /* debugRun= */ false)
             .summaryReportAvroSet()
             .get();
@@ -248,7 +256,7 @@ public class TextOutputDomainProcessorTest {
                 Optional.of(outputDomainLocation),
                 outputDomainProcessor.listShards(outputDomainLocation),
                 noisedAggregationRunner,
-                /* debugPrivacyEpsilon= */ Optional.empty(),
+                DEFAULT_PRIVACY_PARAMS,
                 /* debugRun= */ false)
             .noisedAggregatedResultSet()
             .get();
@@ -286,9 +294,8 @@ public class TextOutputDomainProcessorTest {
     }
 
     @Provides
-    @Threshold
-    Supplier<Double> provideThreshold() {
-      return () -> 0.0;
+    ThresholdSupplier provideThreshold() {
+      return new FakeThresholdSupplier(0.0);
     }
 
     @Provides

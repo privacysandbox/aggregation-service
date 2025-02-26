@@ -19,14 +19,18 @@ package(default_visibility = ["//visibility:public"])
 java_library(
     name = "engine",
     srcs = [
+        "AbstractAggregationEngine.java",
         "AggregationEngine.java",
         "AggregationEngineFactory.java",
+        "KeyAggregationEngine.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
+        "//java/external:autovalue",
         "//java/external:guava",
         "//java/external:javax_inject",
     ],

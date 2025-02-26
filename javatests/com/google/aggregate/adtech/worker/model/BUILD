@@ -45,3 +45,29 @@ java_test(
         "//java/external:google_truth",
     ],
 )
+
+java_test(
+    name = "AggregatableInputBudgetConsumptionInfoTest",
+    srcs = ["AggregatableInputBudgetConsumptionInfoTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model:privacy_budget_debugging_model",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+        "//java/external:guava",
+    ],
+)
+
+java_test(
+    name = "PrivacyBudgetExhaustedInfoTest",
+    srcs = ["PrivacyBudgetExhaustedInfoTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model:privacy_budget_debugging_model",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
+        "//java/external:google_truth",
+        "//java/external:google_truth8",
+        "//java/external:guava",
+    ],
+)

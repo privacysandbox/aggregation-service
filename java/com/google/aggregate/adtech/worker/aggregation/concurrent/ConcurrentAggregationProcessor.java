@@ -53,10 +53,12 @@ import com.google.aggregate.adtech.worker.exceptions.ConcurrentShardReadExceptio
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.adtech.worker.exceptions.InternalServerException;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
+import com.google.aggregate.adtech.worker.model.AggregatableInputBudgetConsumptionInfo;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.AvroRecordEncryptedReportConverter;
 import com.google.aggregate.adtech.worker.model.DecryptionValidationResult;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetExhaustedInfo;
 import com.google.aggregate.adtech.worker.util.DebugSupportHelper;
 import com.google.aggregate.adtech.worker.util.JobResultHelper;
 import com.google.aggregate.adtech.worker.util.JobUtils;
@@ -68,6 +70,9 @@ import com.google.aggregate.perf.StopwatchRegistry;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetingServiceBridgeException;
+import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams;
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParamsFactory;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
 import com.google.aggregate.privacy.noise.model.AggregatedResults;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
@@ -93,6 +98,7 @@ import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Paths;
 import java.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -111,7 +117,6 @@ import org.slf4j.LoggerFactory;
 public final class ConcurrentAggregationProcessor implements JobProcessor {
 
   // Key for user provided debug epsilon value in the job params of the job request.
-  public static final String JOB_PARAM_DEBUG_PRIVACY_EPSILON = "debug_privacy_epsilon";
   public static final String JOB_PARAM_ATTRIBUTION_REPORT_TO = "attribution_report_to";
   // Key to indicate whether this is a debug job
   public static final String JOB_PARAM_DEBUG_RUN = "debug_run";
@@ -128,9 +133,16 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   // Buffer size for decrypting and aggregating data on the same thread
   private final int MAX_REPORTS_PROCESS_BUFFER_SIZE = 1000;
 
+  // PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE should be used as a format string.
   public static final String PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE =
       "Insufficient privacy budget for one or more aggregatable reports. No aggregatable report can"
-          + " appear in more than one aggregation job.";
+          + " appear in more than one aggregation job. Information related to reports that do not"
+          + " have budget can be found in the following file:\n"
+          + " File path: %s \n"
+          + " Filename: %s \n";
+
+  public static final String PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX =
+      "privacy_budget_exhausted_debugging_information_";
   private static final Logger logger =
       LoggerFactory.getLogger(ConcurrentAggregationProcessor.class);
 
@@ -140,6 +152,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
   private final NoisedAggregationRunner noisedAggregationRunner;
   private final ResultLogger resultLogger;
   private final JobResultHelper jobResultHelper;
+  private final JobScopedPrivacyParamsFactory privacyParamsFactory;
   private final BlobStorageClient blobStorageClient;
   private final AvroReportsReaderFactory readerFactory;
   private final AvroRecordEncryptedReportConverter encryptedReportConverter;
@@ -166,6 +179,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       PrivacyBudgetingServiceBridge privacyBudgetingServiceBridge,
       OTelConfiguration oTelConfiguration,
       JobResultHelper jobResultHelper,
+      JobScopedPrivacyParamsFactory privacyParamsFactory,
       @BlockingThreadPool ListeningExecutorService blockingThreadPool,
       @NonBlockingThreadPool ListeningExecutorService nonBlockingThreadPool,
       @ReportErrorThresholdPercentage double defaultReportErrorThresholdPercentage,
@@ -182,6 +196,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     this.stopwatches = stopwatches;
     this.privacyBudgetingServiceBridge = privacyBudgetingServiceBridge;
     this.jobResultHelper = jobResultHelper;
+    this.privacyParamsFactory = privacyParamsFactory;
     this.blockingThreadPool = blockingThreadPool;
     this.nonBlockingThreadPool = nonBlockingThreadPool;
     this.oTelConfiguration = oTelConfiguration;
@@ -199,17 +214,8 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     processingStopwatch.start();
 
     final Boolean debugRun = DebugSupportHelper.isDebugRun(job);
-    final Optional<Double> debugPrivacyEpsilon = getPrivacyEpsilonForJob(job);
+    JobScopedPrivacyParams privacyParams = privacyParamsFactory.fromRequestInfo(job.requestInfo());
     final String jobKey = toJobKeyString(job.jobKey());
-
-    if (debugPrivacyEpsilon.isPresent()) {
-      Double privacyEpsilonForJob = debugPrivacyEpsilon.get();
-      if (!(privacyEpsilonForJob > 0d && privacyEpsilonForJob <= 64d)) {
-        throw new AggregationJobProcessException(
-            INVALID_JOB,
-            String.format("Failed Parsing Job parameters for %s", JOB_PARAM_DEBUG_PRIVACY_EPSILON));
-      }
-    }
 
     Optional<DataLocation> outputDomainLocation = Optional.empty();
     Map<String, String> jobParams = job.requestInfo().getJobParametersMap();
@@ -263,7 +269,8 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       double reportErrorThresholdPercentage = getReportErrorThresholdPercentage(jobParams);
       ImmutableSet<UnsignedLong> filteringIds = JobUtils.getFilteringIdsFromJobOrDefault(job);
 
-      AggregationEngine aggregationEngine = aggregationEngineFactory.create(filteringIds);
+      AggregationEngine aggregationEngine =
+          aggregationEngineFactory.createKeyAggregationEngine(filteringIds);
       ErrorSummaryAggregator errorAggregator =
           ErrorSummaryAggregator.createErrorSummaryAggregator(
               getInputReportCountFromJobParams(jobParams), reportErrorThresholdPercentage);
@@ -293,7 +300,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
                 outputDomainLocation,
                 outputDomainShards,
                 aggregationEngine,
-                debugPrivacyEpsilon,
+                privacyParams,
                 debugRun);
       } catch (DomainReadException e) {
         throw new AggregationJobProcessException(
@@ -306,7 +313,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
       if (debugRun) {
         if (!dontConsumeBudgetInDebugRunEnabled) {
           try {
-            consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
+            consumePrivacyBudgetUnits(aggregationEngine, job);
           } catch (AggregationJobProcessException e) {
             jobCode = AggregationWorkerReturnCode.getDebugEquivalent(e.getCode());
           }
@@ -314,7 +321,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
 
         logResults(aggregatedResults, job, /* isDebugRun= */ true);
       } else {
-        consumePrivacyBudgetUnits(aggregationEngine.getPrivacyBudgetUnits(), job);
+        consumePrivacyBudgetUnits(aggregationEngine, job);
       }
 
       // Log summary results
@@ -380,14 +387,14 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     if (inputReportCount == null || inputReportCount.trim().isEmpty()) {
       return Optional.empty();
     }
-    return Optional.ofNullable(Long.parseLong(inputReportCount.trim()));
+    return Optional.of(Long.parseLong(inputReportCount.trim()));
   }
 
   private AggregatedResults conflateWithDomainAndAddNoiseStreaming(
       Optional<DataLocation> outputDomainLocation,
       ImmutableList<DataLocation> outputDomainShards,
       AggregationEngine engine,
-      Optional<Double> debugPrivacyEpsilon,
+      JobScopedPrivacyParams privacyParams,
       Boolean debugRun)
       throws DomainReadException {
     if (streamingOutputDomainProcessing) {
@@ -396,7 +403,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
           outputDomainLocation,
           outputDomainShards,
           noisedAggregationRunner,
-          debugPrivacyEpsilon,
+          privacyParams,
           debugRun);
     }
 
@@ -405,7 +412,7 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
         outputDomainLocation,
         outputDomainShards,
         noisedAggregationRunner,
-        debugPrivacyEpsilon,
+        privacyParams,
         debugRun);
   }
 
@@ -423,8 +430,10 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     return defaultReportErrorThresholdPercentage;
   }
 
-  private void consumePrivacyBudgetUnits(ImmutableList<PrivacyBudgetUnit> budgetsToConsume, Job job)
+  private void consumePrivacyBudgetUnits(AggregationEngine aggregationEngine, Job job)
       throws AggregationJobProcessException {
+    ImmutableList<PrivacyBudgetUnit> budgetsToConsume = aggregationEngine.getPrivacyBudgetUnits();
+
     // Only send request to PBS if there are units to consume budget for; the list of units
     // can be empty if all reports failed decryption.
     if (budgetsToConsume.isEmpty()) {
@@ -489,8 +498,37 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
     }
 
     if (!missingPrivacyBudgetUnits.isEmpty()) {
+      ImmutableList<PrivacyBudgetKeyInput> exhaustedPrivacyBudgetKeyInputs =
+          aggregationEngine.getPrivacyBudgetKeyInputsFromPrivacyBudgetUnits(
+              missingPrivacyBudgetUnits);
+      ImmutableSet<AggregatableInputBudgetConsumptionInfo>
+          aggregatableInputBudgetConsumptionInfoSet =
+              exhaustedPrivacyBudgetKeyInputs.stream()
+                  .map(
+                      input ->
+                          AggregatableInputBudgetConsumptionInfo.builder()
+                              .setPrivacyBudgetKeyInput(input)
+                              .build())
+                  .collect(ImmutableSet.toImmutableSet());
+      PrivacyBudgetExhaustedInfo privacyBudgetExhaustedDebuggingInfo =
+          PrivacyBudgetExhaustedInfo.builder()
+              .setAggregatableInputBudgetConsumptionInfos(aggregatableInputBudgetConsumptionInfoSet)
+              .build();
+
+      String privacyBudgetExhaustedDebugInfoFilename =
+          PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX + job.createTime() + ".json";
+      String privacyBudgetExhaustedDebugInfoFileBucketAndPrefix =
+          resultLogger.writePrivacyBudgetExhaustedDebuggingInformation(
+              privacyBudgetExhaustedDebuggingInfo, job, privacyBudgetExhaustedDebugInfoFilename);
+      String privacyBudgetExhaustedDebugInfoFilePath =
+          Paths.get(privacyBudgetExhaustedDebugInfoFileBucketAndPrefix).getParent().toString();
+
       throw new AggregationJobProcessException(
-          PRIVACY_BUDGET_EXHAUSTED, PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE);
+          PRIVACY_BUDGET_EXHAUSTED,
+          String.format(
+              PRIVACY_BUDGET_EXHAUSTED_ERROR_MESSAGE,
+              privacyBudgetExhaustedDebugInfoFilePath,
+              privacyBudgetExhaustedDebugInfoFilename));
     }
   }
 
@@ -597,23 +635,5 @@ public final class ConcurrentAggregationProcessor implements JobProcessor {
           }
         });
     return Observable.empty();
-  }
-
-  /** Retrieve epsilon from nested optional fields */
-  private Optional<Double> getPrivacyEpsilonForJob(Job job) {
-    Optional<Double> epsilonValueFromJobReq = Optional.empty();
-    try {
-      if (job.requestInfo().containsJobParameters(JOB_PARAM_DEBUG_PRIVACY_EPSILON)) {
-        epsilonValueFromJobReq =
-            Optional.of(
-                Double.parseDouble(
-                    job.requestInfo().getJobParametersMap().get(JOB_PARAM_DEBUG_PRIVACY_EPSILON)));
-      }
-    } catch (NumberFormatException e) {
-      logger.error(
-          String.format("Failed Parsing Job parameters for %s", JOB_PARAM_DEBUG_PRIVACY_EPSILON),
-          e);
-    }
-    return epsilonValueFromJobReq;
   }
 }

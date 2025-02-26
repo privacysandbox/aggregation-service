@@ -24,6 +24,7 @@ import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.g
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readDebugResultsFromMultipleFiles;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.readResultsFromS3;
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
+import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX;
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
 import static com.google.common.truth.Truth.assertThat;
 
@@ -31,6 +32,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.ErrorCounter;
+import com.google.aggregate.adtech.worker.model.serdes.PrivacyBudgetExhaustedInfoSerdes;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
 import com.google.aggregate.protocol.avro.AvroDebugResultsReaderFactory;
 import com.google.common.collect.ImmutableList;
@@ -89,6 +91,7 @@ public class AwsWorkerContinuousSmokeTest {
 
   @Inject S3BlobStorageClient s3BlobStorageClient;
   @Inject AvroResultsFileReader avroResultsFileReader;
+  @Inject PrivacyBudgetExhaustedInfoSerdes privacyBudgetExhaustedInfoSerdes;
   @Inject private AvroDebugResultsReaderFactory debugReaderFactory;
 
   @Before
@@ -317,7 +320,9 @@ public class AwsWorkerContinuousSmokeTest {
     var inputKey2 =
         String.format("%s/%s/test-inputs/prefix-2/", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var inputKey3 =
-        String.format("%s/%s/test-inputs/prefix-3/report_shard_2.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+        String.format(
+            "%s/%s/test-inputs/prefix-3/report_shard_2.avro",
+            TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
     var domainKey =
         String.format(
             "%s/%s/test-inputs/10k_test_domain.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
@@ -579,9 +584,10 @@ public class AwsWorkerContinuousSmokeTest {
     var domainKey =
         String.format(
             "%s/%s/test-inputs/10k_test_domain_3.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
-    var outputKey =
+    var outputKeyPrefix =
         String.format(
-            "%s/%s/test-outputs/10k_test_output.avro", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+            "%s/%s/test-outputs/10k_test_output", TEST_DATA_S3_KEY_PREFIX, KOKORO_BUILD_ID);
+    var outputKey = outputKeyPrefix + ".avro";
 
     CreateJobRequest createJobRequest1 =
         AwsWorkerContinuousTestHelper.createJobRequestWithAttributionReportTo(
@@ -604,6 +610,9 @@ public class AwsWorkerContinuousSmokeTest {
 
     assertThat(result.get("result_info").get("return_code").asText())
         .isEqualTo(PRIVACY_BUDGET_EXHAUSTED.name());
+    assertThat(result.get("result_info").get("return_message").asText())
+        .containsMatch(
+            ".*" + PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX + ".*\\.json");
     assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
         .isTrue();
   }
@@ -931,8 +940,17 @@ public class AwsWorkerContinuousSmokeTest {
             2,
             Optional.of(50000L),
             filteringIds);
+
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+
     // Privacy Budget is exhausted for the same data and the same filtering ids.
-    assertResponseForCode(createJobRequest, PRIVACY_BUDGET_EXHAUSTED);
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isEqualTo(PRIVACY_BUDGET_EXHAUSTED.name());
+    assertThat(result.get("result_info").get("return_message").asText())
+        .containsMatch(
+            ".*" + PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX + ".*\\.json");
+    assertThat(result.get("result_info").get("error_summary").get("error_counts").isEmpty())
+        .isTrue();
   }
 
   private static void assertResponseForCode(

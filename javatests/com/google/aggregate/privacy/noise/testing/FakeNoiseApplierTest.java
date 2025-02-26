@@ -19,6 +19,8 @@ package com.google.aggregate.privacy.noise.testing;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams;
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams.LaplaceDpParams;
 import com.google.aggregate.privacy.noise.testing.FakeNoiseApplierSupplier.FakeNoiseApplier;
 import com.google.common.collect.ImmutableList;
 import java.util.NoSuchElementException;
@@ -31,6 +33,14 @@ import org.junit.runners.JUnit4;
 public class FakeNoiseApplierTest {
 
   private static final ImmutableList<Long> NEXT_VALUE_NOISE_TO_ADD = ImmutableList.of(10L, -10L);
+
+  private static final JobScopedPrivacyParams IRRELEVANT_PRIVACY_PARAMS =
+      JobScopedPrivacyParams.ofLaplace(
+          LaplaceDpParams.builder()
+              .setEpsilon(10)
+              .setL1Sensitivity(65536)
+              .setDelta(0.0000001)
+              .build());
 
   private static FakeNoiseApplierSupplier fakeNoiseApplierSupplier;
 
@@ -46,12 +56,15 @@ public class FakeNoiseApplierTest {
             .setNextValueNoiseToAdd(NEXT_VALUE_NOISE_TO_ADD.iterator())
             .build());
 
-    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(10L)).isEqualTo(20L);
-    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(15L)).isEqualTo(5L);
+    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(10L, IRRELEVANT_PRIVACY_PARAMS))
+        .isEqualTo(20L);
+    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(15L, IRRELEVANT_PRIVACY_PARAMS))
+        .isEqualTo(5L);
 
     // Runs out of noise.
     assertThrows(
-        NoSuchElementException.class, () -> fakeNoiseApplierSupplier.get().noiseMetric(5L));
+        NoSuchElementException.class,
+        () -> fakeNoiseApplierSupplier.get().noiseMetric(5L, IRRELEVANT_PRIVACY_PARAMS));
   }
 
   @Test
@@ -61,11 +74,14 @@ public class FakeNoiseApplierTest {
             .setNextValueNoiseToAdd(NEXT_VALUE_NOISE_TO_ADD.iterator())
             .build());
 
-    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(10L)).isEqualTo(20L);
-    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(15L)).isEqualTo(5L);
+    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(10L, IRRELEVANT_PRIVACY_PARAMS))
+        .isEqualTo(20L);
+    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(15L, IRRELEVANT_PRIVACY_PARAMS))
+        .isEqualTo(5L);
 
     assertThrows(
-        NoSuchElementException.class, () -> fakeNoiseApplierSupplier.get().noiseMetric(5L));
+        NoSuchElementException.class,
+        () -> fakeNoiseApplierSupplier.get().noiseMetric(5L, IRRELEVANT_PRIVACY_PARAMS));
   }
 
   @Test
@@ -77,7 +93,8 @@ public class FakeNoiseApplierTest {
             .setNextValueNoiseToAdd(ImmutableList.of(0L).iterator())
             .build());
 
-    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(10L)).isEqualTo(10L);
+    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(10L, IRRELEVANT_PRIVACY_PARAMS))
+        .isEqualTo(10L);
 
     // Reset.
     fakeNoiseApplierSupplier.setFakeNoiseApplier(
@@ -87,10 +104,12 @@ public class FakeNoiseApplierTest {
             .build());
 
     // Assert.
-    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(0L)).isEqualTo(4L);
+    assertThat(fakeNoiseApplierSupplier.get().noiseMetric(0L, IRRELEVANT_PRIVACY_PARAMS))
+        .isEqualTo(4L);
 
     // Runs out of noise.
     assertThrows(
-        NoSuchElementException.class, () -> fakeNoiseApplierSupplier.get().noiseMetric(0L));
+        NoSuchElementException.class,
+        () -> fakeNoiseApplierSupplier.get().noiseMetric(0L, IRRELEVANT_PRIVACY_PARAMS));
   }
 }

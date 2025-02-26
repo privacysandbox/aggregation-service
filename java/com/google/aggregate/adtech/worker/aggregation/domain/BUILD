@@ -30,6 +30,7 @@ java_library(
         "//java/com/google/aggregate/adtech/worker/util",
         "//java/com/google/aggregate/perf",
         "//java/com/google/aggregate/privacy/noise",
+        "//java/com/google/aggregate/privacy/noise:params",
         "//java/com/google/aggregate/privacy/noise/model",
         "//java/external:clients_blobstorageclient",
         "//java/external:clients_blobstorageclient_model",

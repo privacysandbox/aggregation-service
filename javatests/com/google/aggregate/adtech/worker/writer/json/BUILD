@@ -35,3 +35,27 @@ java_test(
         "//java/external:jimfs",
     ],
 )
+
+java_test(
+    name = "LocalPrivacyBudgetExhaustedInfoWriterTest",
+    srcs = ["LocalPrivacyBudgetExhaustedInfoWriterTest.java"],
+    data = [
+        "//javatests/com/google/aggregate/adtech/worker/writer/json/test:expected_privacy_budget_exhausted_debugging_info.json",
+    ],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model:privacy_budget_debugging_model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/writer:privacy_budget_exhausted_info_writer",
+        "//java/com/google/aggregate/adtech/worker/writer/json:local_privacy_budget_exhausted_writer",
+        "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
+        "//java/external:acai",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:jackson_core",
+        "//java/external:jackson_databind",
+        "//java/external:jimfs",
+    ],
+)

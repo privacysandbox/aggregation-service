@@ -1,0 +1,186 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
+
+COORDINATOR_VERSION = "v1.17.0-rc01"  # version updated on 2025-02-24
+
+http_file(
+    name = "shared_libraries_workspace",
+    downloaded_file_path = "file",
+    url = "https://raw.githubusercontent.com/privacysandbox/coordinator-services-and-shared-libraries/{}/WORKSPACE".format(COORDINATOR_VERSION),
+)
+
+# Use following instead of git_repository for local development
+#local_repository(
+#    name = "shared_libraries",
+#    path = "<LOCAL PATH TO SCP REPO>",
+#)
+
+git_repository(
+    name = "shared_libraries",
+    patch_args = [
+        "-p1",
+    ],
+    remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
+    patches = [
+        "//build_defs/shared_libraries:coordinator.patch",
+    ],
+    tag = COORDINATOR_VERSION,
+    workspace_file = "@shared_libraries_workspace//file",
+)
+
+# Load specific version of differential privacy from github 2nd March 2022.
+
+DIFFERENTIAL_PRIVACY_COMMIT = "099080e49c4c047802d785bc818898c0caf84d45"
+
+# value recommended by the differential privacy repo.
+# date, not after the specified commit to allow for more shallow clone of repo
+# for faster build times.
+DIFFERENTIAL_PRIVACY_SHALLOW_SINCE = "1618997113 +0200"
+
+git_repository(
+    name = "com_google_differential_privacy",
+    commit = DIFFERENTIAL_PRIVACY_COMMIT,
+    remote = "https://github.com/google/differential-privacy.git",
+    shallow_since = DIFFERENTIAL_PRIVACY_SHALLOW_SINCE,
+)
+
+# Load dependencies for the base workspace.
+load("@com_google_differential_privacy//:differential_privacy_deps.bzl", "differential_privacy_deps")
+
+differential_privacy_deps()
+
+############
+# Go rules #
+############
+
+# Note: Go build rules are an indirect dependency of "io_bazel_rules_docker" and
+# a direct dependency of rpmpack and buildifier. These rules are not used for
+# deploying go code at the time of writing.
+
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "6734a719993b1ba4ebe9806e853864395a8d3968ad27f9dd759c196b3eb3abe8",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.45.1/rules_go-v0.45.1.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.45.1/rules_go-v0.45.1.zip",
+    ],
+)
+
+http_archive(
+    name = "bazel_gazelle",
+    integrity = "sha256-MpOL2hbmcABjA1R5Bj2dJMYO2o15/Uc5Vj9Q0zHLMgk=",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.35.0/bazel-gazelle-v0.35.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.35.0/bazel-gazelle-v0.35.0.tar.gz",
+    ],
+)
+
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+
+go_rules_dependencies()
+
+go_register_toolchains(version = "1.20.5")
+
+gazelle_dependencies()
+
+go_repository(
+    name = "com_github_klauspost_compress",
+    importpath = "github.com/klauspost/compress",
+    sum = "h1:IFV2oUNUzZaz+XyusxpLzpzS8Pt5rh0Z16For/djlyI=",
+    version = "v1.16.5",
+)
+
+###################
+# Container rules #
+###################
+
+# Note: these rules add a dependency on the golang toolchain and must be ordered
+# after any `go_register_toolchains` calls in this file (or else the toolchain
+# defined in io_bazel_rules_docker are used for future go toolchains)
+
+http_archive(
+    name = "io_bazel_rules_docker",
+    sha256 = "b1e80761a8a8243d03ebca8845e9cc1ba6c82ce7c5179ce2b295cd36f7e394bf",
+    urls = ["https://github.com/bazelbuild/rules_docker/releases/download/v0.25.0/rules_docker-v0.25.0.tar.gz"],
+)
+
+load(
+    "@io_bazel_rules_docker//repositories:repositories.bzl",
+    container_repositories = "repositories",
+)
+
+container_repositories()
+
+load("@io_bazel_rules_docker//repositories:deps.bzl", container_deps = "deps")
+
+container_deps()
+
+load("@io_bazel_rules_docker//container:container.bzl", "container_pull")
+
+##############
+# Containers #
+##############
+
+load("//build_defs:container_dependencies.bzl", container_dependencies = "CONTAINER_DEPS")
+
+[
+    container_pull(
+        name = img_name,
+        digest = img_info["digest"],
+        registry = img_info["registry"],
+        repository = img_info["repository"],
+    )
+    for img_name, img_info in container_dependencies.items()
+]
+
+# Distroless image for running C++.
+container_pull(
+    name = "cc_base",
+    registry = "gcr.io",
+    repository = "distroless/cc",
+    # Using SHA-256 for reproducibility.
+    # TODO: use digest instead of tag, currently it's not working.
+    tag = "latest",
+)
+
+# Distroless image for running statically linked binaries.
+container_pull(
+    name = "static_base",
+    registry = "gcr.io",
+    repository = "distroless/static",
+    # Using SHA-256 for reproducibility.
+    # TODO: use digest instead of tag, currently it's not working.
+    tag = "latest",
+)
+
+# Debug image for Java used only for load testing.
+container_pull(
+    name = "java_base_debug",
+    registry = "docker.io",
+    repository = "bellsoft/liberica-openjdk-debian",
+    tag = "latest",
+)
+
+###############################
+# Binary Runtime Dependencies #
+###############################
+
+# Download the AWS enclave SDK repo and apply a patch for building the kmstool dependencies.
+load("@shared_libraries//build_defs/shared:enclaves_kmstools.bzl", "import_aws_nitro_enclaves_sdk_c")
+
+import_aws_nitro_enclaves_sdk_c(repo_name = "@shared_libraries")

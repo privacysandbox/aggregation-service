@@ -19,13 +19,14 @@ package com.google.aggregate.adtech.worker.aggregation.domain;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine;
+import com.google.aggregate.adtech.worker.aggregation.engine.AggregationEngine.AggregationKey;
 import com.google.aggregate.adtech.worker.exceptions.DomainReadException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
 import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
 import com.google.aggregate.adtech.worker.util.OutputShardFileHelper;
-import com.google.aggregate.privacy.noise.NoiseApplier;
+import com.google.aggregate.privacy.noise.JobScopedPrivacyParams;
 import com.google.aggregate.privacy.noise.NoisedAggregationRunner;
 import com.google.aggregate.privacy.noise.model.AggregatedResults;
 import com.google.aggregate.privacy.noise.model.NoisedAggregatedResultSet;
@@ -33,6 +34,8 @@ import com.google.aggregate.privacy.noise.model.NoisedAggregationResult;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvroSet;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
@@ -53,7 +56,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -141,14 +143,12 @@ public abstract class OutputDomainProcessor {
       Optional<DataLocation> domainLocation,
       ImmutableList<DataLocation> domainShards,
       NoisedAggregationRunner noisedAggregationRunner,
-      Optional<Double> debugPrivacyEpsilon,
+      JobScopedPrivacyParams privacyParams,
       Boolean debugRun)
       throws DomainReadException {
     Set<BigInteger> domainKeySet = Sets.newConcurrentHashSet();
     AtomicLong outputDomainTotalCount = new AtomicLong(0);
     AtomicInteger shardCounter = new AtomicInteger(0);
-    Supplier<NoiseApplier> requestScopedNoiseApplier =
-        noisedAggregationRunner.getRequestScopedNoiseApplier(debugPrivacyEpsilon);
 
     // SynchronizedList is thread-safe. Only using bulk addAll function in threads that process
     // buffered facts for each summary report.
@@ -163,7 +163,7 @@ public abstract class OutputDomainProcessor {
                         dataLocation,
                         aggregationEngine,
                         noisedAggregationRunner,
-                        requestScopedNoiseApplier,
+                        privacyParams,
                         domainKeySet,
                         debugRun)
                     .subscribeOn(Schedulers.from(nonBlockingThreadPool)),
@@ -195,13 +195,13 @@ public abstract class OutputDomainProcessor {
     }
 
     if (debugRun || domainOptional) {
-      Flowable.fromIterable(aggregationEngine.getEntries())
+      Flowable.fromStream(aggregationEngine.getEntries())
           .map(
               reportOnlyEntry -> {
-                BigInteger reportOnlyKey = reportOnlyEntry.getKey();
+                BigInteger reportOnlyKey = reportOnlyEntry.getKey().bucket();
                 AggregatedFact reportOnlyFact =
                     AggregatedFact.create(reportOnlyKey, reportOnlyEntry.getValue().longValue());
-                noisedAggregationRunner.noiseSingleFact(reportOnlyFact, requestScopedNoiseApplier);
+                noisedAggregationRunner.noiseSingleFact(reportOnlyFact, privacyParams);
 
                 if (debugRun) {
                   reportOnlyFact.setDebugAnnotations(List.of(DebugBucketAnnotation.IN_REPORTS));
@@ -216,7 +216,7 @@ public abstract class OutputDomainProcessor {
                           ImmutableList.copyOf(summaryFacts),
                           shardCounter.addAndGet(1),
                           debugRun,
-                          debugPrivacyEpsilon,
+                          privacyParams,
                           noisedAggregationRunner,
                           summaryReportAvros,
                           debugSummaryReportAvros)
@@ -238,14 +238,14 @@ public abstract class OutputDomainProcessor {
       ImmutableList<AggregatedFact> summaryFacts,
       Integer shardId,
       boolean debugRun,
-      Optional<Double> debugPrivacyEpsilon,
+      JobScopedPrivacyParams privacyParams,
       NoisedAggregationRunner noisedAggregationRunner,
       List<SummaryReportAvro> summaryReportAvros,
       List<SummaryReportAvro> debugSummaryReportAvros) {
     if (domainOptional) {
       ImmutableList<AggregatedFact> thresholdedFacts =
           enableThresholding
-              ? noisedAggregationRunner.thresholdAggregatedFacts(summaryFacts, debugPrivacyEpsilon)
+              ? noisedAggregationRunner.thresholdAggregatedFacts(summaryFacts, privacyParams)
               : summaryFacts;
 
       byte[] avroBytes = resultsSerdes.convert(thresholdedFacts);
@@ -282,21 +282,22 @@ public abstract class OutputDomainProcessor {
       DataLocation dataLocation,
       AggregationEngine aggregationEngine,
       NoisedAggregationRunner noisedAggregationRunner,
-      Supplier<NoiseApplier> noiseApplier,
+      JobScopedPrivacyParams privacyParams,
       Set<BigInteger> domainKeySet,
       Boolean debugRun) {
     return readShardData(dataLocation)
         .filter(domainKeySet::add)
         .map(
             domainKey -> {
+              AggregationKey aggregationkey = AggregationKey.create(domainKey);
               AggregatedFact aggregatedFact =
                   AggregatedFact.create(
-                      domainKey, aggregationEngine.getAggregatedValueOrDefault(domainKey, 0));
-              noisedAggregationRunner.noiseSingleFact(aggregatedFact, noiseApplier);
+                      domainKey, aggregationEngine.getAggregatedValueOrDefault(aggregationkey, 0));
+              noisedAggregationRunner.noiseSingleFact(aggregatedFact, privacyParams);
 
               if (debugRun) {
                 List<DebugBucketAnnotation> debugAnnotations = new ArrayList<>();
-                if (aggregationEngine.containsKey(domainKey)) {
+                if (aggregationEngine.containsKey(aggregationkey)) {
                   debugAnnotations.add(DebugBucketAnnotation.IN_REPORTS);
                 }
                 debugAnnotations.add(DebugBucketAnnotation.IN_DOMAIN);
@@ -304,7 +305,7 @@ public abstract class OutputDomainProcessor {
                 aggregatedFact.setDebugAnnotations(debugAnnotations);
               }
 
-              aggregationEngine.remove(domainKey);
+              aggregationEngine.remove(aggregationkey);
 
               return aggregatedFact;
             });
@@ -324,10 +325,15 @@ public abstract class OutputDomainProcessor {
       Optional<DataLocation> domainLocation,
       ImmutableList<DataLocation> domainShards,
       NoisedAggregationRunner noisedAggregationRunner,
-      Optional<Double> debugPrivacyEpsilon,
+      JobScopedPrivacyParams privacyParams,
       Boolean debugRun)
       throws DomainReadException {
-    Set<BigInteger> reportsOnlyKeys = Sets.newConcurrentHashSet(aggregationEngine.getKeySet());
+    Set<BigInteger> reportsOnlyKeys =
+        Sets.newConcurrentHashSet(
+            aggregationEngine
+                .getKeySet()
+                .map(key -> key.bucket())
+                .collect(ImmutableSet.toImmutableSet()));
     Set<BigInteger> overlappingKeys = Sets.newConcurrentHashSet();
 
     AtomicLong outputDomainTotalCount = new AtomicLong(0);
@@ -355,7 +361,7 @@ public abstract class OutputDomainProcessor {
                                 }
 
                                 reportsOnlyKeys.remove(domainKey);
-                                aggregationEngine.accept(domainKey);
+                                aggregationEngine.accept(AggregationKey.create(domainKey));
                               });
                           return Observable.empty();
                         }),
@@ -373,13 +379,17 @@ public abstract class OutputDomainProcessor {
     }
 
     Map<BigInteger, AggregatedFact> aggregatedResults =
-        new HashMap<>(aggregationEngine.makeAggregation());
+        new HashMap<>(
+            aggregationEngine.makeAggregation().entrySet().stream()
+                .collect(
+                    ImmutableMap.toImmutableMap(
+                        entry -> entry.getKey().bucket(), entry -> entry.getValue())));
 
     List<AggregatedFact> reportOnlyFacts =
         reportsOnlyKeys.stream().map(aggregatedResults::remove).collect(Collectors.toList());
 
     NoisedAggregationResult noisedOverlappingAndDomainResults =
-        noisedAggregationRunner.noise(aggregatedResults.values(), debugPrivacyEpsilon);
+        noisedAggregationRunner.noise(aggregatedResults.values(), privacyParams);
 
     NoisedAggregatedResultSet.Builder noisedResultSetBuilder =
         NoisedAggregatedResultSet.builder().setNoisedResult(noisedOverlappingAndDomainResults);
@@ -390,13 +400,13 @@ public abstract class OutputDomainProcessor {
 
     // ReportOnly facts are included only if debug run or domain optional are set.
     NoisedAggregationResult noisedReportOnlyResults =
-        noisedAggregationRunner.noise(reportOnlyFacts, debugPrivacyEpsilon);
+        noisedAggregationRunner.noise(reportOnlyFacts, privacyParams);
 
     if (domainOptional) {
       NoisedAggregationResult noisedReportsDomainOptional =
           enableThresholding
               ? noisedAggregationRunner.threshold(
-                  noisedReportOnlyResults.noisedAggregatedFacts(), debugPrivacyEpsilon)
+                  noisedReportOnlyResults.noisedAggregatedFacts(), privacyParams)
               : noisedReportOnlyResults;
       noisedResultSetBuilder.setNoisedResult(
           NoisedAggregationResult.merge(

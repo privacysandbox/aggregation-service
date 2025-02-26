@@ -20,8 +20,8 @@ java_test(
     name = "FakeNoiseApplierTest",
     srcs = ["FakeNoiseApplierTest.java"],
     deps = [
+        "//java/com/google/aggregate/privacy/noise:params",
         "//java/com/google/aggregate/privacy/noise/testing",
-        "//java/com/google/aggregate/privacy/noise/testing:noise_tester_java_proto",
         "//java/external:google_truth",
         "//java/external:guava",
     ],

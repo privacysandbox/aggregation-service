@@ -33,3 +33,20 @@ java_library(
         "//java/external:javax_inject",
     ],
 )
+
+java_library(
+    name = "local_privacy_budget_exhausted_writer",
+    srcs = ["LocalPrivacyBudgetExhaustedInfoWriter.java"],
+    javacopts = ["-Xep:Var"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model:privacy_budget_debugging_model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/writer:privacy_budget_exhausted_info_writer",
+        "//java/external:guava",
+        "//java/external:jackson_core",
+        "//java/external:jackson_databind",
+        "//java/external:javax_inject",
+    ],
+)

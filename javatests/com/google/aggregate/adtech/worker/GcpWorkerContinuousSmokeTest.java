@@ -26,6 +26,7 @@ import static com.google.aggregate.adtech.worker.SmokeTestBase.getTestServiceAcc
 import static com.google.aggregate.adtech.worker.SmokeTestBase.readDebugResultsFromMultipleFiles;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.readResultsFromCloud;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.submitJobAndWaitForResult;
+import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX;
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
@@ -478,8 +479,7 @@ public final class GcpWorkerContinuousSmokeTest {
     String inputDataPrefix = String.format("%s/test-inputs/10k_test_input_3/", KOKORO_BUILD_ID);
     String domainDataPrefix =
         String.format("%s/test-inputs/10k_test_domain_3.avro", KOKORO_BUILD_ID);
-    String outputDataPrefix =
-        String.format("%s/test-outputs/10k_test_input_3.avro.result", KOKORO_BUILD_ID);
+    String outputDataPrefix = String.format("%s/test-outputs/10k_test_input_3", KOKORO_BUILD_ID);
 
     CreateJobRequest createJobRequest1 =
         SmokeTestBase.createJobRequestWithAttributionReportTo(
@@ -499,6 +499,9 @@ public final class GcpWorkerContinuousSmokeTest {
         createJobRequest1.toBuilder().setJobRequestId(UUID.randomUUID().toString()).build();
     result = submitJobAndWaitForResult(createJobRequest2, COMPLETION_TIMEOUT);
     checkJobExecutionResult(result, PRIVACY_BUDGET_EXHAUSTED.name(), 0);
+    assertThat(result.get("result_info").get("return_message").asText())
+        .containsMatch(
+            ".*" + PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX + ".*\\.json");
   }
 
   @Test
@@ -578,6 +581,9 @@ public final class GcpWorkerContinuousSmokeTest {
     // Privacy Budget is exhausted for the same data and the same filtering ids.
     result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
     checkJobExecutionResult(result, PRIVACY_BUDGET_EXHAUSTED.name(), 0);
+    assertThat(result.get("result_info").get("return_message").asText())
+        .containsMatch(
+            ".*" + PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX + ".*\\.json");
   }
 
   private static class TestEnv extends AbstractModule {

@@ -19,11 +19,15 @@ package com.google.aggregate.adtech.worker.testing;
 import com.google.aggregate.adtech.worker.ResultLogger;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetExhaustedInfo;
+import com.google.aggregate.adtech.worker.model.Views.UsedInPrivacyBudgeting;
 import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.AvroResultsSerdes;
+import com.google.aggregate.adtech.worker.model.serdes.PrivacyBudgetExhaustedInfoSerdes;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.jobclient.model.Job;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /**
@@ -34,19 +38,24 @@ public final class InMemoryResultLogger implements ResultLogger {
 
   private MaterializedAggregationResults materializedAggregations;
   private MaterializedAggregationResults materializedDebugAggregations;
+  private PrivacyBudgetExhaustedInfo privacyBudgetExhaustedInfo;
   private boolean shouldThrow;
   private volatile boolean hasLogged;
   private final AvroResultsSerdes avroResultsSerdes;
   private final AvroDebugResultsSerdes avroDebugResultsSerdes;
+  private final PrivacyBudgetExhaustedInfoSerdes privacyBudgetExhaustedInfoSerdes;
 
   @Inject
   InMemoryResultLogger(
-      AvroResultsSerdes avroResultsSerdes, AvroDebugResultsSerdes avroDebugResultsSerdes) {
+      AvroResultsSerdes avroResultsSerdes,
+      AvroDebugResultsSerdes avroDebugResultsSerdes,
+      PrivacyBudgetExhaustedInfoSerdes privacyBudgetExhaustedInfoSerdes) {
     materializedAggregations = null;
     shouldThrow = false;
     hasLogged = false;
     this.avroResultsSerdes = avroResultsSerdes;
     this.avroDebugResultsSerdes = avroDebugResultsSerdes;
+    this.privacyBudgetExhaustedInfoSerdes = privacyBudgetExhaustedInfoSerdes;
   }
 
   public synchronized boolean hasLogged() {
@@ -106,6 +115,26 @@ public final class InMemoryResultLogger implements ResultLogger {
     }
   }
 
+  @Override
+  public String writePrivacyBudgetExhaustedDebuggingInformation(
+      PrivacyBudgetExhaustedInfo privacyBudgetExhaustedDebuggingInfo, Job ctx, String fileName) {
+    hasLogged = true;
+
+    if (shouldThrow) {
+      throw new ResultLogException(new IllegalStateException("Was set to throw"));
+    }
+    this.privacyBudgetExhaustedInfo = privacyBudgetExhaustedDebuggingInfo;
+    System.out.println(
+        "InMemory PrivacyBudgetExhaustedInfo: "
+            + privacyBudgetExhaustedInfoSerdes.doBackwardWithView(
+                Optional.of(privacyBudgetExhaustedDebuggingInfo), UsedInPrivacyBudgeting.class));
+    return ctx.requestInfo().getOutputDataBucketName()
+        + "/"
+        + ctx.requestInfo().getOutputDataBlobPrefix()
+        + "/"
+        + fileName;
+  }
+
   /**
    * Gets materialized aggregation results as an ImmutableList of {@link AggregatedFact}
    *
@@ -135,6 +164,16 @@ public final class InMemoryResultLogger implements ResultLogger {
               "MaterializedAggregations is null. Maybe results did not get logged."));
     }
     return materializedDebugAggregations;
+  }
+
+  public PrivacyBudgetExhaustedInfo getInMemoryPrivacyBudgetExhaustedInfo()
+      throws ResultLogException {
+    if (privacyBudgetExhaustedInfo == null) {
+      throw new ResultLogException(
+          new IllegalStateException(
+              "privacyBudgetExhaustedInfo is null. Results were not logged."));
+    }
+    return privacyBudgetExhaustedInfo;
   }
 
   public void setShouldThrow(boolean shouldThrow) {
