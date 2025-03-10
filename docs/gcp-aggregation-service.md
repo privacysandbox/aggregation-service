@@ -7,7 +7,7 @@ To test the aggregation service with support for encrypted reports, you need the
 -   Have a [GCP project](https://cloud.google.com/).
 -   Run the [Adtech Setup Terraform](#adtech-setup-terraform) to create/configure the service
     account needed for onboarding.
--   Complete the aggregation service [onboarding form](https://forms.gle/EHoecersGKhpcLPNA)
+-   Complete the aggregation service [onboarding & enrollment form](https://console.privacysandbox.google.com/)
 
 Once you've submitted the onboarding form, we will contact you to verify your information. Then,
 we'll send you the remaining instructions and information needed for this setup.</br> _You won't be
