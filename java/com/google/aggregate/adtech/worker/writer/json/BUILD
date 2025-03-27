@@ -18,18 +18,21 @@ package(default_visibility = ["//visibility:public"])
 
 java_library(
     name = "json",
-    srcs = ["LocalJsonResultFileWriter.java"],
+    srcs = [
+        "AbstractLocalJsonResultFileWriter.java",
+        "LocalJsonDebugResultFileWriter.java",
+        "LocalJsonResultFileWriter.java",
+    ],
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model/serdes",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/adtech/worker/writer",
+        "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
         "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
         "//java/external:avro",
         "//java/external:guava",
-        "//java/external:jackson_core",
-        "//java/external:jackson_databind",
         "//java/external:javax_inject",
     ],
 )

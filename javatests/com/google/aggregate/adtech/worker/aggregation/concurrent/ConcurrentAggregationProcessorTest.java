@@ -49,7 +49,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.nio.file.StandardOpenOption.CREATE;
-import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.nio.file.StandardOpenOption.WRITE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -85,11 +84,11 @@ import com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionModu
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.aggregate.adtech.worker.exceptions.ResultLogException;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
-import com.google.aggregate.adtech.worker.model.AvroRecordEncryptedReportConverter;
 import com.google.aggregate.adtech.worker.model.DebugBucketAnnotation;
 import com.google.aggregate.adtech.worker.model.EncryptedReport;
 import com.google.aggregate.adtech.worker.model.ErrorCounter;
 import com.google.aggregate.adtech.worker.model.Fact;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetUnit;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
 import com.google.aggregate.adtech.worker.model.serdes.AvroDebugResultsSerdes;
@@ -99,6 +98,7 @@ import com.google.aggregate.adtech.worker.model.serdes.SharedInfoSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.cbor.CborPayloadSerdes;
 import com.google.aggregate.adtech.worker.testing.FakeDecryptionKeyService;
 import com.google.aggregate.adtech.worker.testing.FakeReportGenerator;
+import com.google.aggregate.adtech.worker.testing.FakeReportWriter;
 import com.google.aggregate.adtech.worker.testing.FakeValidator;
 import com.google.aggregate.adtech.worker.testing.InMemoryResultLogger;
 import com.google.aggregate.adtech.worker.util.NumericConversions;
@@ -109,7 +109,6 @@ import com.google.aggregate.perf.StopwatchExporter;
 import com.google.aggregate.perf.export.NoOpStopwatchExporter;
 import com.google.aggregate.privacy.budgeting.bridge.FakePrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
-import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetingServiceBridgeException;
 import com.google.aggregate.privacy.budgeting.bridge.UnlimitedPrivacyBudgetingServiceBridge;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator;
@@ -131,8 +130,6 @@ import com.google.aggregate.protocol.avro.AvroOutputDomainReaderFactory;
 import com.google.aggregate.protocol.avro.AvroOutputDomainRecord;
 import com.google.aggregate.protocol.avro.AvroOutputDomainWriter;
 import com.google.aggregate.protocol.avro.AvroOutputDomainWriterFactory;
-import com.google.aggregate.protocol.avro.AvroReportWriter;
-import com.google.aggregate.protocol.avro.AvroReportWriterFactory;
 import com.google.aggregate.protocol.avro.AvroResultsSchemaSupplier;
 import com.google.aggregate.shared.mapper.TimeObjectMapper;
 import com.google.common.base.Ticker;
@@ -214,8 +211,7 @@ public class ConcurrentAggregationProcessorTest {
 
   @Rule public final Acai acai = new Acai(TestEnv.class);
   @Rule public final TemporaryFolder testWorkingDir = new TemporaryFolder();
-  @Inject AvroReportWriterFactory reportWriterFactory;
-  @Inject AvroRecordEncryptedReportConverter avroConverter;
+  @Inject private FakeReportWriter fakeReportWriter;
   // These are the same reader and decrypter that are inside the processor, through Guice bindings.
   @Inject FakeNoiseApplierSupplier fakeNoiseApplierSupplier;
   @Inject FakeValidator fakeValidator;
@@ -240,11 +236,6 @@ public class ConcurrentAggregationProcessorTest {
   private Job ctxWithPrefixList;
   private JobResult expectedJobResult;
   private ResultInfo.Builder resultInfoBuilder;
-  private ImmutableList<EncryptedReport> encryptedReports1;
-  private ImmutableList<EncryptedReport> encryptedReports2;
-  private ImmutableList<EncryptedReport> encryptedReports3;
-  private ImmutableList<EncryptedReport> encryptedReports4;
-  private ImmutableList<EncryptedReport> encryptedReports5;
   private final String reportId1 = String.valueOf(UUID.randomUUID());
   private final String reportId2 = String.valueOf(UUID.randomUUID());
   private final String reportId3 = String.valueOf(UUID.randomUUID());
@@ -267,43 +258,6 @@ public class ConcurrentAggregationProcessorTest {
 
     outputDomainProcessorHelper.setStreamingOutputDomainProcessing(streamingOutputDomainTestParam);
     featureFlags.reset();
-  }
-
-  private EncryptedReport generateEncryptedReportWithVersion(
-      int param, String reportId, String version) {
-    Report report =
-        FakeReportGenerator.generateWithFixedReportId(param, reportId, /* reportVersion */ version);
-    return getEncryptedReport(report);
-  }
-
-  private EncryptedReport getEncryptedReport(Report unencryptedreport) {
-    try {
-      String sharedInfoString =
-          sharedInfoSerdes.reverse().convert(Optional.of(unencryptedreport.sharedInfo()));
-      String keyId = UUID.randomUUID().toString();
-      ByteSource firstReportBytes =
-          fakeDecryptionKeyService.generateCiphertext(
-              keyId,
-              payloadSerdes.reverse().convert(Optional.of(unencryptedreport.payload())),
-              sharedInfoString);
-      return EncryptedReport.builder()
-          .setPayload(firstReportBytes)
-          .setKeyId(keyId)
-          .setSharedInfo(sharedInfoString)
-          .build();
-    } catch (Exception ex) {
-      // return null to fail test
-      return null;
-    }
-  }
-
-  private EncryptedReport generateEncryptedReport(int param, String reportId) {
-    return generateEncryptedReportWithVersion(param, reportId, LATEST_VERSION);
-  }
-
-  private EncryptedReport generateInvalidVersionEncryptedReport(
-      int param, String reportId, String invalidVersion) {
-    return generateEncryptedReportWithVersion(param, reportId, invalidVersion);
   }
 
   @Before
@@ -366,35 +320,48 @@ public class ConcurrentAggregationProcessorTest {
                     inputPrefixList))
             .build();
 
-    EncryptedReport firstReport = generateEncryptedReport(1, reportId1);
-    EncryptedReport secondReport = generateEncryptedReport(2, reportId2);
+    Report firstReport =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* param= */ 1, reportId1, /* reportVersion= */ LATEST_VERSION);
+    Report secondReport =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* param= */ 2, reportId2, /* reportVersion= */ LATEST_VERSION);
 
     // thirdReport is same as firstReport but has new report id
-    EncryptedReport thirdReport = generateEncryptedReport(1, reportId3);
+    Report thirdReport =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* param= */ 1, reportId3, /* reportVersion= */ LATEST_VERSION);
     // fourthReport is same as secondReport but has new report id
-    EncryptedReport fourthReport = generateEncryptedReport(2, reportId4);
+    Report fourthReport =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* param= */ 2, reportId4, /* reportVersion= */ LATEST_VERSION);
 
-    EncryptedReport fifthReport = generateEncryptedReport(3, reportId5);
-    EncryptedReport sixthReport = generateEncryptedReport(4, reportId6);
+    Report fifthReport =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* param= */ 3, reportId5, /* reportVersion= */ LATEST_VERSION);
+    Report sixthReport =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* param= */ 4, reportId6, /* reportVersion= */ LATEST_VERSION);
 
-    encryptedReports1 = ImmutableList.of(firstReport, secondReport);
-    encryptedReports2 = ImmutableList.of(thirdReport, fourthReport);
     // 2 shards of same contents.
-    writeReports(reportsDirectory.resolve("reports_1.avro"), encryptedReports1);
-    writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports2);
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(firstReport, secondReport));
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(thirdReport, fourthReport));
 
-    EncryptedReport invalidEncryptedReport =
-        generateInvalidVersionEncryptedReport(1, reportId5, "55.0");
-    writeReports(
+    Report invalidEncryptedReport =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* param= */ 1, reportId5, /* reportVersion= */ "55.0");
+    fakeReportWriter.writeReports(
         invalidReportsDirectory.resolve("invalid_reports.avro"),
         ImmutableList.of(invalidEncryptedReport));
 
-    encryptedReports3 = ImmutableList.of(firstReport, secondReport);
-    encryptedReports4 = ImmutableList.of(fifthReport, sixthReport);
-    encryptedReports5 = ImmutableList.of(thirdReport, fourthReport);
-    writeReports(childPath1.resolve("reports_1.avro"), encryptedReports3);
-    writeReports(childPath2.resolve("reports_2.avro"), encryptedReports4);
-    writeReports(childPath3.resolve("reports_3.avro"), encryptedReports5);
+    fakeReportWriter.writeReports(
+        childPath1.resolve("reports_1.avro"), ImmutableList.of(firstReport, secondReport));
+    fakeReportWriter.writeReports(
+        childPath2.resolve("reports_2.avro"), ImmutableList.of(fifthReport, sixthReport));
+    fakeReportWriter.writeReports(
+        childPath3.resolve("reports_3.avro"), ImmutableList.of(thirdReport, fourthReport));
   }
 
   @Test
@@ -418,11 +385,15 @@ public class ConcurrentAggregationProcessorTest {
   @Test
   public void aggregate_skipZeroSizedBlobs() throws Exception {
     // Write an empty report.
-    writeReports(reportsDirectory.resolve("reports_6.avro"), ImmutableList.of());
+    fakeReportWriter.writeReports(reportsDirectory.resolve("reports_6.avro"), ImmutableList.of());
     // Followed by two additional non-empty reports.
-    EncryptedReport testReport1 = generateEncryptedReport(3, String.valueOf(UUID.randomUUID()));
-    EncryptedReport testReport2 = generateEncryptedReport(4, String.valueOf(UUID.randomUUID()));
-    writeReports(
+    Report testReport1 =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* param= */ 3, String.valueOf(UUID.randomUUID()), /* reportVersion= */ LATEST_VERSION);
+    Report testReport2 =
+        FakeReportGenerator.generateWithFixedReportId(
+            /* param= */ 4, String.valueOf(UUID.randomUUID()), /* reportVersion= */ LATEST_VERSION);
+    fakeReportWriter.writeReports(
         reportsDirectory.resolve("reports_7.avro"), ImmutableList.of(testReport1, testReport2));
     JobResult jobResultProcessor = processor.get().process(ctx);
 
@@ -1324,7 +1295,7 @@ public class ConcurrentAggregationProcessorTest {
     outputDomainProcessorHelper.setDomainOptional(true);
     Path pathToEmptyReports = testWorkingDir.getRoot().toPath().resolve("empty_reports_dir");
     Files.createDirectory(pathToEmptyReports);
-    writeReports(pathToEmptyReports.resolve("reports_1.avro"), ImmutableList.of());
+    fakeReportWriter.writeReports(pathToEmptyReports.resolve("reports_1.avro"), ImmutableList.of());
 
     Job emptyReportsCtx =
         ctx.toBuilder()
@@ -1346,7 +1317,7 @@ public class ConcurrentAggregationProcessorTest {
     Path dirToEmptyReports = testWorkingDir.getRoot().toPath().resolve("empty_reports_dir");
     Files.createDirectory(dirToEmptyReports);
 
-    writeReports(dirToEmptyReports.resolve("reports_1.avro"), ImmutableList.of());
+    fakeReportWriter.writeReports(dirToEmptyReports.resolve("reports_1.avro"), ImmutableList.of());
     writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "3");
 
     ctx = addOutputDomainToJob();
@@ -1436,22 +1407,44 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void process_errorCountExceedsThreshold_quitsEarly() throws Exception {
-    ImmutableList<EncryptedReport> encryptedReports1 =
+    ImmutableList<Report> reports1 =
         ImmutableList.of(
-            generateEncryptedReport(1, reportId1),
-            generateEncryptedReport(2, reportId2),
-            generateEncryptedReport(3, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(4, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(5, reportId3));
-    ImmutableList<EncryptedReport> encryptedReports2 =
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 1, reportId1, /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 2, reportId2, /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 3,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 4,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 5, reportId3, /* reportVersion= */ LATEST_VERSION));
+    ImmutableList<Report> reports2 =
         ImmutableList.of(
-            generateEncryptedReport(6, reportId4),
-            generateEncryptedReport(7, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(8, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(9, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(10, String.valueOf(UUID.randomUUID())));
-    writeReports(reportsDirectory.resolve("reports_1.avro"), encryptedReports1);
-    writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports2);
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 6, reportId4, /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 7,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 8,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 9,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 10,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION));
+    fakeReportWriter.writeReports(reportsDirectory.resolve("reports_1.avro"), reports1);
+    fakeReportWriter.writeReports(reportsDirectory.resolve("reports_2.avro"), reports2);
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
@@ -1505,22 +1498,44 @@ public class ConcurrentAggregationProcessorTest {
   @Test
   public void process_withInputReportCountInRequest_errorCountExceedsThreshold_quitsEarly()
       throws Exception {
-    ImmutableList<EncryptedReport> encryptedReports1 =
+    ImmutableList<Report> reports1 =
         ImmutableList.of(
-            generateEncryptedReport(1, reportId1),
-            generateEncryptedReport(2, reportId2),
-            generateEncryptedReport(3, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(4, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(5, reportId3));
-    ImmutableList<EncryptedReport> encryptedReports2 =
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 1, reportId1, /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 2, reportId2, /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 3,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 4,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 5, reportId3, /* reportVersion= */ LATEST_VERSION));
+    ImmutableList<Report> reports2 =
         ImmutableList.of(
-            generateEncryptedReport(6, reportId4),
-            generateEncryptedReport(7, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(8, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(9, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(10, String.valueOf(UUID.randomUUID())));
-    writeReports(reportsDirectory.resolve("reports_1.avro"), encryptedReports1);
-    writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports2);
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 6, reportId4, /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 7,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 8,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 9,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 10,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION));
+    fakeReportWriter.writeReports(reportsDirectory.resolve("reports_1.avro"), reports1);
+    fakeReportWriter.writeReports(reportsDirectory.resolve("reports_2.avro"), reports2);
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
@@ -1574,22 +1589,44 @@ public class ConcurrentAggregationProcessorTest {
 
   @Test
   public void process_errorCountWithinThreshold_succeedsWithErrors() throws Exception {
-    ImmutableList<EncryptedReport> encryptedReports1 =
+    ImmutableList<Report> reports1 =
         ImmutableList.of(
-            generateEncryptedReport(1, reportId1),
-            generateEncryptedReport(2, reportId2),
-            generateEncryptedReport(3, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(4, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(5, reportId3));
-    ImmutableList<EncryptedReport> encryptedReports2 =
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 1, reportId1, /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 2, reportId2, /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 3,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 4,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 5, reportId3, /* reportVersion= */ LATEST_VERSION));
+    ImmutableList<Report> reports2 =
         ImmutableList.of(
-            generateEncryptedReport(6, reportId4),
-            generateEncryptedReport(7, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(8, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(9, String.valueOf(UUID.randomUUID())),
-            generateEncryptedReport(10, String.valueOf(UUID.randomUUID())));
-    writeReports(reportsDirectory.resolve("reports_1.avro"), encryptedReports1);
-    writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports2);
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 6, reportId4, /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 7,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 8,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 9,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION),
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 10,
+                String.valueOf(UUID.randomUUID()),
+                /* reportVersion= */ LATEST_VERSION));
+    fakeReportWriter.writeReports(reportsDirectory.resolve("reports_1.avro"), reports1);
+    fakeReportWriter.writeReports(reportsDirectory.resolve("reports_2.avro"), reports2);
 
     fakeValidator.setReportIdShouldReturnError(
         ImmutableSet.of(reportId1, reportId2, reportId3, reportId4));
@@ -1662,10 +1699,9 @@ public class ConcurrentAggregationProcessorTest {
   public void process_withNoQueriedFilteringId_queries0OrNullIds() throws Exception {
     Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
     Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
-    EncryptedReport reportWithoutId =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithoutId, nullFact1), VERSION_0_1));
+    Report reportWithoutId =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithoutId, nullFact1), VERSION_0_1);
 
     Fact factWithDefaultId =
         Fact.builder()
@@ -1681,13 +1717,14 @@ public class ConcurrentAggregationProcessorTest {
             .build();
     Fact nullFact2 =
         Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(UnsignedLong.ZERO).build();
-    EncryptedReport reportWithIds =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithDefaultId, factWithId, nullFact2), VERSION_1_0));
+    Report reportWithIds =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithDefaultId, factWithId, nullFact2), VERSION_1_0);
 
-    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
-    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
 
     processor.get().process(ctx);
 
@@ -1706,10 +1743,9 @@ public class ConcurrentAggregationProcessorTest {
   public void process_withQueriedFilteringId_filtersForTheGivenIds() throws Exception {
     Fact factWithoutId = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
     Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
-    EncryptedReport reportWithoutId =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithoutId, nullFact1), VERSION_0_1));
+    Report reportWithoutId =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithoutId, nullFact1), VERSION_0_1);
     // Aggregation is done only for contributions corresponding to ids = 12, 13.
     Fact factWithDefaultId =
         Fact.builder()
@@ -1725,13 +1761,14 @@ public class ConcurrentAggregationProcessorTest {
             .build();
     Fact nullFact2 =
         Fact.builder().setBucket(new BigInteger("0")).setValue(0).setId(UnsignedLong.ZERO).build();
-    EncryptedReport reportWithIds =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithDefaultId, factWithId, nullFact2), "1.0"));
+    Report reportWithIds =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithDefaultId, factWithId, nullFact2), "1.0");
 
-    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
-    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
     // Privacy budget is consumed for 13 as well even though there are no contributions with this
     // id.
     ImmutableSet<PrivacyBudgetUnit> expectedPrivacyBudgetUnits =
@@ -1776,10 +1813,8 @@ public class ConcurrentAggregationProcessorTest {
   public void process_withConsecutiveJobsAndSameFilteringIds_throwsPrivacyExhausted()
       throws Exception {
     Fact factWithoutId1 = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
-    EncryptedReport reportWithoutId =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithoutId1), VERSION_0_1));
+    Report reportWithoutId =
+        FakeReportGenerator.generateWithFactList(ImmutableList.of(factWithoutId1), VERSION_0_1);
 
     Fact factWithId =
         Fact.builder()
@@ -1787,11 +1822,12 @@ public class ConcurrentAggregationProcessorTest {
             .setValue(11)
             .setId(UnsignedLong.valueOf(12))
             .build();
-    EncryptedReport reportWithIds =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(ImmutableList.of(factWithId), "1.0"));
-    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
-    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+    Report reportWithIds =
+        FakeReportGenerator.generateWithFactList(ImmutableList.of(factWithId), "1.0");
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
 
     UnsignedLong filteringIdJob = UnsignedLong.valueOf(1963698);
 
@@ -1825,10 +1861,9 @@ public class ConcurrentAggregationProcessorTest {
     Fact factWithoutId1 = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
     Fact factWithoutId2 = Fact.builder().setBucket(new BigInteger("11111")).setValue(22).build();
     Fact nullFact1 = Fact.builder().setBucket(new BigInteger("0")).setValue(0).build();
-    EncryptedReport reportWithoutId =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithoutId1, factWithoutId2, nullFact1), VERSION_0_1));
+    Report reportWithoutId =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithoutId1, factWithoutId2, nullFact1), VERSION_0_1);
 
     Fact factWithDefaultId =
         Fact.builder()
@@ -1842,12 +1877,13 @@ public class ConcurrentAggregationProcessorTest {
             .setValue(11)
             .setId(UnsignedLong.valueOf(12))
             .build();
-    EncryptedReport reportWithIds =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithDefaultId, factWithId), "1.0"));
-    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
-    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+    Report reportWithIds =
+        FakeReportGenerator.generateWithFactList(
+            ImmutableList.of(factWithDefaultId, factWithId), "1.0");
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
 
     UnsignedLong filteringIdJob1 = UnsignedLong.ZERO;
     UnsignedLong filteringIdJob2 = UnsignedLong.valueOf(12);
@@ -1889,7 +1925,7 @@ public class ConcurrentAggregationProcessorTest {
     String keyId = UUID.randomUUID().toString();
     Report report =
         FakeReportGenerator.generateWithParam(
-            1, /* reportVersion */ LATEST_VERSION, "https://example.foo.com");
+            1, /* reportVersion= */ LATEST_VERSION, "https://example.foo.com");
     // Encrypt with a different sharedInfo than what is provided with the report so that decryption
     // fails
     String sharedInfoForEncryption = "foobarbaz";
@@ -1906,10 +1942,13 @@ public class ConcurrentAggregationProcessorTest {
             .setKeyId(keyId)
             .setSharedInfo(sharedInfoWithReport)
             .build();
-    encryptedReports1 = ImmutableList.of(encryptedReport, encryptedReport);
     // 2 shards of same contents.
-    writeReports(reportsDirectory.resolve("reports_1.avro"), encryptedReports1);
-    writeReports(reportsDirectory.resolve("reports_2.avro"), encryptedReports1);
+    fakeReportWriter.writeEncryptedReports(
+        reportsDirectory.resolve("reports_1.avro"),
+        ImmutableList.of(encryptedReport, encryptedReport));
+    fakeReportWriter.writeEncryptedReports(
+        reportsDirectory.resolve("reports_2.avro"),
+        ImmutableList.of(encryptedReport, encryptedReport));
     writeOutputDomainAvroFile(outputDomainDirectory.resolve("output_domain_1.avro"), "1");
     DataLocation outputDomainLocation = getOutputDomainLocation();
     ImmutableMap<String, String> jobParams =
@@ -1984,10 +2023,8 @@ public class ConcurrentAggregationProcessorTest {
       process_withConsecutiveJobsAndSameFilteringIds_throwsPrivacyExhausted_writesPrivacyBudgetDebuggingInfo()
           throws Exception {
     Fact factWithoutId1 = Fact.builder().setBucket(new BigInteger("11111")).setValue(11).build();
-    EncryptedReport reportWithoutId =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(
-                ImmutableList.of(factWithoutId1), VERSION_0_1));
+    Report reportWithoutId =
+        FakeReportGenerator.generateWithFactList(ImmutableList.of(factWithoutId1), VERSION_0_1);
 
     Fact factWithId =
         Fact.builder()
@@ -1995,11 +2032,12 @@ public class ConcurrentAggregationProcessorTest {
             .setValue(11)
             .setId(UnsignedLong.valueOf(12))
             .build();
-    EncryptedReport reportWithIds =
-        getEncryptedReport(
-            FakeReportGenerator.generateWithFactList(ImmutableList.of(factWithId), "1.0"));
-    writeReports(reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
-    writeReports(reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
+    Report reportWithIds =
+        FakeReportGenerator.generateWithFactList(ImmutableList.of(factWithId), "1.0");
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_1.avro"), ImmutableList.of(reportWithoutId));
+    fakeReportWriter.writeReports(
+        reportsDirectory.resolve("reports_2.avro"), ImmutableList.of(reportWithIds));
 
     UnsignedLong filteringIdJob = UnsignedLong.valueOf(1963698);
 
@@ -2045,9 +2083,15 @@ public class ConcurrentAggregationProcessorTest {
   public void aggregate_withPrivacyBudgeting() throws Exception {
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
-    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    PrivacyBudgetUnit privacyBudgetUnit1 =
+        getPrivacyBudgetUnit(
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 1, reportId1, /* reportVersion= */ LATEST_VERSION));
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
-    PrivacyBudgetUnit privacyBudgetUnit2 = getPrivacyBudgetUnit(encryptedReports1.get(1));
+    PrivacyBudgetUnit privacyBudgetUnit2 =
+        getPrivacyBudgetUnit(
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 2, reportId2, /* reportVersion= */ LATEST_VERSION));
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit2, 1);
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -2212,9 +2256,15 @@ public class ConcurrentAggregationProcessorTest {
         new FakePrivacyBudgetingServiceBridge();
     // Privacy Budget failure via thrown exception
     fakePrivacyBudgetingServiceBridge.setShouldThrow();
-    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    PrivacyBudgetUnit privacyBudgetUnit1 =
+        getPrivacyBudgetUnit(
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 1, reportId1, /* reportVersion= */ LATEST_VERSION));
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
-    PrivacyBudgetUnit privacyBudgetUnit2 = getPrivacyBudgetUnit(encryptedReports1.get(1));
+    PrivacyBudgetUnit privacyBudgetUnit2 =
+        getPrivacyBudgetUnit(
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 2, reportId2, /* reportVersion= */ LATEST_VERSION));
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit2, 1);
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -2247,9 +2297,15 @@ public class ConcurrentAggregationProcessorTest {
         new FakePrivacyBudgetingServiceBridge();
     // Privacy Budget failure via thrown exception
     fakePrivacyBudgetingServiceBridge.setShouldThrow();
-    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    PrivacyBudgetUnit privacyBudgetUnit1 =
+        getPrivacyBudgetUnit(
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 1, reportId1, /* reportVersion= */ LATEST_VERSION));
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
-    PrivacyBudgetUnit privacyBudgetUnit2 = getPrivacyBudgetUnit(encryptedReports1.get(1));
+    PrivacyBudgetUnit privacyBudgetUnit2 =
+        getPrivacyBudgetUnit(
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 2, reportId2, /* reportVersion= */ LATEST_VERSION));
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit2, 1);
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
         fakePrivacyBudgetingServiceBridge);
@@ -2281,7 +2337,10 @@ public class ConcurrentAggregationProcessorTest {
 
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
-    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    PrivacyBudgetUnit privacyBudgetUnit1 =
+        getPrivacyBudgetUnit(
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 2, reportId2, /* reportVersion= */ LATEST_VERSION));
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
@@ -2313,7 +2372,10 @@ public class ConcurrentAggregationProcessorTest {
 
     FakePrivacyBudgetingServiceBridge fakePrivacyBudgetingServiceBridge =
         new FakePrivacyBudgetingServiceBridge();
-    PrivacyBudgetUnit privacyBudgetUnit1 = getPrivacyBudgetUnit(encryptedReports1.get(0));
+    PrivacyBudgetUnit privacyBudgetUnit1 =
+        getPrivacyBudgetUnit(
+            FakeReportGenerator.generateWithFixedReportId(
+                /* param= */ 2, reportId2, /* reportVersion= */ LATEST_VERSION));
     fakePrivacyBudgetingServiceBridge.setPrivacyBudget(privacyBudgetUnit1, 1);
     // Missing budget for the second report.
     privacyBudgetingServiceBridge.setPrivacyBudgetingServiceBridgeImpl(
@@ -2399,16 +2461,15 @@ public class ConcurrentAggregationProcessorTest {
         .build();
   }
 
-  private PrivacyBudgetUnit getPrivacyBudgetUnit(EncryptedReport encryptedReport) {
+  private PrivacyBudgetUnit getPrivacyBudgetUnit(Report encryptedReport) {
     return getPrivacyBudgetUnit(
         encryptedReport,
         /** filteringId = */
         UnsignedLong.ZERO);
   }
 
-  private PrivacyBudgetUnit getPrivacyBudgetUnit(
-      EncryptedReport encryptedReport, UnsignedLong filteringId) {
-    SharedInfo sharedInfo = sharedInfoSerdes.convert(encryptedReport.sharedInfo()).get();
+  private PrivacyBudgetUnit getPrivacyBudgetUnit(Report report, UnsignedLong filteringId) {
+    SharedInfo sharedInfo = report.sharedInfo();
     PrivacyBudgetKeyInput privacyBudgetKeyInput =
         PrivacyBudgetKeyInput.builder()
             .setFilteringId(filteringId)
@@ -2426,16 +2487,6 @@ public class ConcurrentAggregationProcessorTest {
             Instant.ofEpochMilli(0),
             sharedInfo.reportingOrigin());
     return privacyBudgetUnit;
-  }
-
-  private void writeReports(Path reportsPath, ImmutableList<EncryptedReport> encryptedReports)
-      throws IOException {
-    try (OutputStream avroStream = Files.newOutputStream(reportsPath, CREATE, TRUNCATE_EXISTING);
-        AvroReportWriter reportWriter = reportWriterFactory.create(avroStream)) {
-      reportWriter.writeRecords(
-          /* metadata= */ ImmutableList.of(),
-          encryptedReports.stream().map(avroConverter.reverse()).collect(toImmutableList()));
-    }
   }
 
   private DataLocation getOutputDomainLocation() {

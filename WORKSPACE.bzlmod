@@ -13,34 +13,7 @@
 # limitations under the License.
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
-
-COORDINATOR_VERSION = "v1.17.0-rc01"  # version updated on 2025-02-24
-
-http_file(
-    name = "shared_libraries_workspace",
-    downloaded_file_path = "file",
-    url = "https://raw.githubusercontent.com/privacysandbox/coordinator-services-and-shared-libraries/{}/WORKSPACE".format(COORDINATOR_VERSION),
-)
-
-# Use following instead of git_repository for local development
-#local_repository(
-#    name = "shared_libraries",
-#    path = "<LOCAL PATH TO SCP REPO>",
-#)
-
-git_repository(
-    name = "shared_libraries",
-    patch_args = [
-        "-p1",
-    ],
-    remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
-    patches = [
-        "//build_defs/shared_libraries:coordinator.patch",
-    ],
-    tag = COORDINATOR_VERSION,
-    workspace_file = "@shared_libraries_workspace//file",
-)
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # Load specific version of differential privacy from github 2nd March 2022.
 
@@ -89,7 +62,7 @@ http_archive(
     ],
 )
 
-load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies", "go_repository")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
@@ -97,13 +70,6 @@ go_rules_dependencies()
 go_register_toolchains(version = "1.20.5")
 
 gazelle_dependencies()
-
-go_repository(
-    name = "com_github_klauspost_compress",
-    importpath = "github.com/klauspost/compress",
-    sum = "h1:IFV2oUNUzZaz+XyusxpLzpzS8Pt5rh0Z16For/djlyI=",
-    version = "v1.16.5",
-)
 
 ###################
 # Container rules #
@@ -181,6 +147,18 @@ container_pull(
 ###############################
 
 # Download the AWS enclave SDK repo and apply a patch for building the kmstool dependencies.
-load("@shared_libraries//build_defs/shared:enclaves_kmstools.bzl", "import_aws_nitro_enclaves_sdk_c")
+# load("@shared_libraries//build_defs/shared:enclaves_kmstools.bzl", "import_aws_nitro_enclaves_sdk_c")
+# import_aws_nitro_enclaves_sdk_c(repo_name = "@shared_libraries")
 
-import_aws_nitro_enclaves_sdk_c(repo_name = "@shared_libraries")
+# http_archive(
+#     name = "aws_nitro_enclaves_sdk_c",
+#     build_file = Label("//build_defs/aws/kmstool:kmstool.BUILD"),
+#     patches = [
+#         Label("//build_defs/aws/kmstool:kmstool.patch"),
+#         Label("//build_defs/aws/kmstool:dockerfile_git_shallow_clone.patch"),
+#     ],
+#     patch_args = ["-p1"],
+#     sha256 = "bc937626e1058c2464e60dde3a410855b87987e6da23433d78e77aedc8a152ec",
+#     strip_prefix = "aws-nitro-enclaves-sdk-c-e3425251b5fd573a730101b091f770ad21b9ee56",
+#     urls = ["https://github.com/aws/aws-nitro-enclaves-sdk-c/archive/e3425251b5fd573a730101b091f770ad21b9ee56.zip"],
+# )

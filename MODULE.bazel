@@ -18,10 +18,11 @@ Bazel module.
 
 module(
     name = "privacy_sandbox_aggregation_service",
-    version = "2.11.0",
+    version = "2.12.0",
 )
 
 bazel_dep(name = "gazelle", version = "0.42.0", repo_name = "bazel_gazelle")
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
 bazel_dep(name = "googletest", version = "1.14.0", repo_name = "com_google_googletest")
 bazel_dep(name = "grpc-java", version = "1.69.0", repo_name = "io_grpc_grpc_java")
 bazel_dep(name = "protobuf", version = "29.3", repo_name = "com_google_protobuf")
@@ -75,6 +76,46 @@ http_archive(
     sha256 = "358e3b6277a71634de7b7cb1cef14b728f6af6e450fbc9b0e5847882729b32ea",
     strip_prefix = "google-cloud-cpp-c7242253b17a1754e06444bd042849ec101729c8",
     urls = ["https://github.com/googleapis/google-cloud-cpp/archive/c7242253b17a1754e06444bd042849ec101729c8.zip"],  # 2024-06-11
+)
+
+single_version_override(
+    module_name = "rules_cc",
+    version = "0.1.1",
+)
+
+bazel_dep(name = "rules_boost", repo_name = "com_github_nelhage_rules_boost")
+archive_override(
+    module_name = "rules_boost",
+    integrity = "sha256-ZLcmvYKc2FqgLvR96ApPXxp8+sXKqhBlCK66PY/uFIo=",
+    strip_prefix = "rules_boost-e3adfd8d6733c914d2b91a65fb7175af09602281",
+    urls = "https://github.com/nelhage/rules_boost/archive/e3adfd8d6733c914d2b91a65fb7175af09602281.tar.gz",
+)
+
+bazel_dep(name = "privacy_sandbox_coordinator_services_and_shared_libraries", repo_name = "shared_libraries")
+
+# local_path_override(
+#     module_name = "privacy_sandbox_coordinator_services_and_shared_libraries",
+#     path = "<local path to coordinator_services_and_shared_libraries>"
+# )
+
+# Version updated on 2025-03-12
+COORDINATOR_VERSION = "v1.19.0-rc01"
+
+COORDINATOR_COMMIT_HASH = "1fb28e43af9c7ef3c29b1137ba3e710083947d10"
+
+git_override(
+    module_name = "privacy_sandbox_coordinator_services_and_shared_libraries",
+    commit = COORDINATOR_COMMIT_HASH,
+    patch_strip = 1,
+    patches = [
+        "//build_defs/shared_libraries:coordinator.patch",
+        "//build_defs/shared_libraries:emulator_container.patch",
+        "//build_defs/shared_libraries:golang.patch",
+        "//build_defs/shared_libraries:rules_docker.patch",
+        "//build_defs/shared_libraries:tmp_build.patch",
+        "//build_defs/shared_libraries:workspace.patch",
+    ],
+    remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
 )
 
 http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
@@ -133,7 +174,7 @@ use_repo(
 )
 
 # IMPORTANT: If you added dependencies and/or updated dependency versions below, run
-# `$ bazel run @unpinned_maven//:pin` and include `maven_install.json` in your change.
+# `$ bazel run @unpinned_maven//:pin` and include `maven_install_bzlmod.json` in your change.
 
 PROTOBUF_CORE_VERSION = "28.3"
 
@@ -156,7 +197,7 @@ AUTO_SERVICE_VERSION = "1.1.1"
 OTEL_VERSION = "1.43.0"
 
 # IMPORTANT: If you added dependencies and/or updated dependency versions below, run
-# `$ bazel run @maven//:pin` and include `maven_install.json` in your change.
+# `$ bazel run @maven//:pin` and include `maven_install_bzlmod.json` in your change.
 OTEL_ARTIFACTS = [
     "com.google.errorprone:error_prone_annotations:2.+",
     "io.opentelemetry:opentelemetry-api:" + OTEL_VERSION,
@@ -184,7 +225,7 @@ OTEL_ARTIFACTS = [
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 
 # IMPORTANT: If you added dependencies and/or updated dependency versions below, run
-# `$ bazel run @maven//:pin` and include `maven_install.json` in your change.
+# `$ bazel run @maven//:pin` and include `maven_install_bzlmod.json` in your change.
 
 maven.install(
     name = "maven",

@@ -22,12 +22,12 @@ java_library(
         "DebugSupportHelper.java",
         "JobResultHelper.java",
         "JobUtils.java",
-        "NumericConversions.java",
         "OutputShardFileHelper.java",
         "ReportingOriginUtils.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [
+        ":numerical_conversions_utils",
         "//java/com/google/aggregate/adtech/worker:annotations",
         "//java/com/google/aggregate/adtech/worker:return_code",
         "//java/com/google/aggregate/adtech/worker/exceptions",
@@ -37,7 +37,20 @@ java_library(
         "//java/external:javax_inject",
         "//java/external:operator_protos",
         "//java/external:scp_shared_proto",
+        "//java/external:slf4j",
         "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:model",
         "@shared_libraries//java/com/google/scp/operator/shared/model",
+    ],
+)
+
+java_library(
+    name = "numerical_conversions_utils",
+    srcs = [
+        "NumericConversions.java",
+    ],
+    javacopts = ["-Xep:Var"],
+    deps = [
+        "//java/external:error_prone_anntotations",
+        "//java/external:guava",
     ],
 )

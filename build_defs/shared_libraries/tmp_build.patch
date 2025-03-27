@@ -1,0 +1,25 @@
+diff --git a/.bazelrc b/.bazelrc
+index 879cb6cfd..7c019b93c 100644
+--- a/.bazelrc
++++ b/.bazelrc
+@@ -1,5 +1,5 @@
+ # Migration to Bzlmod is not ready yet
+-common --noenable_bzlmod
++# common --noenable_bzlmod
+ 
+ build --announce_rc
+ build --verbose_failures
+diff --git a/BUILD b/BUILD
+index 41107c77f..5094911d3 100644
+--- a/BUILD
++++ b/BUILD
+@@ -119,7 +119,9 @@ pkg_tar(
+         ".bazelrc",
+         ".bazelversion",
+         "BUILD",
++        "MODULE.bazel",
+         "WORKSPACE",
++        "WORKSPACE.bzlmod",
+         ":build_defs_dir",
+         ":cc_dir",
+         ":java_dir",

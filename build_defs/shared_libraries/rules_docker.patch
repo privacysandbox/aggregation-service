@@ -1,0 +1,209 @@
+diff --git a/.bazelrc b/.bazelrc
+index 879cb6c..a241f5d 100644
+--- a/.bazelrc
++++ b/.bazelrc
+@@ -10,7 +10,7 @@ build --test_output=errors
+ 
+ # Required for io_bazel_rules_docker. Reference:
+ # https://github.com/bazelbuild/rules_docker/issues/2275
+-common --@io_bazel_rules_docker//transitions:enable=false
++common --@@io_bazel_rules_docker//transitions:enable=false
+ 
+ build:cpp --client_env=BAZEL_CXXOPTS=-std=c++20
+ build:cpp --cxxopt=-std=c++20
+diff --git a/build_defs/aws/enclave/container.bzl b/build_defs/aws/enclave/container.bzl
+index 873a452..ca662aa 100644
+--- a/build_defs/aws/enclave/container.bzl
++++ b/build_defs/aws/enclave/container.bzl
+@@ -12,7 +12,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
++load("@@io_bazel_rules_docker//container:container.bzl", "container_image")
+ 
+ # Note: use reproducible versions of these binaries.
+ _PROXY_BINARY_FILES = [Label("//cc/aws/proxy:libproxy_preload.so"), Label("//cc/aws/proxy:proxify"), Label("//cc/aws/proxy:socket_vendor")]
+@@ -74,7 +74,7 @@ def java_enclave_image(
+ 
+     container_image(
+         name = name,
+-        base = "@java_base//image",
++        base = "@@java_base//image",
+         cmd = enclave_cmd,
+         env = enclave_env_variables,
+         files = container_files,
+diff --git a/build_defs/cc/aws/enclave/container.bzl b/build_defs/cc/aws/enclave/container.bzl
+index 9330d32..7ebc0fa 100644
+--- a/build_defs/cc/aws/enclave/container.bzl
++++ b/build_defs/cc/aws/enclave/container.bzl
+@@ -12,9 +12,9 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+-load("@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
+-load("@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
++load("@@io_bazel_rules_docker//container:container.bzl", "container_image")
++load("@@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
++load("@@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
+ load("@rules_pkg//:pkg.bzl", "pkg_tar")
+ load("//cc/process_launcher:helpers.bzl", "executable_struct_to_json_str")
+ 
+diff --git a/cc/aws/proxy/BUILD b/cc/aws/proxy/BUILD
+index f9f0301..1d001a5 100644
+--- a/cc/aws/proxy/BUILD
++++ b/cc/aws/proxy/BUILD
+@@ -13,7 +13,7 @@
+ # limitations under the License.
+ 
+ load("@com_github_google_rpmpack//:def.bzl", "pkg_tar2rpm")
+-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
++load("@@io_bazel_rules_docker//container:container.bzl", "container_image")
+ load("@rules_pkg//:pkg.bzl", "pkg_tar")
+ 
+ package(
+@@ -63,7 +63,7 @@ pkg_tar(
+ 
+ container_image(
+     name = "build_container",
+-    base = "@amazonlinux_2//image",
++    base = "@@amazonlinux_2//image",
+ )
+ 
+ # Mounts the source code into an AmazonLinux2 docker container and performs a
+diff --git a/cc/pbs/deploy/pbs_server/build_defs/pbs_container_multi_stage_build_tools.bzl b/cc/pbs/deploy/pbs_server/build_defs/pbs_container_multi_stage_build_tools.bzl
+index d9c02f5..3124a15 100644
+--- a/cc/pbs/deploy/pbs_server/build_defs/pbs_container_multi_stage_build_tools.bzl
++++ b/cc/pbs/deploy/pbs_server/build_defs/pbs_container_multi_stage_build_tools.bzl
+@@ -12,10 +12,10 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+-load("@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
+-load("@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
+-load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit_layer", "container_run_and_extract")
++load("@@io_bazel_rules_docker//container:container.bzl", "container_image")
++load("@@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
++load("@@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
++load("@@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit_layer", "container_run_and_extract")
+ load("@rules_pkg//:pkg.bzl", "pkg_tar")
+ load("//cc/process_launcher:helpers.bzl", "executable_struct_to_json_str")
+ 
+diff --git a/cc/tools/build/BUILD b/cc/tools/build/BUILD
+index acfce04..2cc1f37 100644
+--- a/cc/tools/build/BUILD
++++ b/cc/tools/build/BUILD
+@@ -12,10 +12,10 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-load("@io_bazel_rules_docker//container:container.bzl", "container_image")
+-load("@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
+-load("@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
+-load("@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit", "container_run_and_commit_layer")
++load("@@io_bazel_rules_docker//container:container.bzl", "container_image")
++load("@@io_bazel_rules_docker//docker/package_managers:download_pkgs.bzl", "download_pkgs")
++load("@@io_bazel_rules_docker//docker/package_managers:install_pkgs.bzl", "install_pkgs")
++load("@@io_bazel_rules_docker//docker/util:run.bzl", "container_run_and_commit", "container_run_and_commit_layer")
+ load("@rules_pkg//:pkg.bzl", "pkg_tar")
+ 
+ package(default_visibility = ["//cc:pbs_visibility"])
+diff --git a/coordinator/keygeneration/gcp/build_defs.bzl b/coordinator/keygeneration/gcp/build_defs.bzl
+index e846f6a..648f886 100644
+--- a/coordinator/keygeneration/gcp/build_defs.bzl
++++ b/coordinator/keygeneration/gcp/build_defs.bzl
+@@ -12,7 +12,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
++load("@@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
+ 
+ def keygeneration_container(name, tag, registry, repository, log_policy_override = False):
+     container_name = name + "_container"
+@@ -21,7 +21,7 @@ def keygeneration_container(name, tag, registry, repository, log_policy_override
+         labels["tee.launch_policy.log_redirect"] = "always"
+     container_image(
+         name = container_name,
+-        base = "@java_base//image",
++        base = "@@java_base//image",
+         cmd = [
+             "KeyGenerationApp_deploy.jar",
+             "--multiparty",
+diff --git a/coordinator/keyhosting/gcp/build_defs.bzl b/coordinator/keyhosting/gcp/build_defs.bzl
+index 24f107c..405814d 100644
+--- a/coordinator/keyhosting/gcp/build_defs.bzl
++++ b/coordinator/keyhosting/gcp/build_defs.bzl
+@@ -12,14 +12,14 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
++load("@@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
+ load("//build_defs/shared:variables.bzl", "CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION")
+ 
+ def keyhosting_public_key_container(name, tag, registry, repository):
+     container_name = name + "_container"
+     container_image(
+         name = container_name,
+-        base = "@java_base//image",
++        base = "@@java_base//image",
+         cmd = [
+             "/java-function-invoker-{}.jar".format(CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION),
+             "--classpath",
+@@ -46,7 +46,7 @@ def keyhosting_private_key_container(name, tag, registry, repository):
+     container_name = name + "_container"
+     container_image(
+         name = container_name,
+-        base = "@java_base//image",
++        base = "@@java_base//image",
+         cmd = [
+             "/java-function-invoker-{}.jar".format(CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION),
+             "--classpath",
+diff --git a/coordinator/keystorage/gcp/build_defs.bzl b/coordinator/keystorage/gcp/build_defs.bzl
+index 7a8b692..f11fc58 100644
+--- a/coordinator/keystorage/gcp/build_defs.bzl
++++ b/coordinator/keystorage/gcp/build_defs.bzl
+@@ -12,14 +12,14 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
++load("@@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
+ load("//build_defs/shared:variables.bzl", "CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION")
+ 
+ def keystorage_container(name, tag, registry, repository):
+     container_name = name + "_container"
+     container_image(
+         name = container_name,
+-        base = "@java_base//image",
++        base = "@@java_base//image",
+         cmd = [
+             "/java-function-invoker-{}.jar".format(CLOUD_FUNCTIONS_JAVA_INVOKER_VERSION),
+             "--classpath",
+diff --git a/coordinator/privacybudget/gcp/BUILD b/coordinator/privacybudget/gcp/BUILD
+index 36e1a77..3bca731 100644
+--- a/coordinator/privacybudget/gcp/BUILD
++++ b/coordinator/privacybudget/gcp/BUILD
+@@ -12,7 +12,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
++load("@@io_bazel_rules_docker//container:container.bzl", "container_push")
+ 
+ container_push(
+     name = "pbs_cloud_run_container_image",
+diff --git a/operator/worker/gcp/BUILD b/operator/worker/gcp/BUILD
+index bf94567..a4c83a0 100644
+--- a/operator/worker/gcp/BUILD
++++ b/operator/worker/gcp/BUILD
+@@ -12,6 +12,4 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
+-load("@io_bazel_rules_docker//container:container.bzl", "container_image", "container_push")
+-
+ package(default_visibility = ["//visibility:public"])

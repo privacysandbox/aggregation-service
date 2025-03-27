@@ -35,7 +35,7 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model/serdes",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
         "//java/external:acai",
         "//java/external:google_truth",
@@ -51,7 +51,7 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model/serdes",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
         "//java/external:acai",
         "//java/external:google_truth",

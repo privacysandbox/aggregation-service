@@ -1,0 +1,108 @@
+#!/bin/bash
+#
+# Upgrade Operator service from an existing VPC to a new VPC on AWS
+#
+# If the operator service VPC configurations change, Terraform will attempt an in-place
+# update of the autoscaling group (ASG), replacing the old subnets with new ones.
+# Naively applying Terraform changes may cause unintended service disruptions,
+# subnet deletion failures, and ASG instances hanging in `terminating:Wait` state.
+#
+# This script automates best practices to upgrade networking of an operator service.
+# It first initiates ASG to scale down to 0 instances, waits for all instances to
+# terminate and detach from the AGS, and finally applies the state changes.
+#
+# Using this script is recommended to maintain service availability and minimize
+# interruptions to any running jobs, enabling a smooth upgrade process.
+#
+# USAGE:
+# ./upgrade_operator_vpc <operator_environment_path>
+
+set -euo pipefail
+[[ "${DEBUG:-}" ]] && set -x
+ENV_PATH=${1:?"Must provide the path to a Terraform operator environment"}
+
+terraform_in_dir() {
+  terraform -chdir="${ENV_PATH}" "$@"
+}
+
+banner() {
+  echo "++++++++++++++++++++++++++++++++++++++++++++"
+  printf "| %-40s |\n" "$(date)"
+  echo "|                                          |"
+  printf "|$(tput bold) %-40s $(tput sgr0)|\n" "$@"
+  echo "|                                          |"
+  echo "++++++++++++++++++++++++++++++++++++++++++++"
+}
+
+get_asg_name() {
+  local state_path=${1}
+
+  jq '.values.root_module' "${state_path}" |
+    jq '.child_modules[] | select( .address | contains("operator_service") )' |
+    jq '.child_modules[] | select( .address | contains("worker_autoscaling") )' |
+    jq '.resources[] | select( .type == "aws_autoscaling_group" )' |
+    jq -r '.values.name'
+}
+
+wait_for_asg_to_scale_down() {
+  local asg_name=${1}
+  local max_iterations=60
+  local wait_seconds=10
+
+  # initiate ASG scale down to 0 instances
+  aws autoscaling update-auto-scaling-group \
+    --auto-scaling-group-name "${asg_name}" \
+    --desired-capacity 0 --min-size 0 --max-size 0
+
+  # wait for ASG to scale down
+  local i=0
+  while true; do
+    ((i = i + 1))
+    echo "[Attempt $i] Waiting for ASG ${asg_name} to scale down... "
+    sleep ${wait_seconds}
+
+    count=$(aws autoscaling describe-auto-scaling-instances \
+      --query 'AutoScalingInstances[?AutoScalingGroupName==`'"${asg_name}"'`].InstanceId' \
+      --output text | wc -l)
+
+    echo "Detected ${count} instances still present"
+    if [[ "${count}" -eq 0 ]]; then
+      echo "Scaled down to zero instance"
+      break
+    fi
+
+    if [[ "${i}" -ge "${max_iterations}" ]]; then
+      echo "Loop Timeout"
+      exit 1
+    fi
+  done
+}
+
+main() {
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  # shellcheck disable=SC2064
+  # variable value not changing during execution
+  trap "rm -rf ${tmp_dir}" EXIT
+  local tfplan_path="${tmp_dir}/tfplan"
+
+  banner "Step 1: scale down ASG to 0 instances"
+  local state_path="${tmp_dir}/state"
+  terraform_in_dir init # idempotent operation; no-op if directory is already initialized
+  terraform_in_dir show -json >"${state_path}"
+
+  local asg_name
+  asg_name=$(get_asg_name "${state_path}")
+  wait_for_asg_to_scale_down "${asg_name}"
+
+  banner "Step 2: apply current configuration"
+  terraform_in_dir plan -out "${tfplan_path}"
+  terraform_in_dir apply "${tfplan_path}"
+}
+
+if [[ "$1" == "-h" ]]; then
+  echo "Usage: $(basename "$0") <environment_path>"
+  exit 0
+fi
+
+main "$@"

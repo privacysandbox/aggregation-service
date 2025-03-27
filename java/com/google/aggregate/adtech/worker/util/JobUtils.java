@@ -20,9 +20,15 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.UnsignedLong;
 import com.google.errorprone.annotations.Var;
 import com.google.scp.operator.cpio.jobclient.model.Job;
+import java.util.Map;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Static utilities relating to Job. */
 public final class JobUtils {
+
+  private static Logger logger = LoggerFactory.getLogger(JobUtils.class);
 
   public static final String JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX = "output_domain_blob_prefix";
 
@@ -62,6 +68,34 @@ public final class JobUtils {
     }
 
     return filteringIds;
+  }
+
+  /** Gets the input report count from the job request if provided. */
+  public static Optional<Long> getInputReportCountFromJobParams(Map<String, String> jobParams) {
+    String inputReportCount = jobParams.get(JobUtils.JOB_PARAM_INPUT_REPORT_COUNT);
+    if (inputReportCount == null || inputReportCount.trim().isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(Long.parseLong(inputReportCount.trim()));
+  }
+
+  /**
+   * Gets the report error threshold from the job request otherwise returns the default set for the
+   * job.
+   */
+  public static double getReportErrorThresholdPercentage(
+      Map<String, String> jobParams, double defaultReportErrorThresholdPercentage) {
+    String jobParamsReportErrorThresholdPercentage =
+        jobParams.getOrDefault(JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE, null);
+    if (jobParamsReportErrorThresholdPercentage != null) {
+      return NumericConversions.getPercentageValue(jobParamsReportErrorThresholdPercentage);
+    }
+    logger.info(
+        String.format(
+            "Job parameters didn't have a report error threshold configured. Taking the default"
+                + " percentage value %f",
+            defaultReportErrorThresholdPercentage));
+    return defaultReportErrorThresholdPercentage;
   }
 
   private JobUtils() {}

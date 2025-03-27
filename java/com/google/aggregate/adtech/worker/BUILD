@@ -230,6 +230,7 @@ java_library(
         "//java/external:clients_cryptoclient_aws",
         "//java/external:clients_distributed_privacy_budgeting",
         "//java/external:clients_distributed_privacy_budgeting_aws",
+        "//java/external:clients_distributed_privacy_budgeting_aws_to_gcp",
         "//java/external:clients_jobclient_aws",
         "//java/external:clients_jobclient_model",
         "//java/external:clients_lifecycleclient_aws",

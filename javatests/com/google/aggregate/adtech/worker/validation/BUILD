@@ -149,6 +149,7 @@ java_test(
     name = "ReportVersionValidatorTest",
     srcs = ["ReportVersionValidatorTest.java"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/validation",
         "//java/external:clients_jobclient_aws",

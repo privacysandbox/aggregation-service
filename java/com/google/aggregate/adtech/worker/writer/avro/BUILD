@@ -25,7 +25,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/adtech/worker/writer",
         "//java/com/google/aggregate/protocol/avro:avro_debug_results",
         "//java/com/google/aggregate/protocol/avro:avro_record_writer",

@@ -22,5 +22,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker:return_code",
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/external:error_prone_anntotations",
     ],
 )

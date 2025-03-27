@@ -17,8 +17,8 @@
 package com.google.aggregate.adtech.worker.aggregation.engine;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetUnit;
 import com.google.aggregate.adtech.worker.model.Report;
-import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
@@ -67,8 +67,9 @@ public interface AggregationEngine {
   /** Gets a set of distinct privacy budget units observed during the aggregation */
   ImmutableList<PrivacyBudgetUnit> getPrivacyBudgetUnits();
 
-  /** Gets a list of corresponding privacy budget inputs for given privacy budget units*/
-  ImmutableList<PrivacyBudgetKeyInput> getPrivacyBudgetKeyInputsFromPrivacyBudgetUnits(ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits);
+  /** Gets a list of corresponding privacy budget inputs for given privacy budget units */
+  ImmutableList<PrivacyBudgetKeyInput> getPrivacyBudgetKeyInputsFromPrivacyBudgetUnits(
+      ImmutableList<PrivacyBudgetUnit> privacyBudgetUnits);
 
   /** Holds the keys to group by in aggregation. */
   @AutoValue

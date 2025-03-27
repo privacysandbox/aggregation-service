@@ -1,1 +1,2 @@
 AWS_ACCOUNT_ID=".*"
+aws_account_id\s*=\s*".*"

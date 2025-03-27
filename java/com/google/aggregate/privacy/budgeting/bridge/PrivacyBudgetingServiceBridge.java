@@ -16,12 +16,9 @@
 
 package com.google.aggregate.privacy.budgeting.bridge;
 
-import static java.time.temporal.ChronoUnit.HOURS;
-
-import com.google.auto.value.AutoValue;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetUnit;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.StatusCode;
-import java.time.Instant;
 
 /** Interface for consuming privacy budgeting. */
 public interface PrivacyBudgetingServiceBridge {
@@ -41,24 +38,6 @@ public interface PrivacyBudgetingServiceBridge {
   ImmutableList<PrivacyBudgetUnit> consumePrivacyBudget(
       ImmutableList<PrivacyBudgetUnit> budgetsToConsume, String claimedIdentity)
       throws PrivacyBudgetingServiceBridgeException;
-
-  /** Identifier for an individual key of the privacy budget to be consumed. */
-  @AutoValue
-  abstract class PrivacyBudgetUnit {
-
-    public static PrivacyBudgetUnit createHourTruncatedUnit(
-        String privacyBudgetKey, Instant scheduledReportTime, String reportingOrigin) {
-      return new com.google.aggregate.privacy.budgeting.bridge
-          .AutoValue_PrivacyBudgetingServiceBridge_PrivacyBudgetUnit(
-          privacyBudgetKey, scheduledReportTime.truncatedTo(HOURS), reportingOrigin);
-    }
-
-    public abstract String privacyBudgetKey();
-
-    public abstract Instant scheduledReportTime();
-
-    public abstract String reportingOrigin();
-  }
 
   /** Exception that may happen when consuming the privacy budget. */
   final class PrivacyBudgetingServiceBridgeException extends Exception {

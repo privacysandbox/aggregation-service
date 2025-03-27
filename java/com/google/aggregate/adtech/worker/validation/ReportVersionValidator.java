@@ -21,6 +21,7 @@ import static com.google.aggregate.adtech.worker.model.SharedInfo.LATEST_VERSION
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SUPPORTED_MAJOR_VERSIONS;
 import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.createErrorMessage;
 
+import com.google.aggregate.adtech.worker.exceptions.ValidationException;
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.model.Version;

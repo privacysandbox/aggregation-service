@@ -27,6 +27,7 @@ import com.google.aggregate.adtech.worker.selector.ParameterClientSelector;
 import com.google.aggregate.privacy.noise.proto.Params.NoiseParameters.Distribution;
 import com.google.privacysandbox.otel.OTelExporterSelector;
 import java.net.URI;
+import java.util.Optional;
 
 /**
  * Worker args are runtime flags that are set when building an image or as CLI args when running a
@@ -458,6 +459,32 @@ public final class AggregationWorkerArgs {
       names = "--dont_consume_budget_in_debug_run_enabled",
       description = "Flag to enable the logic that skips budget consumption in debug runs.")
   private boolean dontConsumeBudgetInDebugRunEnabled = false;
+
+  @Parameter(
+      names = "--primary_encryption_key_service_cloudfunction_url",
+      description =
+          "Full URL of the primary (Party A) encryption key service cloudfunction service, used"
+              + " only as audience for GCP authentication. This is temporary and will be replaced"
+              + " by encryption key service url in the future.")
+  private String primaryEncryptionKeyServiceCloudfunctionUrl = "";
+
+  @Parameter(
+      names = "--secondary_encryption_key_service_cloudfunction_url",
+      description =
+          "Full URL of the secondary (Party B) encryption key service cloudfunction service, used"
+              + " only as audience for GCP authentication.This is temporary and will be replaced by"
+              + " encryption key service url in the future.")
+  private String secondaryEncryptionKeyServiceCloudfunctionUrl = "";
+
+  Optional<String> getPrimaryEncryptionKeyServiceCloudfunctionUrl() {
+    return Optional.ofNullable(primaryEncryptionKeyServiceCloudfunctionUrl)
+        .filter(id -> !id.isEmpty());
+  }
+
+  Optional<String> getSecondaryEncryptionKeyServiceCloudfunctionUrl() {
+    return Optional.ofNullable(secondaryEncryptionKeyServiceCloudfunctionUrl)
+        .filter(id -> !id.isEmpty());
+  }
 
   ClientConfigSelector getClientConfigSelector() {
     return clientConfigSelector;

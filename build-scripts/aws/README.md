@@ -99,3 +99,36 @@ Run `bash fetch_terraform.sh`.
 
 After downloading the artifacts and running above script continue with
 [Set up your deployment environment](/docs/aws-aggregation-service.md#set-up-your-deployment-environment)
+
+## Upgrade Terraform AWS provider to `5.x` version
+
+1. Update the Terraform code to the most recent version in the repository.
+2. Remove Terraform variable `compute_type` in `codebuild.auto.tfvars`.
+3. Update aws provider version in `main.tf` to the latest `5.x`.
+
+    ```hcl
+    required_providers {
+        aws = {
+            source  = "hashicorp/aws"
+            version = "~> 5.0"
+        }
+    }
+    ```
+
+4. Update the locked dependency selections and apply changes.
+
+    ```shell
+    terraform init -upgrade
+    terraform apply
+    ```
+
+5. (Optional) Update the Terraform variables `aggregation_service_compute_type` and
+   `bazel_compute_type` to change the compute type for the bazel or aggregation-service CodeBuild,
+   if necessary.
+
+## Terraform variable changes (AWS provider version `3.x`)
+
+1. Update the Terraform code to the most recent version in the repository.
+2. Remove Terraform variable `compute_type` in `codebuild.auto.tfvars`.
+3. Set the Terraform variable `aggregation_service_compute_type` to `BUILD_GENERAL1_2XLARGE` in
+   `codebuild.auto.tfvars`.

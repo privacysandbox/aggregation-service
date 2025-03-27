@@ -19,7 +19,7 @@ package com.google.aggregate.adtech.worker;
 import com.google.aggregate.adtech.worker.Annotations.DebugWriter;
 import com.google.aggregate.adtech.worker.Annotations.ResultWriter;
 import com.google.aggregate.adtech.worker.writer.LocalResultFileWriter;
-import com.google.aggregate.adtech.worker.writer.avro.LocalAvroDebugResultFileWriter;
+import com.google.aggregate.adtech.worker.writer.json.LocalJsonDebugResultFileWriter;
 import com.google.aggregate.adtech.worker.writer.json.LocalJsonResultFileWriter;
 
 public final class LocalJsonResultLoggerModule extends ResultLoggerModule {
@@ -37,6 +37,6 @@ public final class LocalJsonResultLoggerModule extends ResultLoggerModule {
 
     bind(LocalResultFileWriter.class)
         .annotatedWith(DebugWriter.class)
-        .to(LocalAvroDebugResultFileWriter.class);
+        .to(LocalJsonDebugResultFileWriter.class);
   }
 }

@@ -38,8 +38,8 @@ resource "aws_s3_bucket" "artifacts_output" {
 }
 
 resource "aws_s3_bucket_acl" "artifacts_output" {
-  bucket = aws_s3_bucket.artifacts_output.id
-  acl    = "private"
+  bucket     = aws_s3_bucket.artifacts_output.id
+  acl        = "private"
   depends_on = [aws_s3_bucket_ownership_controls.artifacts_output_ownership_controls]
 }
 
@@ -200,7 +200,7 @@ resource "aws_codebuild_project" "bazel_build_container" {
   }
 
   environment {
-    compute_type                = var.compute_type
+    compute_type                = var.bazel_compute_type
     image                       = "aws/codebuild/standard:6.0"
     type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "CODEBUILD"
@@ -265,7 +265,7 @@ resource "aws_codebuild_project" "aggregation-service-artifacts-build" {
   }
 
   environment {
-    compute_type                = var.compute_type
+    compute_type                = var.aggregation_service_compute_type
     image                       = "${aws_ecr_repository.ecr_repository.repository_url}:${local.release_version}"
     type                        = "LINUX_CONTAINER"
     image_pull_credentials_type = "SERVICE_ROLE"
@@ -295,6 +295,11 @@ resource "aws_codebuild_project" "aggregation-service-artifacts-build" {
       name  = "JARS_PUBLISH_BUCKET_PATH"
       value = "aggregation-service"
     }
+
+    environment_variable {
+      name  = "MAKE_AMI_PUBLIC"
+      value = tostring(var.make_ami_public)
+    }
   }
 
   source {
@@ -303,6 +308,10 @@ resource "aws_codebuild_project" "aggregation-service-artifacts-build" {
     git_clone_depth = 1
 
     buildspec = "build-scripts/aws/buildspec.yml"
+
+    git_submodules_config {
+      fetch_submodules = false
+    }
   }
 
   source_version = var.aggregation_service_github_repo_branch == "" ? "v${local.release_version}" : var.aggregation_service_github_repo_branch

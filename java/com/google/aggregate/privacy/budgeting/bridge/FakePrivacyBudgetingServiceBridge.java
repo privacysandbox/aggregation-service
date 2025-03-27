@@ -18,6 +18,7 @@ package com.google.aggregate.privacy.budgeting.bridge;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetUnit;
 import com.google.common.collect.ImmutableList;
 import java.util.HashMap;
 import java.util.Optional;

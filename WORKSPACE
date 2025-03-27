@@ -26,7 +26,7 @@ PROTOBUF_JAVA_VERSION_PREFIX = "4."
 
 PROTOBUF_SHA_256 = "7c3ebd7aaedd86fa5dc479a0fda803f602caaf78d8aff7ce83b89e1b8ae7442a"
 
-COORDINATOR_VERSION = "v1.18.0-rc01"  # version updated on 2025-02-24
+COORDINATOR_VERSION = "v1.19.0-rc01"  # version updated on 2025-03-24
 
 JACKSON_VERSION = "2.16.1"
 

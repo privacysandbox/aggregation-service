@@ -15,6 +15,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 
 def _s3_jar_release_impl(ctx):
     jar_file = ctx.file.jar_target
+    licenses = ctx.file.licenses
     script_template = """#!/bin/bash
 set -eux
 # parse arguments and set up variables
@@ -49,6 +50,7 @@ echo "bazel working directory:"
 pwd
 echo "-------------------------"
 outputfile=$(mktemp)
+jar uf {jar_file} {licenses}
 aws s3 cp {jar_file} s3://{release_bucket}/{release_key}/$version/$artifact_name 2>&1 | tee $outputfile
 if grep -q "Skipping" "$outputfile"; then
   echo "ERROR: Artifact already exists"
@@ -61,15 +63,17 @@ openssl sha256 {jar_file} || true
         jar_file = jar_file.short_path,
         release_bucket = ctx.attr.release_bucket[BuildSettingInfo].value,
         release_key = ctx.attr.release_key[BuildSettingInfo].value,
+        licenses = licenses.short_path,
         artifact_base_name = ctx.attr.artifact_base_name,
     )
     ctx.actions.write(script, script_content, is_executable = True)
     runfiles = ctx.runfiles(files = [
         jar_file,
+        licenses,
     ])
     return [DefaultInfo(
         executable = script,
-        files = depset([script, jar_file]),
+        files = depset([script, jar_file, licenses]),
         runfiles = runfiles,
     )]
 
@@ -83,6 +87,10 @@ s3_jar_release_rule = rule(
             allow_single_file = True,
             mandatory = True,
             providers = [BuildSettingInfo],
+        ),
+        "licenses": attr.label(
+            allow_single_file = True,
+            mandatory = True,
         ),
         "release_bucket": attr.label(
             mandatory = True,
@@ -100,6 +108,7 @@ def s3_jar_release(
         *,
         name,
         jar_target = ":jar_target_flag",
+        licenses = ":licenses_flag",
         release_bucket = ":bucket_flag",
         release_key = ":bucket_path_flag",
         artifact_base_name):
@@ -115,6 +124,7 @@ def s3_jar_release(
     Args:
         name: The target name used to generate the targets described above.
         jar_target: Path to the jar build target.
+        licenses: Licenses that should be packaged with the release jar.
         release_bucket: s3 bucket to which the release the artifact.
         release_key: s3 key for the release artifact.
         artifact_base_name: base name of the artifact. The base name should include a "{VERSION}" substring which will be
@@ -123,6 +133,7 @@ def s3_jar_release(
     s3_jar_release_rule(
         name = name,
         jar_target = jar_target,
+        licenses = licenses,
         release_bucket = release_bucket,
         release_key = release_key,
         artifact_base_name = artifact_base_name,
@@ -130,6 +141,7 @@ def s3_jar_release(
 
 def _gcs_jar_release_impl(ctx):
     jar_file = ctx.file.jar_target
+    licenses = ctx.file.licenses
     script_template = """#!/bin/bash
 set -eux
 # parse arguments and set up variables
@@ -164,6 +176,7 @@ echo "bazel working directory:"
 pwd
 echo "-------------------------"
 outputfile=$(mktemp)
+jar uf {jar_file} {licenses}
 gsutil cp {jar_file} gs://{release_bucket}/{release_key}/$version/$artifact_name 2>&1 | tee $outputfile
 if grep -q "Skipping" "$outputfile"; then
   echo "ERROR: Artifact already exists"
@@ -176,15 +189,17 @@ openssl sha256 {jar_file} || true
         jar_file = jar_file.short_path,
         release_bucket = ctx.attr.release_bucket[BuildSettingInfo].value,
         release_key = ctx.attr.release_key[BuildSettingInfo].value,
+        licenses = licenses.short_path,
         artifact_base_name = ctx.attr.artifact_base_name,
     )
     ctx.actions.write(script, script_content, is_executable = True)
     runfiles = ctx.runfiles(files = [
         jar_file,
+        licenses,
     ])
     return [DefaultInfo(
         executable = script,
-        files = depset([script, jar_file]),
+        files = depset([script, jar_file, licenses]),
         runfiles = runfiles,
     )]
 
@@ -198,6 +213,10 @@ gcs_jar_release_rule = rule(
             allow_single_file = True,
             mandatory = True,
             providers = [BuildSettingInfo],
+        ),
+        "licenses": attr.label(
+            allow_single_file = True,
+            mandatory = True,
         ),
         "release_bucket": attr.label(
             mandatory = True,
@@ -217,6 +236,7 @@ def gcs_jar_release(
         jar_target = ":jar_target_flag",
         release_bucket = ":bucket_flag",
         release_key = ":bucket_path_flag",
+        licenses = ":licenses_flag",
         artifact_base_name):
     """
     Creates targets for releasing aggregation service artifact to gcs.
@@ -240,5 +260,6 @@ def gcs_jar_release(
         jar_target = jar_target,
         release_bucket = release_bucket,
         release_key = release_key,
+        licenses = licenses,
         artifact_base_name = artifact_base_name,
     )

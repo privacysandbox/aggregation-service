@@ -22,7 +22,27 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model/serdes",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
+        "//java/com/google/aggregate/adtech/worker/writer",
+        "//java/com/google/aggregate/adtech/worker/writer/json",
+        "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
+        "//java/external:acai",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:jackson_core",
+        "//java/external:jackson_databind",
+        "//java/external:jimfs",
+    ],
+)
+
+java_test(
+    name = "LocalJsonDebugResultFileWriterTest",
+    srcs = ["LocalJsonDebugResultFileWriterTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/adtech/worker/writer",
         "//java/com/google/aggregate/adtech/worker/writer/json",
         "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",

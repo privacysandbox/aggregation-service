@@ -86,7 +86,7 @@ java_test(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/external:google_truth",
         "//java/external:guava",
     ],
@@ -169,5 +169,28 @@ java_test(
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:jimfs",
+    ],
+)
+
+java_test(
+    name = "FakeReportWriterTest",
+    srcs = ["FakeReportWriterTest.java"],
+    deps = [
+        "//java/com/google/aggregate/adtech/worker/decryption",
+        "//java/com/google/aggregate/adtech/worker/decryption/hybrid",
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
+        "//java/com/google/aggregate/adtech/worker/model/serdes/cbor",
+        "//java/com/google/aggregate/adtech/worker/testing:fake_decryption_key_service",
+        "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
+        "//java/com/google/aggregate/adtech/worker/testing:fake_report_writer",
+        "//java/com/google/aggregate/protocol/avro:avro_report",
+        "//java/external:acai",
+        "//java/external:clients_blobstorageclient",
+        "//java/external:clients_cryptoclient",
+        "//java/external:google_truth",
+        "//java/external:guava",
+        "//java/external:guice",
+        "//java/external:tink",
     ],
 )

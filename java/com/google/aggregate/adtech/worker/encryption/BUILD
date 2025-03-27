@@ -35,9 +35,9 @@ java_library(
 java_library(
     name = "encrypter",
     srcs = [
-        "NoopRecordEncrypter.java",
-        "RecordEncrypter.java",
-        "RecordEncrypterImpl.java",
+        "NoopReportEncrypter.java",
+        "ReportEncrypter.java",
+        "ReportEncrypterImpl.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [

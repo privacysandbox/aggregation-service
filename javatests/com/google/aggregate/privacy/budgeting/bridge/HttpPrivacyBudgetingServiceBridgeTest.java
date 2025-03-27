@@ -21,7 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.acai.Acai;
 import com.google.acai.TestScoped;
-import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetUnit;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
