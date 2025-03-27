@@ -214,28 +214,21 @@ public final class AggregationWorkerModule extends AbstractModule {
     bind(String.class).annotatedWith(GcpZoneOverride.class).toInstance(args.getGcpZoneOverride());
     OperatorClientConfig.Builder clientConfigBuilder =
         OperatorClientConfig.builder()
-            .setCoordinatorAServiceAccountToImpersonate(args.getCoordinatorAServiceAccount())
-            .setCoordinatorAWipProvider(args.getCoordinatorAWipProvider())
+            .setCoordinatorAServiceAccountToImpersonate(
+                Optional.of(args.getCoordinatorAServiceAccount()))
+            .setCoordinatorBServiceAccountToImpersonate(
+                Optional.of(args.getCoordinatorBServiceAccount()))
+            .setCoordinatorAWipProvider(Optional.of(args.getCoordinatorAWipProvider()))
+            .setCoordinatorBWipProvider(Optional.of(args.getCoordinatorBWipProvider()))
             .setUseLocalCredentials(args.getCoordinatorAWipProvider().isEmpty())
             .setCoordinatorAEncryptionKeyServiceBaseUrl(
                 args.getPrimaryEncryptionKeyServiceBaseUrl())
+            .setCoordinatorBEncryptionKeyServiceBaseUrl(
+                args.getSecondaryEncryptionKeyServiceBaseUrl())
             .setCoordinatorAEncryptionKeyServiceCloudfunctionUrl(
-                args.getPrimaryEncryptionKeyServiceCloudfunctionUrl());
-    OperatorClientConfig.builder()
-        .setCoordinatorAServiceAccountToImpersonate(args.getCoordinatorAServiceAccount())
-        .setCoordinatorAWipProvider(args.getCoordinatorAWipProvider())
-        .setUseLocalCredentials(args.getCoordinatorAWipProvider().isEmpty());
-    if (!args.getCoordinatorBWipProvider().isEmpty()) {
-      clientConfigBuilder.setCoordinatorBWipProvider(
-          Optional.of(args.getCoordinatorBWipProvider()));
-      clientConfigBuilder
-          .setCoordinatorBServiceAccountToImpersonate(
-              Optional.of(args.getCoordinatorBServiceAccount()))
-          .setCoordinatorBEncryptionKeyServiceBaseUrl(
-              Optional.of(args.getSecondaryEncryptionKeyServiceBaseUrl()))
-          .setCoordinatorBEncryptionKeyServiceCloudfunctionUrl(
-              args.getSecondaryEncryptionKeyServiceCloudfunctionUrl());
-    }
+                args.getPrimaryEncryptionKeyServiceCloudfunctionUrl())
+            .setCoordinatorBEncryptionKeyServiceCloudfunctionUrl(
+                args.getSecondaryEncryptionKeyServiceCloudfunctionUrl());
     bind(OperatorClientConfig.class).toInstance(clientConfigBuilder.build());
     install(args.getLifeCycleClientSelector().getLifecycleModule());
     install(args.getMetricCycleClientSelector().getMetricModule());

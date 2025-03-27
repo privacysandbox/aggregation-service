@@ -30,9 +30,15 @@ variable "region" {
   description = "Region to deploy services to and publish artifacts"
 }
 
-variable "compute_type" {
+variable "aggregation_service_compute_type" {
   type        = string
-  description = "CodeBuild compute type to use for build."
+  description = "CodeBuild compute type to use for Aggregation Service build."
+  default     = "BUILD_GENERAL1_XLARGE"
+}
+
+variable "bazel_compute_type" {
+  type        = string
+  description = "CodeBuild compute type to use for utility bazel build."
   default     = "BUILD_GENERAL1_MEDIUM"
 }
 
@@ -67,4 +73,10 @@ variable "aggregation_service_github_repo_branch" {
   type        = string
   description = "Aggregation Service Github repository branch"
   default     = ""
+}
+
+variable "make_ami_public" {
+  type        = bool
+  description = "Set the AMI and its EBS snapshots to be publicly accessible"
+  default     = false
 }

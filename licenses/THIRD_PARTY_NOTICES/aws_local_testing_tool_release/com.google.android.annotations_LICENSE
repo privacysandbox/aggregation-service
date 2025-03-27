@@ -20,9 +20,11 @@
     <link rel="preconnect" href="//apis.google.com" crossorigin>
     <link rel="preconnect" href="//www.google-analytics.com" crossorigin><link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:300,400,400italic,500,500italic,700,700italic|Roboto+Mono:400,500,700&display=swap">
       <link rel="stylesheet"
-            href="//fonts.googleapis.com/css2?family=Material+Icons&family=Material+Symbols+Outlined&display=block"><link rel="stylesheet" href="https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/androidsource/css/app.css">
-      <link rel="shortcut icon" href="https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/androidsource/images/favicon.svg">
-    <link rel="apple-touch-icon" href="https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/androidsource/images/touchicon-180.png"><link rel="canonical" href="https://source.android.com/license"><link rel="search" type="application/opensearchdescription+xml"
+            href="//fonts.googleapis.com/css2?family=Material+Icons&family=Material+Symbols+Outlined&display=block"><link rel="stylesheet" href="https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/css/app.css">
+      
+        <link rel="stylesheet" href="https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/css/dark-theme.css" disabled>
+      <link rel="shortcut icon" href="https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/images/favicon.svg">
+    <link rel="apple-touch-icon" href="https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/images/touchicon-180.png"><link rel="canonical" href="https://source.android.com/license"><link rel="search" type="application/opensearchdescription+xml"
             title="Android Open Source Project" href="https://source.android.com/s/opensearch.xml">
       <link rel="alternate" hreflang="en"
           href="https://source.android.com/license" /><link rel="alternate" hreflang="x-default" href="https://source.android.com/license" /><link rel="alternate" hreflang="zh-Hans"
@@ -48,7 +50,7 @@
         type="lcat"
         
         
-        
+        appearance
         layout="docs"
         
         
@@ -89,7 +91,7 @@
 
 
 
-<div class="devsite-header--inner nocontent">
+<div class="devsite-header--inner" data-nosnippet>
   <div class="devsite-top-logo-row-wrapper-wrapper">
     <div class="devsite-top-logo-row-wrapper">
       <div class="devsite-top-logo-row">
@@ -109,7 +111,11 @@
   
   <picture>
     
-    <img src="https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/androidsource/images/lockup.svg" class="devsite-site-logo" alt="Android Open Source Project">
+    <source srcset="https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/images/lockup-dark-theme.svg"
+            media="(prefers-color-scheme: dark)"
+            class="devsite-dark-theme">
+    
+    <img src="https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/images/lockup.svg" class="devsite-site-logo" alt="Android Open Source Project">
   </picture>
   
 </a>
@@ -1407,11 +1413,9 @@
 
           
 
-        
+          <devsite-appearance-selector></devsite-appearance-selector>
 
-        
-
-        
+          
 <devsite-language-selector>
   <ul role="presentation">
     
@@ -1439,6 +1443,8 @@
   </ul>
 </devsite-language-selector>
 
+
+          
 
         
 
@@ -1539,7 +1545,11 @@
   
   <picture>
     
-    <img src="https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/androidsource/images/lockup.svg" class="devsite-site-logo" alt="Android Open Source Project">
+    <source srcset="https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/images/lockup-dark-theme.svg"
+            media="(prefers-color-scheme: dark)"
+            class="devsite-dark-theme">
+    
+    <img src="https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/images/lockup.svg" class="devsite-site-logo" alt="Android Open Source Project">
   </picture>
   
 </a>
@@ -3494,8 +3504,8 @@
     <h1 class="devsite-page-title" tabindex="-1">
       Content license
       
-    </h1>
-  <devsite-feature-tooltip
+  <div class="devsite-actions" data-nosnippet>
+    <devsite-feature-tooltip
       ack-key="AckCollectionsBookmarkTooltipDismiss"
       analytics-category="Site-Wide Custom Events"
       analytics-action-show="Callout Profile displayed"
@@ -3522,6 +3532,9 @@
       Save and categorize content based on your preferences.
     </span>
   </devsite-feature-tooltip>
+  </div>
+  
+    </h1>
   <div class="devsite-page-title-meta"><devsite-view-release-notes></devsite-view-release-notes></div>
   
 
@@ -4420,12 +4433,12 @@ this Software without prior written authorization of the copyright holder.
         .fully-clickable"
     watch=".android-samples, devsite-content"></android-fully-clickable>
     
-<script nonce="Ur5XhlzKaL4D6+6XQ0s5dOSpfKJSAL">
+<script nonce="uIT+w+dePJkLmrWdfV8Fn87Y/Bs4hC">
   
   (function(d,e,v,s,i,t,E){d['GoogleDevelopersObject']=i;
     t=e.createElement(v);t.async=1;t.src=s;E=e.getElementsByTagName(v)[0];
     E.parentNode.insertBefore(t,E);})(window, document, 'script',
-    'https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/androidsource/js/app_loader.js', '[7,"en",null,"/js/devsite_app_module.js","https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018","https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/androidsource","https://androidsource-dot-devsite-v2-prod.appspot.com",null,null,["/_pwa/androidsource/manifest.json","https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/images/video-placeholder.svg","https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/androidsource/images/favicon.svg","https://www.gstatic.com/devrel-devsite/prod/vd2dddc2199cd18ccf014281c77515e1e906f6b98324fd2a8b5fa9e92b09e8018/androidsource/images/lockup.svg","https://fonts.googleapis.com/css?family=Roboto:300,400,400italic,500,500italic,700,700italic|Roboto+Mono:400,500,700&display=swap"],1,null,[1,6,8,12,14,17,21,25,50,52,63,70,75,76,80,87,91,92,93,97,98,100,101,102,103,104,105,107,108,109,110,112,113,117,118,120,122,124,125,126,127,129,130,131,132,133,134,135,136,138,140,141,147,148,149,151,152,156,157,158,159,161,163,164,168,169,170,179,180,182,183,186,191,193,196],"AIzaSyAP-jjEJBzmIyKR4F-3XITp8yM9T1gEEI8","AIzaSyB6xiKGDR5O3Ak2okS4rLkauxGUG7XP0hg","source.android.com","AIzaSyAQk0fBONSGUqCNznf6Krs82Ap1-NV6J4o","AIzaSyCCxcqdrZ_7QMeLCRY20bh_SXdAYqy70KY",null,null,null,["TpcFeatures__enable_mirror_tenant_redirects","MiscFeatureFlags__enable_view_transitions","Cloud__enable_cloudx_ping","Cloud__enable_cloud_shell","TpcFeatures__enable_unmirrored_page_left_nav","Cloud__enable_free_trial_server_call","DevPro__enable_developer_subscriptions","Profiles__enable_release_notes_notifications","EngEduTelemetry__enable_engedu_telemetry","Cloud__enable_cloud_dlp_service","Profiles__enable_dashboard_curated_recommendations","Profiles__enable_complete_playlist_endpoint","CloudShell__cloud_shell_button","Experiments__reqs_query_experiments","Cloud__enable_cloud_facet_chat","MiscFeatureFlags__emergency_css","Cloud__enable_llm_concierge_chat","Profiles__enable_stripe_subscription_management","Profiles__enable_page_saving","Profiles__enable_public_developer_profiles","Profiles__enable_completequiz_endpoint","CloudShell__cloud_code_overflow_menu","Concierge__enable_pushui","MiscFeatureFlags__developers_footer_image","DevPro__enable_cloud_innovators_plus","MiscFeatureFlags__developers_footer_dark_image","MiscFeatureFlags__enable_project_variables","MiscFeatureFlags__enable_variable_operator","Profiles__require_profile_eligibility_for_signin","MiscFeatureFlags__enable_explain_this_code","MiscFeatureFlags__enable_firebase_utm","Search__enable_page_map","Profiles__enable_profile_collections","Profiles__enable_developer_profiles_callout","Cloud__enable_legacy_calculator_redirect","Profiles__enable_awarding_url","Search__enable_ai_eligibility_checks","Profiles__enable_recognition_badges","Search__enable_suggestions_from_borg","Search__enable_dynamic_content_confidential_banner","Profiles__enable_join_program_group_endpoint","BookNav__enable_tenant_cache_key","Cloud__enable_cloudx_experiment_ids","Cloud__enable_cloud_shell_fte_user_flow","Profiles__enable_completecodelab_endpoint","Analytics__enable_clearcut_logging"],null,null,"AIzaSyBLEMok-5suZ67qRPzx0qUtbnLmyT_kCVE","https://developerscontentserving-pa.googleapis.com","AIzaSyCM4QpTRSqP5qI4Dvjt4OAScIN8sOUlO-k","https://developerscontentsearch-pa.googleapis.com",2,4,null,"https://developerprofiles-pa.googleapis.com",[7,"androidsource","Android Open Source Project","source.android.com",null,"androidsource-dot-devsite-v2-prod.appspot.com",null,null,[null,1,null,null,null,null,null,null,null,null,null,[1],null,null,null,null,null,null,[1],[1,null,null,[1]],null,null,null,[1,null,1],[1,1,null,null,1]],null,[29,null,null,null,null,null,"/images/lockup.svg","/images/touchicon-180.png",null,null,null,null,null,1,null,null,null,null,null,null,null,1,null,null,null,"/images/lockup-dark-theme.svg",[]],[],null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,[6,1],null,[[null,null,null,[3,7],null,null,[1,[["docType","Choose a content type",[["Guide",null,null,null,null,null,null,null,null,"Guide"],["ReleaseNotes",null,null,null,null,null,null,null,null,"Release Notes"]]],["category","Choose a topic",[["Architecture",null,null,null,null,null,null,null,null,"Architecture"],["Automotive",null,null,null,null,null,null,null,null,"Automotive"],["AndroidBuilding",null,null,null,null,null,null,null,null,"Building"],["AndroidConnectivity",null,null,null,null,null,null,null,null,"Connectivity"],["Camera",null,null,null,null,null,null,null,null,"Camera"],["Compatibility",null,null,null,null,null,null,null,null,"Compatibility"],["Drivers",null,null,null,null,null,null,null,null,"Drivers"],["Graphics",null,null,null,null,null,null,null,null,"Graphics"],["Media",null,null,null,null,null,null,null,null,"Media"],["Security",null,null,null,null,null,null,null,null,"Security"],["Testing",null,null,null,null,null,null,null,null,"Testing"]]]]]],[1,1],null,1],[[null,null,null,null,null,null,null,[["G-2TQ26MFY2E"],null,null,[["G-2TQ26MFY2E",1]]],null,null,null,null,1]],null,4],null,"pk_live_5170syrHvgGVmSx9sBrnWtA5luvk9BwnVcvIi7HizpwauFG96WedXsuXh790rtij9AmGllqPtMLfhe2RSwD6Pn38V00uBCydV4m",1]')
+    'https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/js/app_loader.js', '[7,"en",null,"/js/devsite_app_module.js","https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933","https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource","https://androidsource-dot-devsite-v2-prod.appspot.com",null,null,["/_pwa/androidsource/manifest.json","https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/images/video-placeholder.svg","https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/images/favicon.svg","https://www.gstatic.com/devrel-devsite/prod/v17c4f87be230ffee20589ee6dca0a2318ead9eddb228ec5c58233202ff69a933/androidsource/images/lockup.svg","https://fonts.googleapis.com/css?family=Roboto:300,400,400italic,500,500italic,700,700italic|Roboto+Mono:400,500,700&display=swap"],1,null,[1,6,8,12,14,17,21,25,50,52,63,70,75,76,80,87,91,92,93,97,98,100,101,102,103,104,105,107,108,109,110,112,113,117,118,120,122,124,125,126,127,129,130,131,132,133,134,135,136,138,140,141,147,148,149,151,152,156,157,158,159,161,163,164,168,169,170,179,180,182,183,186,191,193,196],"AIzaSyAP-jjEJBzmIyKR4F-3XITp8yM9T1gEEI8","AIzaSyB6xiKGDR5O3Ak2okS4rLkauxGUG7XP0hg","source.android.com","AIzaSyAQk0fBONSGUqCNznf6Krs82Ap1-NV6J4o","AIzaSyCCxcqdrZ_7QMeLCRY20bh_SXdAYqy70KY",null,null,null,["Cloud__enable_legacy_calculator_redirect","MiscFeatureFlags__enable_framebox_badge_methods","MiscFeatureFlags__enable_project_variables","Profiles__enable_stripe_subscription_management","Profiles__enable_join_program_group_endpoint","Experiments__reqs_query_experiments","Profiles__enable_public_developer_profiles","Concierge__enable_actions_menu","Profiles__enable_dashboard_curated_recommendations","Cloud__enable_cloudx_ping","MiscFeatureFlags__enable_variable_operator","CloudShell__cloud_shell_button","Cloud__enable_cloud_dlp_service","TpcFeatures__enable_mirror_tenant_redirects","Profiles__enable_page_saving","MiscFeatureFlags__enable_view_transitions","Cloud__enable_cloud_shell","DevPro__enable_devpro_offers","Profiles__enable_completequiz_endpoint","MiscFeatureFlags__enable_explain_this_code","DevPro__enable_developer_subscriptions","Profiles__enable_developer_profiles_callout","Profiles__enable_awarding_url","MiscFeatureFlags__emergency_css","MiscFeatureFlags__enable_dark_theme","Profiles__enable_profile_collections","Cloud__enable_free_trial_server_call","Profiles__enable_recognition_badges","Search__enable_suggestions_from_borg","Profiles__enable_completecodelab_endpoint","Cloud__enable_llm_concierge_chat","MiscFeatureFlags__enable_firebase_utm","Analytics__enable_clearcut_logging","MiscFeatureFlags__developers_footer_image","Search__enable_ai_eligibility_checks","Profiles__enable_purchase_prompts","Profiles__enable_release_notes_notifications","Search__enable_page_map","Cloud__enable_cloud_shell_fte_user_flow","Search__enable_dynamic_content_confidential_banner","EngEduTelemetry__enable_engedu_telemetry","MiscFeatureFlags__enable_variable_operator_index_yaml","Profiles__require_profile_eligibility_for_signin","TpcFeatures__enable_unmirrored_page_left_nav","Profiles__enable_complete_playlist_endpoint","MiscFeatureFlags__developers_footer_dark_image","DevPro__enable_cloud_innovators_plus","Cloud__enable_cloud_facet_chat","Concierge__enable_pushui","CloudShell__cloud_code_overflow_menu","BookNav__enable_tenant_cache_key","Cloud__enable_cloudx_experiment_ids"],null,null,"AIzaSyBLEMok-5suZ67qRPzx0qUtbnLmyT_kCVE","https://developerscontentserving-pa.googleapis.com","AIzaSyCM4QpTRSqP5qI4Dvjt4OAScIN8sOUlO-k","https://developerscontentsearch-pa.googleapis.com",2,4,null,"https://developerprofiles-pa.googleapis.com",[7,"androidsource","Android Open Source Project","source.android.com",null,"androidsource-dot-devsite-v2-prod.appspot.com",null,null,[null,1,null,null,null,null,null,null,null,null,null,[1],null,null,null,null,null,null,[1],[1,null,null,[1]],null,null,null,[1,null,1],[1,1,null,null,1]],null,[29,null,null,null,null,null,"/images/lockup.svg","/images/touchicon-180.png",null,null,null,null,null,1,null,null,null,null,null,null,null,2,null,null,null,"/images/lockup-dark-theme.svg",[]],[],null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,[6,1],null,[[null,null,null,[3,7],null,null,[1,[["docType","Choose a content type",[["Guide",null,null,null,null,null,null,null,null,"Guide"],["ReleaseNotes",null,null,null,null,null,null,null,null,"Release Notes"]]],["category","Choose a topic",[["Architecture",null,null,null,null,null,null,null,null,"Architecture"],["Automotive",null,null,null,null,null,null,null,null,"Automotive"],["AndroidBuilding",null,null,null,null,null,null,null,null,"Building"],["AndroidConnectivity",null,null,null,null,null,null,null,null,"Connectivity"],["Camera",null,null,null,null,null,null,null,null,"Camera"],["Compatibility",null,null,null,null,null,null,null,null,"Compatibility"],["Drivers",null,null,null,null,null,null,null,null,"Drivers"],["Graphics",null,null,null,null,null,null,null,null,"Graphics"],["Media",null,null,null,null,null,null,null,null,"Media"],["Security",null,null,null,null,null,null,null,null,"Security"],["Testing",null,null,null,null,null,null,null,null,"Testing"]]]]]],[1,1],null,1],[[null,null,null,null,null,null,null,[["G-2TQ26MFY2E"],null,null,[["G-2TQ26MFY2E",1]]],null,null,null,null,1]],null,4],null,"pk_live_5170syrHvgGVmSx9sBrnWtA5luvk9BwnVcvIi7HizpwauFG96WedXsuXh790rtij9AmGllqPtMLfhe2RSwD6Pn38V00uBCydV4m",1,1,"https://developerscontentinsights-pa.googleapis.com","AIzaSyBJyPHP8SgojSj3JDDL8lu7pDB_mz-nQUc"]')
   
 </script>
 

@@ -23,7 +23,7 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/aggregation/engine",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/privacy/budgeting/budgetkeygenerator:privacy_budget_key_generator",
         "//java/external:acai",

@@ -44,6 +44,7 @@ import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientExcept
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
 import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 import io.opentelemetry.api.logs.Severity;
+import io.opentelemetry.api.metrics.LongCounter;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.slf4j.Logger;
@@ -114,6 +115,8 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
     logger.info("Worker Max Heap Size (MiB): " + Runtime.getRuntime().maxMemory() / (1024 * 1024));
     oTelConfiguration.createProdMemoryUtilizationRatioGauge();
     oTelConfiguration.createProdCPUUtilizationGauge();
+    LongCounter jobSuccessCounter = oTelConfiguration.createProdCounter("job_success_counter");
+    LongCounter jobFailCounter = oTelConfiguration.createProdCounter("job_fail_counter");
     setOutputShardFileSizeBytes(outputShardFileSizeBytes);
     oTelConfiguration.writeProdLog(
         instanceID + "-AggregationWorker: Worker is healthy.", Severity.INFO);
@@ -141,7 +144,7 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
         try {
           JobValidator.validate(job, domainOptional);
         } catch (IllegalArgumentException iae) {
-          processValidationException(iae, job.get());
+          handleJobProcessingException(iae, jobClient, job.get(), jobFailCounter);
           continue;
         }
 
@@ -155,11 +158,19 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
                 "total_execution_time", jobID, TimerUnit.SECONDS)) {
           jobResult = jobProcessor.process(currentJob);
         }
+        if (jobResult
+            .resultInfo()
+            .getReturnCode()
+            .equals(AggregationWorkerReturnCode.SUCCESS.name())) {
+          jobSuccessCounter.add(1L);
+        } else {
+          jobFailCounter.add(1L);
+        }
         jobClient.markJobCompleted(jobResult);
       } catch (AggregationJobProcessException e) {
         processAggregationJobProcessException(e, jobClient, job.get());
       } catch (Exception e) {
-        processException(e, jobClient, job.orElse(null));
+        handleJobProcessingException(e, jobClient, job.orElse(null), jobFailCounter);
       }
       // Stopwatches only get exported once this loop exits. When run in benchmark mode (for perf
       // tests), we only expect one worker item.
@@ -176,6 +187,28 @@ public final class WorkerPullWorkService extends AbstractExecutionThreadService 
 
     nonBlockingThreadPool.shutdownNow();
     blockingThreadPool.shutdownNow();
+  }
+
+  /**
+   * Handles exceptions that occur during job processing, routing them to specific handlers and
+   * updating the job failure metric. This acts as a central point for managing exceptions related
+   * to job processing.
+   *
+   * @param e Unexpected exception whose message is to be saved
+   * @param jobClient JobClient that processed the job
+   * @param job Job that threw the exception when run
+   * @param jobFailCounter Otel counter that tracks job failures
+   */
+  private void handleJobProcessingException(
+      Exception e, JobClient jobClient, Job job, LongCounter jobFailCounter) {
+    jobFailCounter.add(1L);
+    if (e instanceof IllegalArgumentException) {
+      processValidationException((IllegalArgumentException) e, job);
+    } else if (e instanceof AggregationJobProcessException) {
+      processAggregationJobProcessException((AggregationJobProcessException) e, jobClient, job);
+    } else {
+      processException(e, jobClient, job);
+    }
   }
 
   @Override

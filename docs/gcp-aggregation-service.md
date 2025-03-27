@@ -7,7 +7,8 @@ To test the aggregation service with support for encrypted reports, you need the
 -   Have a [GCP project](https://cloud.google.com/).
 -   Run the [Adtech Setup Terraform](#adtech-setup-terraform) to create/configure the service
     account needed for onboarding.
--   Complete the aggregation service [onboarding & enrollment flow](https://console.privacysandbox.google.com)
+-   Complete the aggregation service
+    [onboarding & enrollment flow](https://console.privacysandbox.google.com)
 
 Once you've submitted the onboarding form, we will contact you to verify your information. Then,
 we'll send you the remaining instructions and information needed for this setup.</br> _You won't be
@@ -184,7 +185,7 @@ Make the following adjustments in the `<repository_root>/terraform/gcp/environme
     environment = "<environment_name>"
     ...
     alarms_enabled           = true
-    alarm_notification_email = "<noreply@example.com>"
+    alarms_notification_email = "<noreply@example.com>"
     ```
 
     -   project_id: Google Cloud project ID for your deployment
@@ -192,8 +193,8 @@ Make the following adjustments in the `<repository_root>/terraform/gcp/environme
     -   user_provided_worker_sa_email: Set to worker service account created in
         [Adtech Setup section](./docs/gcp-aggregation-service.md#adtech-setup-terraform) and
         submitted in [onboarding form](./docs/gcp-aggregation-service.md#prerequisites)
-    -   alarm_enabled: boolean flag to enable alarms (default: false)
-    -   alarm_notification_email: Email to receive alarm notifications.
+    -   alarms_enabled: boolean flag to enable alarms (default: false)
+    -   alarms_notification_email: Email to receive alarm notifications.
 
 1.  **Skip this step if you use our prebuilt container image and Cloud Function jars**
 
@@ -327,6 +328,27 @@ file into smaller shards.
     for sending an authenticated request. [Detailed API spec](/docs/api.md#getjob-endpoint)_
 
 # **Upgrade Environment**
+
+_Note: Versions 2.13.0 and higher will contain the terraform files previously available in the
+[Coordinator Services and Shared Libraries Repository](https://github.com/privacysandbox/coordinator-services-and-shared-libraries).
+When upgrading from a version lower than or equal to 2.12.x, please run the below commands to remove
+untracked copies of the folders that will now be managed via the aggregation service repository. If
+you made manual modifications to the adtech_setup.tf, adtech_setup_output.tf, or
+adtech_setup_variables.tf files, you should not remove them._
+
+```sh
+rm -rf terraform/gcp/applications
+rm -rf terraform/gcp/environments/demo
+rm -rf terraform/gcp/environments/shared
+rm -rf terraform/gcp/modules
+rm -rf terraform/gcp/coordinator-services-and-shared-libraries
+rm -rf terraform/gcp/environments/adtech_setup/adtech_setup.auto.tfvars_sample
+rm -rf terraform/gcp/environments/adtech_setup/main.tf_sample
+mkdir backup
+mv terraform/gcp/environments/adtech_setup/adtech_setup.tf backup/
+mv terraform/gcp/environments/adtech_setup/adtech_setup_output.tf backup/
+mv terraform/gcp/environments/adtech_setup/adtech_setup_variables.tf backup/
+```
 
 Run the following in the `<repository_root>`.
 

@@ -49,7 +49,7 @@ java_library(
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/exceptions",
         "//java/com/google/aggregate/adtech/worker/model/serdes",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/perf",
         "//java/external:clients_blobstorageclient",
         "//java/external:clients_blobstorageclient_model",

@@ -75,6 +75,26 @@ java_library(
 )
 
 java_library(
+    name = "fake_report_writer",
+    testonly = True,
+    srcs = ["FakeReportWriter.java"],
+    javacopts = ["-Xep:Var"],
+    deps = [
+        ":fake_decryption_key_service",
+        "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/model/serdes",
+        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
+        "//java/com/google/aggregate/protocol/avro:avro_report",
+        "//java/com/google/aggregate/protocol/avro:avro_reports_schema_supplier",
+        "//java/external:clients_cryptoclient",
+        "//java/external:guava",
+        "//java/external:guice",
+    ],
+)
+
+java_library(
     name = "fake_report_generator",
     testonly = True,
     srcs = ["FakeReportGenerator.java"],
@@ -82,7 +102,7 @@ java_library(
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/external:guava",
     ],
 )
@@ -146,7 +166,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
         "//java/external:avro",
         "//java/external:guava",
@@ -160,7 +180,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
         "//java/external:avro",
         "//java/external:guava",
@@ -182,5 +202,16 @@ java_library(
         "//java/external:guice",
         "//java/external:jcommander",
         "//java/external:tink",
+    ],
+)
+
+java_library(
+    name = "local_credentials_provider_module",
+    srcs = ["LocalCredentialsProviderModule.java"],
+    javacopts = ["-Xep:Var"],
+    deps = [
+        "//java/external:clients_configclient_operator",
+        "//java/external:google_auth_library_oauth2_http",
+        "//java/external:guice",
     ],
 )

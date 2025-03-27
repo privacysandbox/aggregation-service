@@ -23,8 +23,7 @@ java_library(
     ],
     javacopts = ["-Xep:Var"],
     deps = [
-        "//java/external:autovalue",
-        "//java/external:autovalue_annotations",
+        "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:clients_distributed_privacy_budgeting",
         "//java/external:guava",
     ],
@@ -38,6 +37,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         ":privacy_budgeting_service_bridge",
+        "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/util",
         "//java/external:clients_distributed_privacy_budgeting",
         "//java/external:guava",
@@ -54,6 +54,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         ":privacy_budgeting_service_bridge",
+        "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:guava",
     ],
 )
@@ -67,6 +68,7 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         ":privacy_budgeting_service_bridge",
+        "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:guava",
     ],
 )

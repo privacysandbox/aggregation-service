@@ -49,6 +49,7 @@ import com.google.aggregate.adtech.worker.decryption.DeserializingReportDecrypte
 import com.google.aggregate.adtech.worker.decryption.RecordDecrypter;
 import com.google.aggregate.adtech.worker.model.serdes.PayloadSerdes;
 import com.google.aggregate.adtech.worker.model.serdes.cbor.CborPayloadSerdes;
+import com.google.aggregate.adtech.worker.selector.ClientConfigSelector;
 import com.google.aggregate.adtech.worker.util.JobUtils;
 import com.google.aggregate.adtech.worker.validation.SimulationValidationModule;
 import com.google.aggregate.adtech.worker.validation.ValidationModule;
@@ -69,6 +70,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.OptionalBinder;
 import com.google.privacysandbox.otel.Annotations.EnableOTelLogs;
@@ -78,6 +80,7 @@ import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientMod
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorARegionBindingOverride;
 import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorBRegionBindingOverride;
 import com.google.scp.operator.cpio.configclient.Annotations.TrustedServicesClientVersion;
+import com.google.scp.operator.cpio.configclient.common.OperatorClientConfig;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorARoleArn;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorBRoleArn;
 import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorKmsArnParameter;
@@ -97,6 +100,7 @@ import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPr
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorBPrivacyBudgetServiceAuthEndpoint;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorBPrivacyBudgetServiceBaseUrl;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.aws.AwsPbsClientModule;
+import com.google.scp.operator.cpio.distributedprivacybudgetclient.external2gcp.External2GcpPbsClientModule;
 import com.google.scp.operator.cpio.jobclient.aws.AwsJobHandlerModule.DdbEndpointOverrideBinding;
 import com.google.scp.operator.cpio.jobclient.aws.AwsJobHandlerModule.SqsEndpointOverrideBinding;
 import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerPath;
@@ -122,7 +126,6 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
-import javax.inject.Singleton;
 import software.amazon.awssdk.http.SdkHttpClient;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.regions.internal.util.EC2MetadataUtils;
@@ -144,6 +147,20 @@ public final class AggregationWorkerModule extends AbstractModule {
     bind(OutputDomainProcessor.class).to(args.getDomainFileFormat().getDomainProcessorClass());
 
     install(new WorkerModule());
+
+    OperatorClientConfig.Builder configBuilder =
+        OperatorClientConfig.builder()
+            .setUseLocalCredentials(false)
+            .setCoordinatorAEncryptionKeyServiceBaseUrl(
+                args.getCoordinatorAEncryptionKeyServiceBaseUrl())
+            .setCoordinatorBEncryptionKeyServiceBaseUrl(
+                args.getCoordinatorBEncryptionKeyServiceBaseUrl())
+            .setCoordinatorAEncryptionKeyServiceCloudfunctionUrl(
+                args.getPrimaryEncryptionKeyServiceCloudfunctionUrl())
+            .setCoordinatorBEncryptionKeyServiceCloudfunctionUrl(
+                args.getSecondaryEncryptionKeyServiceCloudfunctionUrl());
+    bind(OperatorClientConfig.class).toInstance(configBuilder.build());
+
     install(args.getClientConfigSelector().getClientConfigGuiceModule());
     install(args.getJobClient().getPullerGuiceModule());
     bind(SdkHttpClient.class).toInstance(ApacheHttpClient.builder().build());
@@ -350,7 +367,11 @@ public final class AggregationWorkerModule extends AbstractModule {
       bind(String.class)
           .annotatedWith(TrustedServicesClientVersion.class)
           .toInstance(ClientVersionUtils.getServiceClientVersion());
-      install(new AwsPbsClientModule());
+      if (args.getClientConfigSelector().equals(ClientConfigSelector.AWS_TO_GCP)) {
+        install(new External2GcpPbsClientModule());
+      } else {
+        install(new AwsPbsClientModule());
+      }
     }
     install(new PrivacyBudgetKeyGeneratorModule());
 

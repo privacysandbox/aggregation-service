@@ -29,7 +29,7 @@ java_library(
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model:privacy_budget_debugging_model",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_debug_results_schema_supplier",
         "//java/com/google/aggregate/protocol/avro:avro_results_schema_supplier",
         "//java/com/google/aggregate/shared/mapper",

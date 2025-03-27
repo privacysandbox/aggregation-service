@@ -18,7 +18,7 @@ package com.google.aggregate.adtech.worker.aggregation.engine;
 
 import static com.google.common.collect.Sets.newConcurrentHashSet;
 
-import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetUnit;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorFactory;
 import com.google.common.collect.ImmutableSet;
@@ -54,11 +54,10 @@ public class AggregationEngineFactory {
 
     ConcurrentMap<BigInteger, LongAdder> aggregationMap =
         new MapMaker().concurrencyLevel(concurrentMapConcurrencyHint).makeMap();
-    ConcurrentMap<PrivacyBudgetingServiceBridge.PrivacyBudgetUnit, PrivacyBudgetKeyInput>
+    ConcurrentMap<PrivacyBudgetUnit, PrivacyBudgetKeyInput>
         privacyBudgetUnitToPrivacyBudgetKeyInput =
             new MapMaker().concurrencyLevel(concurrentMapConcurrencyHint).makeMap();
-    Set<PrivacyBudgetingServiceBridge.PrivacyBudgetUnit> privacyBudgetUnits =
-        newConcurrentHashSet();
+    Set<PrivacyBudgetUnit> privacyBudgetUnits = newConcurrentHashSet();
     Set<UUID> reportIdSet = newConcurrentHashSet();
 
     if (filteringIds.isEmpty()) {

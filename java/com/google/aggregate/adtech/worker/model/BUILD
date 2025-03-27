@@ -30,6 +30,7 @@ java_library(
         "FactDeserializer.java",
         "FactSerializer.java",
         "Payload.java",
+        "PrivacyBudgetUnit.java",
         "Report.java",
         "SharedInfo.java",
         "Version.java",
@@ -37,7 +38,7 @@ java_library(
     ],
     javacopts = ["-Xep:Var"],
     deps = [
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_report",
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",

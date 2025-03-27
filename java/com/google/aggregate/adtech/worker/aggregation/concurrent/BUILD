@@ -20,6 +20,8 @@ java_library(
     name = "concurrent",
     srcs = [
         "ConcurrentAggregationProcessor.java",
+        "ReportAggregator.java",
+        "ReportReader.java",
     ],
     javacopts = ["-Xep:Var"],
     deps = [
@@ -31,6 +33,7 @@ java_library(
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model:privacy_budget_debugging_model",
         "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/adtech/worker/validation",
         "//java/com/google/aggregate/perf",
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",

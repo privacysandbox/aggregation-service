@@ -1,0 +1,29 @@
+diff --git a/MODULE.bazel b/MODULE.bazel
+index 16f8d85..0881461 100644
+--- a/MODULE.bazel
++++ b/MODULE.bazel
+@@ -209,7 +209,8 @@ go_sdk = use_extension("@io_bazel_rules_go//go:extensions.bzl", "go_sdk")
+ go_sdk.download(version = "1.23.0")
+ 
+ go_deps = use_extension("@bazel_gazelle//:extensions.bzl", "go_deps")
+-go_deps.from_file(go_work = "//:go.work")
++
++# go_deps.from_file(go_work = "//:go.work")
+ go_deps.module(
+     path = "github.com/bazelbuild/buildtools",
+     sum = "h1:FGzENZi+SX9I7h9xvMtRA3rel8hCEfyzSixteBgn7MU=",
+@@ -221,10 +222,10 @@ go_deps.module(
+ use_repo(
+     go_deps,
+     "com_github_bazelbuild_buildtools",
+-    "com_github_googleapis_gax_go_v2",
+-    "com_github_kylelemons_godebug",
+-    "com_github_stretchr_testify",
+-    "com_google_cloud_go_spanner",
++    # "com_github_googleapis_gax_go_v2",
++    # "com_github_kylelemons_godebug",
++    # "com_github_stretchr_testify",
++    # "com_google_cloud_go_spanner",
+ )
+ 
+ python = use_extension("@rules_python//python/extensions:python.bzl", "python")

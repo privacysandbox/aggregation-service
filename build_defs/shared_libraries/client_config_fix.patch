@@ -1,0 +1,259 @@
+diff --git a/java/com/google/scp/operator/cpio/configclient/aws/Aws2GcpOperatorClientConfigModule.java b/java/com/google/scp/operator/cpio/configclient/aws/Aws2GcpOperatorClientConfigModule.java
+index 5b58d3783..482d458f4 100644
+--- a/java/com/google/scp/operator/cpio/configclient/aws/Aws2GcpOperatorClientConfigModule.java
++++ b/java/com/google/scp/operator/cpio/configclient/aws/Aws2GcpOperatorClientConfigModule.java
+@@ -124,7 +124,7 @@ public final class Aws2GcpOperatorClientConfigModule extends AbstractModule {
+         coordinatorBCredentials,
+         config
+             .coordinatorBEncryptionKeyServiceCloudfunctionUrl()
+-            .orElse(config.coordinatorBEncryptionKeyServiceBaseUrl().get()));
++            .orElse(config.coordinatorBEncryptionKeyServiceBaseUrl()));
+   }
+ 
+   /** Provider for a {@code AwsSessionCredentialsProvider} class to access coordinator A. */
+diff --git a/java/com/google/scp/operator/cpio/configclient/common/OperatorClientConfig.java b/java/com/google/scp/operator/cpio/configclient/common/OperatorClientConfig.java
+index 8a7a70502..4f881ac7f 100644
+--- a/java/com/google/scp/operator/cpio/configclient/common/OperatorClientConfig.java
++++ b/java/com/google/scp/operator/cpio/configclient/common/OperatorClientConfig.java
+@@ -32,12 +32,12 @@ public abstract class OperatorClientConfig {
+   }
+ 
+   /** CoordinatorA Workload Identity Pool Provider. */
+-  public abstract String coordinatorAWipProvider();
++  public abstract Optional<String> coordinatorAWipProvider();
+ 
+   /**
+    * CoordinatorA Service Account which TEE can impersonate and has access to protected resources.
+    */
+-  public abstract String coordinatorAServiceAccountToImpersonate();
++  public abstract Optional<String> coordinatorAServiceAccountToImpersonate();
+ 
+   /** CoordinatorB Workload Identity Pool Provider. */
+   public abstract Optional<String> coordinatorBWipProvider();
+@@ -54,7 +54,7 @@ public abstract class OperatorClientConfig {
+   public abstract String coordinatorAEncryptionKeyServiceBaseUrl();
+ 
+   /** Coordinator B encryption key service url */
+-  public abstract Optional<String> coordinatorBEncryptionKeyServiceBaseUrl();
++  public abstract String coordinatorBEncryptionKeyServiceBaseUrl();
+ 
+   /** Coordinator A encryption key service cloudfunction url */
+   public abstract Optional<String> coordinatorAEncryptionKeyServiceCloudfunctionUrl();
+@@ -67,11 +67,11 @@ public abstract class OperatorClientConfig {
+   public abstract static class Builder {
+ 
+     /** Set the CoordinatorA Workload Identity Pool Provider. */
+-    public abstract Builder setCoordinatorAWipProvider(String coordinatorAWipProvider);
++    public abstract Builder setCoordinatorAWipProvider(Optional<String> coordinatorAWipProvider);
+ 
+     /** Set the CoordinatorA Service Account which can be impersonated by TEE. */
+     public abstract Builder setCoordinatorAServiceAccountToImpersonate(
+-        String coordinatorAServiceAccountToImpersonate);
++        Optional<String> coordinatorAServiceAccountToImpersonate);
+ 
+     /** Set the CoordinatorB Workload Identity Pool Provider. */
+     public abstract Builder setCoordinatorBWipProvider(Optional<String> coordinatorBWipProvider);
+@@ -89,7 +89,7 @@ public abstract class OperatorClientConfig {
+ 
+     /** Set coordinator B encryption key service base url */
+     public abstract Builder setCoordinatorBEncryptionKeyServiceBaseUrl(
+-        Optional<String> coordinatorBEncryptionKeyServiceBaseUrl);
++        String coordinatorBEncryptionKeyServiceBaseUrl);
+ 
+     /** Set coordinator A encryption key service base url */
+     public abstract Builder setCoordinatorAEncryptionKeyServiceCloudfunctionUrl(
+diff --git a/java/com/google/scp/operator/cpio/configclient/gcp/GcpOperatorClientConfigModule.java b/java/com/google/scp/operator/cpio/configclient/gcp/GcpOperatorClientConfigModule.java
+index 4b74c418c..88b3752b4 100644
+--- a/java/com/google/scp/operator/cpio/configclient/gcp/GcpOperatorClientConfigModule.java
++++ b/java/com/google/scp/operator/cpio/configclient/gcp/GcpOperatorClientConfigModule.java
+@@ -49,7 +49,8 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
+       return GoogleCredentials.getApplicationDefault();
+     }
+     return CredentialsHelper.getAttestedCredentials(
+-        config.coordinatorAWipProvider(), config.coordinatorAServiceAccountToImpersonate());
++        config.coordinatorAWipProvider().get(),
++        config.coordinatorAServiceAccountToImpersonate().get());
+   }
+ 
+   /**
+@@ -60,9 +61,7 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
+   @CoordinatorBCredentials
+   @Singleton
+   GoogleCredentials provideCoordinatorBCredentials(OperatorClientConfig config) throws IOException {
+-    // For single party solution, we will not have coordinatorB details, so use default
+-    // credentials. These are not used for single party solution.
+-    if (config.useLocalCredentials() || config.coordinatorBWipProvider().isEmpty()) {
++    if (config.useLocalCredentials()) {
+       return GoogleCredentials.getApplicationDefault();
+     }
+     return CredentialsHelper.getAttestedCredentials(
+@@ -88,13 +87,10 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
+   @Singleton
+   public HttpClientWrapper provideCoordinatorBHttpClient(OperatorClientConfig config)
+       throws IOException {
+-    if (config.coordinatorBEncryptionKeyServiceBaseUrl().isPresent()) {
+-      return getHttpClientWrapper(
+-          config
+-              .coordinatorBEncryptionKeyServiceCloudfunctionUrl()
+-              .orElse(config.coordinatorBEncryptionKeyServiceBaseUrl().get()));
+-    }
+-    return HttpClientWrapper.createDefault();
++    return getHttpClientWrapper(
++        config
++            .coordinatorBEncryptionKeyServiceCloudfunctionUrl()
++            .orElse(config.coordinatorBEncryptionKeyServiceBaseUrl()));
+   }
+ 
+   @Override
+@@ -102,9 +98,9 @@ public final class GcpOperatorClientConfigModule extends AbstractModule {
+     install(new GcpClientConfigModule());
+   }
+ 
+-  private static HttpClientWrapper getHttpClientWrapper(String url) throws IOException {
++  private static HttpClientWrapper getHttpClientWrapper(String audience) throws IOException {
+     return HttpClientWrapper.builder()
+-        .setInterceptor(GcpHttpInterceptorUtil.createHttpInterceptor(url))
++        .setInterceptor(GcpHttpInterceptorUtil.createHttpInterceptor(audience))
+         .setExponentialBackoff(
+             COORDINATOR_HTTPCLIENT_RETRY_INITIAL_INTERVAL,
+             COORDINATOR_HTTPCLIENT_RETRY_MULTIPLIER,
+diff --git a/java/com/google/scp/operator/worker/SimpleWorkerModule.java b/java/com/google/scp/operator/worker/SimpleWorkerModule.java
+index 40a071117..e0b6694e3 100644
+--- a/java/com/google/scp/operator/worker/SimpleWorkerModule.java
++++ b/java/com/google/scp/operator/worker/SimpleWorkerModule.java
+@@ -25,8 +25,8 @@ import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientMod
+ import com.google.scp.operator.cpio.blobstorageclient.gcp.Annotations.GcsEndpointUrl;
+ import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorARegionBindingOverride;
+ import com.google.scp.operator.cpio.configclient.Annotations.CoordinatorBRegionBindingOverride;
+-import com.google.scp.operator.cpio.configclient.common.OperatorClientConfig;
+ import com.google.scp.operator.cpio.configclient.Annotations.TrustedServicesClientVersion;
++import com.google.scp.operator.cpio.configclient.common.OperatorClientConfig;
+ import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorARoleArn;
+ import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorBRoleArn;
+ import com.google.scp.operator.cpio.configclient.local.Annotations.CoordinatorKmsArnParameter;
+@@ -266,26 +266,22 @@ public final class SimpleWorkerModule extends AbstractModule {
+     }
+     OperatorClientConfig.Builder configBuilder =
+         OperatorClientConfig.builder()
+-            .setCoordinatorAServiceAccountToImpersonate(args.getCoordinatorAServiceAccount())
+-            .setCoordinatorAWipProvider(args.getCoordinatorAWipProvider())
++            .setCoordinatorAServiceAccountToImpersonate(
++                Optional.of(args.getCoordinatorAServiceAccount()))
++            .setCoordinatorBServiceAccountToImpersonate(
++                Optional.of(args.getCoordinatorBServiceAccount()))
++            .setCoordinatorAWipProvider(Optional.of(args.getCoordinatorAWipProvider()))
++            .setCoordinatorBWipProvider(Optional.of(args.getCoordinatorBWipProvider()))
+             .setUseLocalCredentials(args.getCoordinatorAWipProvider().isEmpty())
+             .setCoordinatorAEncryptionKeyServiceBaseUrl(
+                 args.getPrimaryEncryptionKeyServiceBaseUrl())
++            .setCoordinatorBEncryptionKeyServiceBaseUrl(
++                args.getSecondaryEncryptionKeyServiceBaseUrl())
+             .setCoordinatorAEncryptionKeyServiceCloudfunctionUrl(
+-                args.getPrimaryEncryptionKeyServiceCloudfunctionUrl());
+-    if (!args.getCoordinatorBWipProvider().isEmpty()) {
+-      configBuilder.setCoordinatorBWipProvider(Optional.of(args.getCoordinatorBWipProvider()));
+-    }
+-    if (!args.getCoordinatorBServiceAccount().isEmpty()) {
+-      configBuilder.setCoordinatorBServiceAccountToImpersonate(
+-          Optional.of(args.getCoordinatorBServiceAccount()));
+-    }
+-    if (!args.getSecondaryEncryptionKeyServiceBaseUrl().isEmpty()) {
+-      configBuilder.setCoordinatorBEncryptionKeyServiceBaseUrl(
+-          Optional.of(args.getSecondaryEncryptionKeyServiceBaseUrl()));
+-    }
+-    configBuilder.setCoordinatorBEncryptionKeyServiceCloudfunctionUrl(
+-        args.getSecondaryEncryptionKeyServiceCloudfunctionUrl());
++                args.getPrimaryEncryptionKeyServiceCloudfunctionUrl())
++            .setCoordinatorBEncryptionKeyServiceCloudfunctionUrl(
++                args.getSecondaryEncryptionKeyServiceCloudfunctionUrl());
++
+     bind(OperatorClientConfig.class).toInstance(configBuilder.build());
+     install(args.getClientConfigSelector().getClientConfigGuiceModule());
+ 
+diff --git a/java/com/google/scp/shared/gcp/util/GcpHttpInterceptorUtil.java b/java/com/google/scp/shared/gcp/util/GcpHttpInterceptorUtil.java
+index 3a3255d16..fbf63f0ca 100644
+--- a/java/com/google/scp/shared/gcp/util/GcpHttpInterceptorUtil.java
++++ b/java/com/google/scp/shared/gcp/util/GcpHttpInterceptorUtil.java
+@@ -16,32 +16,32 @@ import org.apache.hc.core5.http.protocol.HttpContext;
+ public final class GcpHttpInterceptorUtil {
+ 
+   /** Create http interceptor for gcp http clients with url as audience */
+-  public static org.apache.http.HttpRequestInterceptor createHttpInterceptor(String url)
++  public static org.apache.http.HttpRequestInterceptor createHttpInterceptor(String audience)
+       throws IOException {
+-    return createHttpInterceptor(GoogleCredentials.getApplicationDefault(), url);
++    return createHttpInterceptor(GoogleCredentials.getApplicationDefault(), audience);
+   }
+ 
+   public static org.apache.http.HttpRequestInterceptor createHttpInterceptor(
+-      GoogleCredentials credentials, String url) {
+-    return new GcpHttpInterceptor(credentials, url);
++      GoogleCredentials credentials, String audience) {
++    return new GcpHttpInterceptor(credentials, audience);
+   }
+ 
+   /**
+    * Create HTTP Interceptor for GCP HTTP clients with url as audience. This is for use when
+    * communicating with the PBS server - not with GCP directly.
+    *
+-   * @param url The TargetAudience url to use
++   * @param audience The TargetAudience url to use
+    * @return A HttpRequestInterceptor that applies the generated GCP AccessToken to the intercepted
+    *     HTTP request.
+    */
+   public static org.apache.hc.core5.http.HttpRequestInterceptor createPbsHttpInterceptor(
+-      GoogleCredentials credentials, String url) {
+-    return new GcpPbsHttpInterceptor(credentials, url);
++      GoogleCredentials credentials, String audience) {
++    return new GcpPbsHttpInterceptor(credentials, audience);
+   }
+ 
+-  public static org.apache.hc.core5.http.HttpRequestInterceptor createPbsHttpInterceptor(String url)
+-      throws IOException {
+-    return new GcpPbsHttpInterceptor(GoogleCredentials.getApplicationDefault(), url);
++  public static org.apache.hc.core5.http.HttpRequestInterceptor createPbsHttpInterceptor(
++      String audience) throws IOException {
++    return new GcpPbsHttpInterceptor(GoogleCredentials.getApplicationDefault(), audience);
+   }
+ 
+   private abstract static class GcpHttpInterceptorBase {
+@@ -50,13 +50,13 @@ public final class GcpHttpInterceptorUtil {
+ 
+     public GcpHttpInterceptorBase(
+         GoogleCredentials sourceCredentials,
+-        String url,
++        String audience,
+         Consumer<IdTokenCredentials.Builder>... extraSettings) {
+ 
+       IdTokenCredentials.Builder builder =
+           IdTokenCredentials.newBuilder()
+               .setIdTokenProvider((IdTokenProvider) sourceCredentials)
+-              .setTargetAudience(url)
++              .setTargetAudience(audience)
+               // Setting the ID token options.
+               .setOptions(
+                   Arrays.asList(Option.FORMAT_FULL, Option.LICENSES_TRUE, Option.INCLUDE_EMAIL));
+@@ -75,8 +75,8 @@ public final class GcpHttpInterceptorUtil {
+   private static final class GcpHttpInterceptor extends GcpHttpInterceptorBase
+       implements org.apache.http.HttpRequestInterceptor {
+ 
+-    public GcpHttpInterceptor(GoogleCredentials sourceCredentials, String url) {
+-      super(sourceCredentials, url);
++    public GcpHttpInterceptor(GoogleCredentials sourceCredentials, String audience) {
++      super(sourceCredentials, audience);
+     }
+ 
+     @Override
+@@ -90,10 +90,10 @@ public final class GcpHttpInterceptorUtil {
+   private static final class GcpPbsHttpInterceptor extends GcpHttpInterceptorBase
+       implements org.apache.hc.core5.http.HttpRequestInterceptor {
+ 
+-    public GcpPbsHttpInterceptor(GoogleCredentials sourceCredentials, String url) {
++    public GcpPbsHttpInterceptor(GoogleCredentials sourceCredentials, String audience) {
+       super(
+           sourceCredentials,
+-          url,
++          audience,
+           builder ->
+               builder
+                   .setExpirationMargin(Duration.ofMinutes(10))

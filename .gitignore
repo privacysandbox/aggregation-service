@@ -21,9 +21,8 @@ __pycache__/
 /target
 /bin
 
-# don't track prebuilt/local-built artifacts and terrafrom release-manged scripts
+# don't track prebuilt/local-built artifacts and terraform release-manged scripts
 /terrafrom/aws/control-plane-shared-libraries
-/terraform/aws/jars
 /terrafrom/aws/environments/applications
 /terrafrom/aws/environments/modules
 /terrafrom/aws/environments/shared

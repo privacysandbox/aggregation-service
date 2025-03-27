@@ -6,7 +6,8 @@ To test the aggregation service with support for encrypted reports, you need the
 
 -   Have an [AWS account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html)
     available to you.
--   Complete the aggregation service [onboarding & enrollment flow](https://console.privacysandbox.google.com)
+-   Complete the aggregation service
+    [onboarding & enrollment flow](https://console.privacysandbox.google.com)
 
 Once you've submitted the onboarding form, we will contact you to verify your information. Then,
 we'll send you the remaining instructions and information needed for this setup.</br> _You won't be
@@ -117,27 +118,19 @@ Make the following adjustments in the `<repository_root>/terraform/aws/environme
     # }
     ```
 
-1.  Rename `example.auto.tfvars` to `<environment>.auto.tfvars` and add the `...assume_role...`
-    values using the information you received in the onboarding email. Delete the line that reads
-    `assume_role_parameter = "arn:aws:iam::example:role/example"` Leave all other values as-is for
+1.  Rename `example.auto.tfvars` to `<environment>.auto.tfvars`. Delete the line that reads
+    `assume_role_parameter = "arn:aws:iam::example:role/example"`. Leave all other values as-is for
     the initial deployment.
 
     ```sh
     environment = "<environment_name>"
     ...
-
-    coordinator_a_assume_role_parameter = "arn:aws:iam::<CoordinatorAAccountID>:role/a_<YourAccountID>_coordinator_assume_role"
-    coordinator_b_assume_role_parameter = "arn:aws:iam::<CoordinatorBAccountID>:role/b_<YourAccountID>_coordinator_assume_role"
     ...
 
     alarm_notification_email = "<noreply@example.com>"
     ```
 
     -   environment: name of your environment
-    -   coordinator_a_assume_role_parameter: IAM role for Coordinator A given by us in the
-        onboarding or upgrade email
-    -   coordinator_b_assume_role_parameter: IAM role for Coordinator B given by us in the
-        onboarding or upgrade email
     -   alarm_notification_email: Email to receive alarm notifications. Requires confirmation
         subscription through sign up email sent to this address.
     -   region: The region of the AMI. It is set to "us-east-1" by default. If the AMI is self-built
@@ -276,6 +269,19 @@ file into smaller shards.
 
 ## Updating the system
 
+_Note: Versions 2.13.0 and higher will contain the terraform files previously available in the
+[Coordinator Services and Shared Libraries Repository](https://github.com/privacysandbox/coordinator-services-and-shared-libraries).
+When upgrading from a version lower than or equal to 2.12.x, please run the below commands to remove
+untracked copies of the folders that will now be managed via the aggregation service repository:_
+
+```sh
+rm -rf terraform/aws/environments/demo
+rm -rf terraform/aws/environments/shared
+rm -rf terraform/aws/applications
+rm -rf terraform/aws/modules
+rm -rf terraform/aws/coordinator-services-and-shared-libraries
+```
+
 Run the following in the `<repository_root>`.
 
 ```sh
@@ -290,6 +296,14 @@ _Note: If you use self-built artifacts described in
 [build-scripts/aws](/build-scripts/aws/README.md), run `bash fetch_terraform.sh` instead of
 `bash download_prebuilt_dependencies.sh` and make sure you updated your dependencies in the `jars`
 folder._
+
+If you're updating from pre-2.13 to 2.13+ :
+
+1. Make sure to update shared terraform, following this
+   [section](#download-terraform-scripts-and-prebuilt-dependencies).
+2. In your `<env>.auto.tfvars`, delete `coordinator_a_assume_role_parameter` and
+   `coordinator_b_assume_role_parameter` since the cross-cloud coordinators no longer require these
+   values.
 
 ## Troubleshooting
 

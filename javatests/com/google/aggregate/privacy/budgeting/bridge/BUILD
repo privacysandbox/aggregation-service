@@ -20,6 +20,7 @@ java_test(
     name = "FakePrivacyBudgetingServiceBridgeTest",
     srcs = ["FakePrivacyBudgetingServiceBridgeTest.java"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/privacy/budgeting/bridge:fake_privacy_budgeting_service_bridge",
         "//java/com/google/aggregate/privacy/budgeting/bridge:privacy_budgeting_service_bridge",
         "//java/external:google_truth",

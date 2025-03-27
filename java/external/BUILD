@@ -441,6 +441,11 @@ alias(
 )
 
 alias(
+    name = "clients_distributed_privacy_budgeting_aws_to_gcp",
+    actual = "@shared_libraries//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/external2gcp:external2gcp_pbs_client_module",
+)
+
+alias(
     name = "clients_distributed_privacy_budgeting_gcp",
     actual = "@shared_libraries//java/com/google/scp/operator/cpio/distributedprivacybudgetclient/gcp:gcp_pbs_client_module",
 )

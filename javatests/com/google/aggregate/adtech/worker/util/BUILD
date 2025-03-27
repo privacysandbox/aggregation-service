@@ -18,7 +18,7 @@ java_test(
     name = "NumericConversionsTest",
     srcs = ["NumericConversionsTest.java"],
     deps = [
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/external:google_truth",
         "//java/external:guava",
     ],

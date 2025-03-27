@@ -32,6 +32,7 @@ java_library(
         "//java/external:clients_cryptoclient_gcp",
         "//java/external:clients_distributed_privacy_budgeting",
         "//java/external:clients_distributed_privacy_budgeting_aws",
+        "//java/external:clients_distributed_privacy_budgeting_aws_to_gcp",
         "//java/external:clients_distributed_privacy_budgeting_gcp",
         "//java/external:clients_distributed_privacy_budgeting_local",
         "//java/external:clients_jobclient_aws",

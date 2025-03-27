@@ -18,6 +18,7 @@ package com.google.aggregate.privacy.budgeting.bridge;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetUnit;
 import com.google.common.collect.ImmutableList;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetRequest;
 import com.google.scp.coordinator.privacy.budgeting.model.ConsumePrivacyBudgetResponse;

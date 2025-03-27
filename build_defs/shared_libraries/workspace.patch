@@ -1,0 +1,7 @@
+diff --git a/WORKSPACE b/WORKSPACE
+index 809c65855..f67caa8b2 100644
+--- a/WORKSPACE
++++ b/WORKSPACE
+@@ -1 +1 @@
+-workspace(name = "privacy_sandbox_coordinator_services_and_shared_libraries~")
++workspace(name = "privacy_sandbox_coordinator_services_and_shared_libraries")

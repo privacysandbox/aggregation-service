@@ -1,0 +1,1 @@
+../shared/operator_service_variables.tf

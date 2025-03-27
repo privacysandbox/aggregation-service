@@ -17,8 +17,8 @@ load("@rules_java//java:defs.bzl", "java_test")
 package(default_visibility = ["//visibility:public"])
 
 java_test(
-    name = "RecordEncrypterImplTest",
-    srcs = ["RecordEncrypterImplTest.java"],
+    name = "ReportEncrypterImplTest",
+    srcs = ["ReportEncrypterImplTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/decryption",

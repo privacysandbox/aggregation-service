@@ -18,8 +18,8 @@ package com.google.aggregate.adtech.worker.aggregation.engine;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
+import com.google.aggregate.adtech.worker.model.PrivacyBudgetUnit;
 import com.google.aggregate.adtech.worker.model.SharedInfo;
-import com.google.aggregate.privacy.budgeting.bridge.PrivacyBudgetingServiceBridge.PrivacyBudgetUnit;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGenerator.PrivacyBudgetKeyInput;
 import com.google.aggregate.privacy.budgeting.budgetkeygenerator.PrivacyBudgetKeyGeneratorFactory;
@@ -133,9 +133,9 @@ public final class KeyAggregationEngine extends AbstractAggregationEngine {
    */
   @Override
   void addPrivacyBudgetUnit(
-      SharedInfo sharedInfo, UnsignedLong unusedFilteringId, PrivacyBudgetUnit privacyBudgetUnit) {
+      SharedInfo sharedInfo, UnsignedLong filteringId, PrivacyBudgetUnit privacyBudgetUnit) {
     privacyBudgetUnits.add(privacyBudgetUnit);
-    addPrivacyBudgetUnitToPrivacyBudgetKeyInput(sharedInfo, unusedFilteringId);
+    addPrivacyBudgetUnitToPrivacyBudgetKeyInput(privacyBudgetUnit, sharedInfo, filteringId);
   }
 
   /**
@@ -152,29 +152,14 @@ public final class KeyAggregationEngine extends AbstractAggregationEngine {
 
   /** Calculates Privacy Budget Keys for the report for the filteringId. */
   private void addPrivacyBudgetUnitToPrivacyBudgetKeyInput(
-      SharedInfo sharedInfo, UnsignedLong filteringId) {
+      PrivacyBudgetUnit privacyBudgetUnit, SharedInfo sharedInfo, UnsignedLong filteringId) {
     PrivacyBudgetKeyInput privacyBudgetKeyInput =
         PrivacyBudgetKeyInput.builder()
             .setSharedInfo(sharedInfo)
             .setFilteringId(filteringId)
             .build();
 
-    Optional<PrivacyBudgetKeyGenerator> privacyBudgetKeyGenerator =
-        privacyBudgetKeyGeneratorFactory.getPrivacyBudgetKeyGenerator(privacyBudgetKeyInput);
-    if (privacyBudgetKeyGenerator.isEmpty()) {
-      // Impossible because validations ensure only the supported reports are allowed.
-      throw new IllegalStateException(
-          String.format(
-              "PrivacyBudgetKeyGenerator for the given report is not found. Api = %s. Report"
-                  + " Version  =%s.",
-              sharedInfo.api().get(), sharedInfo.version()));
-    }
-    String privacyBudgetKey =
-        privacyBudgetKeyGenerator.get().generatePrivacyBudgetKey(privacyBudgetKeyInput);
-    PrivacyBudgetUnit budgetUnitId =
-        PrivacyBudgetUnit.createHourTruncatedUnit(
-            privacyBudgetKey, sharedInfo.scheduledReportTime(), sharedInfo.reportingOrigin());
-    privacyBudgetUnitToPrivacyBudgetKeyInput.putIfAbsent(budgetUnitId, privacyBudgetKeyInput);
+    privacyBudgetUnitToPrivacyBudgetKeyInput.putIfAbsent(privacyBudgetUnit, privacyBudgetKeyInput);
   }
 
   KeyAggregationEngine(

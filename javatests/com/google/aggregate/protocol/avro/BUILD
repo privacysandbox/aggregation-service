@@ -42,7 +42,7 @@ java_test(
     name = "AvroOutputDomainReaderTest",
     srcs = ["AvroOutputDomainReaderTest.java"],
     deps = [
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_output_domain",
         "//java/com/google/aggregate/protocol/avro:avro_record_reader",
         "//java/com/google/aggregate/protocol/avro:avro_record_writer",
@@ -80,7 +80,7 @@ java_test(
     srcs = ["AvroDebugResultsReaderTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_debug_results",
         "//java/com/google/aggregate/protocol/avro:avro_record_reader",
         "//java/com/google/aggregate/protocol/avro:avro_record_writer",
@@ -99,7 +99,7 @@ java_test(
     name = "AvroOutputDomainWriterTest",
     srcs = ["AvroOutputDomainWriterTest.java"],
     deps = [
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_output_domain",
         "//java/com/google/aggregate/protocol/avro:avro_record_writer",
         "//java/external:acai",
@@ -135,7 +135,7 @@ java_test(
     srcs = ["AvroDebugResultsWriterTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/com/google/aggregate/adtech/worker/util",
+        "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_debug_results",
         "//java/com/google/aggregate/protocol/avro:avro_record_writer",
         "//java/external:acai",

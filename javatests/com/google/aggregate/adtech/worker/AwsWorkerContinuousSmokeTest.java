@@ -79,7 +79,7 @@ public class AwsWorkerContinuousSmokeTest {
   @Rule public final Acai acai = new Acai(TestEnv.class);
   @Rule public final TestName name = new TestName();
 
-  private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
+  private static final Duration COMPLETION_TIMEOUT = Duration.of(30, ChronoUnit.MINUTES);
 
   private static final Integer DEBUG_DOMAIN_KEY_SIZE = 10000;
 

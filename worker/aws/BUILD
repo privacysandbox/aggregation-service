@@ -134,6 +134,8 @@ worker_aws_deployment(
     ami_name = ":ami_name_flag",
     aws_region = ":aws_region_flag",
     jar_args = PROD_ENCLAVE_ARGS + [
+        "--client_config_env",
+        "AWS_TO_GCP",
         # Coordinators regions
         "--coordinator_a_region_override",
         "us-east-1",
@@ -144,9 +146,13 @@ worker_aws_deployment(
         "--decryption_key_service",
         "AWS_ENCLAVE_CLI_MULTI_PARTY_DECRYPTION_KEY_SERVICE",
         "--coordinator_a_encryption_key_service_base_url",
-        "https://privatekeyservice-a.msmt-1.aws.privacysandboxservices.com/v1alpha",
+        "https://privatekeyservice-a.msmt-5.gcp.privacysandboxservices.com/v1alpha",
         "--coordinator_b_encryption_key_service_base_url",
-        "https://privatekeyservice-b.msmt-2.aws.privacysandboxservices.com/v1alpha",
+        "https://privatekeyservice-prod-b.msmt-6.gcp.privacysandboxservices.com/v1alpha",
+        "--primary_encryption_key_service_cloudfunction_url",
+        "https://privatekeyservice-a.msmt-5.gcp.privacysandboxservices.com",
+        "--secondary_encryption_key_service_cloudfunction_url",
+        "https://privatekeyservice-prod-b.msmt-6.gcp.privacysandboxservices.com",
 
         # PBS related arguments
         "--privacy_budgeting",
@@ -154,15 +160,15 @@ worker_aws_deployment(
 
         # PBS endpoints
         "--coordinator_a_privacy_budgeting_endpoint",
-        "https://mp-pbs-a.msmt-1.aws.privacysandboxservices.com/v1",
+        "https://mp-pbs-a.msmt-5.gcp.privacysandboxservices.com/v1",
         "--coordinator_b_privacy_budgeting_endpoint",
-        "https://mp-pbs-b.msmt-2.aws.privacysandboxservices.com/v1",
+        "https://mp-pbs-prod-b.msmt-6.gcp.privacysandboxservices.com/v1",
 
         # PBS auth endpoints
         "--coordinator_a_privacy_budget_service_auth_endpoint",
-        "https://auth.mp-pbs-a.msmt-1.aws.privacysandboxservices.com/auth",
+        "https://a-us-central1-pbs-auth-cloudfunction-wkj2nvpniq-uc.a.run.app",
         "--coordinator_b_privacy_budget_service_auth_endpoint",
-        "https://auth.mp-pbs-b.msmt-2.aws.privacysandboxservices.com/auth",
+        "https://prod-b-us-central1-pbs-auth-cloudfunction-tg2wad647q-uc.a.run.app",
     ],
     jar_file = "/WorkerRunner_prod_deploy.jar",
     jvm_options = DEFAULT_JVM_OPTIONS,

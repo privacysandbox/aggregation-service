@@ -20,60 +20,19 @@
 
 set -o errexit
 
-function get_coordinator_version() {
-  local -r workspace_file="$1"
-  local -r ver_assign="$(grep -o '^COORDINATOR_VERSION = "v.*"' "${workspace_file}")"
-  local -r ver="${ver_assign#*\"}"
-  printf "%s\n" "${ver%\"}"
-}
-
 WORK_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 readonly WORKSPACE_DIR="${WORK_DIR}"/../..
-CONTROL_PLANE_SHARED_LIBRARIES_VERSION=$(get_coordinator_version "${WORKSPACE_DIR}"/WORKSPACE)
 VERSION="$(<"${WORKSPACE_DIR}"/VERSION)"
 CONTAINER_NAME_AND_TAG="worker_mp_gcp_prod:${VERSION}"
 CONTAINER_REGISTRY_PATH="us-docker.pkg.dev/ps-msmt-published-artifacts/aggregation-service-container-artifacts"
 printf "Aggregation server version: %s\n" "${VERSION}"
-printf "Control plane shared version: %s\n" "${CONTROL_PLANE_SHARED_LIBRARIES_VERSION}"
-
-# fetch based on tag
-readonly CONTROL_PLANE_REPO_RELDIR=coordinator-services-and-shared-libraries
-readonly CONTROL_PLANE_REPO_DIR="${WORK_DIR}/${CONTROL_PLANE_REPO_RELDIR}"
-if [[ -d ${CONTROL_PLANE_REPO_DIR} ]] && ! [[ -r ${CONTROL_PLANE_REPO_DIR}/.git/config ]]; then
-  rm -rf ${CONTROL_PLANE_REPO_DIR}
-fi
-if ! [[ -d ${CONTROL_PLANE_REPO_DIR} ]]; then
-  git clone https://github.com/privacysandbox/coordinator-services-and-shared-libraries "${CONTROL_PLANE_REPO_DIR}" || true
-fi
-# restore changes in control plane repo
-git -C "${CONTROL_PLANE_REPO_DIR}" restore .
-# update control plane repo
-git -C "${CONTROL_PLANE_REPO_DIR}" fetch origin "${CONTROL_PLANE_SHARED_LIBRARIES_VERSION}"
-git -C "${CONTROL_PLANE_REPO_DIR}" checkout FETCH_HEAD
-git -C "${CONTROL_PLANE_REPO_DIR}" clean -df
-# patch control plane repo if any patches exist
-for patch in ${WORKSPACE_DIR}/build_defs/shared_libraries/*.patch; do
-  git -C "${CONTROL_PLANE_REPO_DIR}" apply --reject --whitespace=fix "${patch}"
-done
 
 # remove existing symlinks
-rm -rf "${WORK_DIR}"/{applications,modules,environments/shared,environments/demo,environments/adtech_setup/*.*_sample,environments/adtech_setup/adtech_setup.tf,environments/adtech_setup/adtech_setup_output.tf,environments/adtech_setup/adtech_setup_variables.tf}
+rm -f "${WORK_DIR}"/environments/demo/release_params.auto.tfvars
 
-# symlink terraform folders
-mkdir -p "${WORK_DIR}"/environments
-ln -s "${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/gcp/applications "${WORK_DIR}"/applications
-ln -s "${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/gcp/modules "${WORK_DIR}"/modules
-ln -s ../"${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/gcp/environments/shared "${WORK_DIR}"/environments/shared
-ln -s ../"${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/gcp/environments/demo "${WORK_DIR}"/environments/demo
-mkdir -p "${WORK_DIR}"/environments/adtech_setup
-ln -s ../../"${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/gcp/environments/adtech_setup/adtech_setup_output.tf "${WORK_DIR}"/environments/adtech_setup/adtech_setup_output.tf
-ln -s ../../"${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/gcp/environments/adtech_setup/adtech_setup_variables.tf "${WORK_DIR}"/environments/adtech_setup/adtech_setup_variables.tf
-ln -s ../../"${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/gcp/environments/adtech_setup/adtech_setup.auto.tfvars_sample "${WORK_DIR}"/environments/adtech_setup/adtech_setup.auto.tfvars_sample
-ln -s ../../"${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/gcp/environments/adtech_setup/adtech_setup.tf "${WORK_DIR}"/environments/adtech_setup/adtech_setup.tf
-ln -s ../../"${CONTROL_PLANE_REPO_RELDIR}"/operator/terraform/gcp/environments/adtech_setup/main.tf_sample "${WORK_DIR}"/environments/adtech_setup/main.tf_sample
 # generate release_params.auto.tfvars to use prebuilt and published AMI for
 # aggregation-service release version and use downloaded versioned prebuilt jars
-cat <<EOT >>"${WORK_DIR}"/environments/shared/release_params.auto.tfvars
+cat <<EOT >"${WORK_DIR}"/environments/shared/release_params.auto.tfvars
 # Generated from release version - using prebuilt container image
 # If you want use your self-built container image, follow the steps at
 # https://github.com/privacysandbox/aggregation-service/blob/main/docs/gcp-aggregation-service.md#set-up-your-deployment-environment

@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
 import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.testing.AvroResultsFileReader;
+import com.google.api.gax.rpc.ApiException;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.auth.oauth2.ImpersonatedCredentials;
 import com.google.cloud.logging.v2.LoggingClient;
@@ -47,6 +48,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.logging.v2.ListLogEntriesRequest;
 import com.google.logging.v2.LogEntry;
+import com.google.monitoring.v3.Aggregation;
 import com.google.monitoring.v3.ListTimeSeriesRequest;
 import com.google.monitoring.v3.ListTimeSeriesRequest.TimeSeriesView;
 import com.google.monitoring.v3.ProjectName;
@@ -56,7 +58,6 @@ import com.google.protobuf.util.Timestamps;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.GcsBlobStorageClient;
 import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.io.IOException;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -76,7 +77,10 @@ import org.junit.runners.MethodSorters;
  * tests are testing if OTel metrics and traces exist in Monitoring and traces. In continuous
  * environment, prod binary is used for OTel which would only export prod metrics. Use
  * FixMethodOrder for this class to ensure the job will be running first to generate metrics and
- * traces.
+ * traces. Aggregation jobs have dependencies that require them to run in a specific order. Jobs are
+ * numbered (Job 1, Job 2, etc.) to indicate the required execution order. To ensure tests execute
+ * in the correct order, test methods MUST be maintained in ascending numerical order within this
+ * file.
  */
 @RunWith(JUnit4.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -92,7 +96,8 @@ public final class GcpOTelTest {
 
   private static final ProjectName projectName = ProjectName.of("ps-msmt-aggserv-test");
   private static final String ENVIRONMENT_NAME = "continuous-mp";
-  private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
+  private static final java.time.Duration COMPLETION_TIMEOUT =
+      java.time.Duration.of(10, ChronoUnit.MINUTES);
 
   @Before
   public void checkBuildEnv() {
@@ -135,7 +140,7 @@ public final class GcpOTelTest {
   }
 
   @Test
-  public void e2eCPUMetricTest() throws IOException {
+  public void e2eJob1CPUMetricTest() throws IOException {
     String metricName = "workload.googleapis.com/process.runtime.jvm.CPU.utilization";
 
     ListTimeSeriesPagedResponse response = listAllMetrics(metricName);
@@ -151,7 +156,7 @@ public final class GcpOTelTest {
   }
 
   @Test
-  public void e2eMemoryMetricTest() throws IOException {
+  public void e2eJob1MemoryMetricTest() throws IOException {
     String metricName = "workload.googleapis.com/process.runtime.jvm.memory.utilization_ratio";
 
     ListTimeSeriesPagedResponse response = listAllMetrics(metricName);
@@ -167,7 +172,53 @@ public final class GcpOTelTest {
   }
 
   @Test
-  public void e2eTracesTest() throws InterruptedException, IOException {
+  public void e2eJob1LogsTest() throws IOException {
+    // Search the log for the last 15 mins
+    String startTime = Instant.now().minus(15, ChronoUnit.MINUTES).toString();
+    String filter =
+        "projects/"
+            + projectName.getProject()
+            + "/logs/%2Fgcp%2Faggregate-service%2Flogs%2F"
+            + ENVIRONMENT_NAME
+            + " AND "
+            + "timestamp >="
+            + "\""
+            + startTime
+            + "\"";
+    StringBuilder allLogs = new StringBuilder();
+    List<String> logSeverities = new ArrayList();
+
+    try (LoggingClient loggingClient = LoggingClient.create()) {
+      ListLogEntriesRequest request =
+          ListLogEntriesRequest.newBuilder()
+              .addResourceNames("projects/" + projectName.getProject())
+              .setFilter(filter)
+              .setPageSize(1000)
+              .build();
+      final ListLogEntriesPagedResponse response = loggingClient.listLogEntries(request);
+      ListLogEntriesPage page = response.getPage();
+      while (page != null) {
+        for (LogEntry logEntry : page.iterateAll()) {
+          System.out.println(logEntry.getLogName());
+          logSeverities.add(logEntry.getSeverity().toString());
+          allLogs.append(logEntry.getTextPayload());
+        }
+        page = page.getNextPage();
+      }
+    }
+
+    // Check if the log level is "INFO".
+    assertThat(logSeverities.contains("INFO"));
+    assertThat(allLogs.toString()).contains("Successfully pull a job");
+  }
+
+  @Test
+  public void e2eJob1SuccessCounterTest() throws IOException, InterruptedException {
+    assertThat(hasMetricIncremented("workload.googleapis.com/job_success_counter")).isTrue();
+  }
+
+  @Test
+  public void e2eJob1TracesTest() throws InterruptedException, IOException {
     // Wait for 3 mins for uploading traces
     Thread.sleep(180000);
     int prodTraceCount = 0;
@@ -209,44 +260,58 @@ public final class GcpOTelTest {
   }
 
   @Test
-  public void e2eLogsTest() throws IOException {
-    // Search the log for the last 15 mins
-    String startTime = Instant.now().minus(15, ChronoUnit.MINUTES).toString();
-    String filter =
-        "projects/"
-            + projectName.getProject()
-            + "/logs/%2Fgcp%2Faggregate-service%2Flogs%2F"
-            + ENVIRONMENT_NAME
-            + " AND "
-            + "timestamp >="
-            + "\""
-            + startTime
-            + "\"";
-    StringBuilder allLogs = new StringBuilder();
-    List<String> logSeverities = new ArrayList();
+  public void e2eJob2FailCounterInvalidInputTest() throws Exception {
+    String inputDataPrefix =
+        String.format("%s/test-inputs/10k_test_input_invalid_key/", KOKORO_BUILD_ID);
+    String outputDataPrefix =
+        String.format("%s/test-outputs/invalid_input_test.avro.result", KOKORO_BUILD_ID);
+    String domainDataPrefix =
+        String.format("%s/test-inputs/otel_test_domain.avro", KOKORO_BUILD_ID);
 
-    try (LoggingClient loggingClient = LoggingClient.create()) {
-      ListLogEntriesRequest request =
-          ListLogEntriesRequest.newBuilder()
-              .addResourceNames("projects/" + projectName.getProject())
-              .setFilter(filter)
-              .setPageSize(1000)
-              .build();
-      final ListLogEntriesPagedResponse response = loggingClient.listLogEntries(request);
-      ListLogEntriesPage page = response.getPage();
-      while (page != null) {
-        for (LogEntry logEntry : page.iterateAll()) {
-          System.out.println(logEntry.getLogName());
-          logSeverities.add(logEntry.getSeverity().toString());
-          allLogs.append(logEntry.getTextPayload());
-        }
-        page = page.getNextPage();
-      }
-    }
+    CreateJobRequest createJobRequest =
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
+            getTestDataBucket(),
+            inputDataPrefix,
+            getTestDataBucket(),
+            outputDataPrefix,
+            /* jobId= */ "e2eJobFailCounterInvalidInputTest",
+            Optional.of(getTestDataBucket()),
+            Optional.of(domainDataPrefix));
 
-    // Check if the log level is "INFO".
-    assertThat(logSeverities.contains("INFO"));
-    assertThat(allLogs.toString()).contains("Successfully pull a job");
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+    // The job should be completed before the completion timeout.
+    assertThat(result.get("job_status").asText()).isEqualTo("FINISHED");
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isNotEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
+
+    assertThat(hasMetricIncremented("workload.googleapis.com/job_fail_counter")).isTrue();
+  }
+
+  @Test
+  public void e2eJob2FailCounterMissingInputTest() throws Exception {
+    String inputDataPrefix = "non_existent_input_file.avro";
+    String outputDataPrefix =
+        String.format("%s/test-outputs/non_existent_input_test.avro.result", KOKORO_BUILD_ID);
+    String domainDataPrefix =
+        String.format("%s/test-inputs/otel_test_domain.avro", KOKORO_BUILD_ID);
+
+    CreateJobRequest createJobRequest =
+        SmokeTestBase.createJobRequestWithAttributionReportTo(
+            getTestDataBucket(),
+            inputDataPrefix,
+            getTestDataBucket(),
+            outputDataPrefix,
+            /* jobId= */ "e2eJobFailCounterMissingInputTest",
+            Optional.of(getTestDataBucket()),
+            Optional.of(domainDataPrefix));
+
+    JsonNode result = submitJobAndWaitForResult(createJobRequest, COMPLETION_TIMEOUT);
+    // The job should be completed before the completion timeout.
+    assertThat(result.get("job_status").asText()).isEqualTo("FINISHED");
+    assertThat(result.get("result_info").get("return_code").asText())
+        .isNotEqualTo(AggregationWorkerReturnCode.SUCCESS.name());
+
+    assertThat(hasMetricIncremented("workload.googleapis.com/job_fail_counter")).isTrue();
   }
 
   private ListTimeSeriesPagedResponse listAllMetrics(String metricType) throws IOException {
@@ -278,6 +343,75 @@ public final class GcpOTelTest {
       response = client.listTimeSeries(request);
     }
     return response;
+  }
+
+  public static boolean hasMetricIncremented(String metricName)
+      throws IOException, InterruptedException {
+    // Wait 2 min for metrics to be uploaded.
+    Thread.sleep(120000);
+    try (MetricServiceClient metricServiceClient = MetricServiceClient.create()) {
+      // Restrict time to last 20 minutes.
+      long startMillis = System.currentTimeMillis() - ((60 * 20) * 1000);
+      TimeInterval interval =
+          TimeInterval.newBuilder()
+              .setStartTime(Timestamps.fromMillis(startMillis))
+              .setEndTime(Timestamps.fromMillis(System.currentTimeMillis()))
+              .build();
+
+      String filter =
+          "metric.type=\""
+              + metricName
+              + "\""
+              + " AND "
+              + "metric.label.custom_namespace=\""
+              + ENVIRONMENT_NAME
+              + "\""
+              + " AND "
+              + "resource.type=\"generic_node\"";
+
+      // Compare values from the beginning and the end of interval
+      Aggregation aggregation =
+          Aggregation.newBuilder()
+              .setAlignmentPeriod(com.google.protobuf.Duration.newBuilder().setSeconds(600).build())
+              .setPerSeriesAligner(Aggregation.Aligner.ALIGN_DELTA)
+              .build();
+
+      ListTimeSeriesRequest.Builder requestBuilder =
+          ListTimeSeriesRequest.newBuilder()
+              .setName(projectName.toString()) // Use the predefined ProjectName
+              .setFilter(filter)
+              .setInterval(interval)
+              .setAggregation(aggregation)
+              .setView(ListTimeSeriesRequest.TimeSeriesView.FULL);
+      ListTimeSeriesRequest request = requestBuilder.build();
+
+      // Make the request to list the time series
+      ListTimeSeriesPagedResponse response = metricServiceClient.listTimeSeries(request);
+
+      // Iterate through the time series and check for increments
+      boolean incremented = false;
+      for (TimeSeries timeSeries : response.iterateAll()) {
+        if (timeSeries.getPointsCount() >= 1) {
+          long endValue =
+              timeSeries.getPoints(timeSeries.getPointsCount() - 1).getValue().getInt64Value();
+
+          if (endValue > 0) {
+            incremented = true;
+            break;
+          }
+        } else if (timeSeries.getPointsCount() == 1) {
+          // If there is only 1 point it means this is the first time metric is
+          // published, so it should be considered as increment.
+          incremented = true;
+        }
+      }
+
+      return incremented;
+
+    } catch (ApiException e) {
+      System.err.println("Error retrieving metric data for " + metricName + ": " + e.getMessage());
+      return false;
+    }
   }
 
   private static class TestEnv extends AbstractModule {

@@ -1,9 +1,9 @@
 # Telemetry in Aggregation Service
 
 Aggregation Service exports the following metrics and traces through
-[OpenTelemetry](https://opentelemetry.io/): CPU usage, memory, total execution time. These
-metrics/traces can be helpful during the debugging process or when deciding on the appropriate cloud
-[instance size](./sizing-guidance.md).
+[OpenTelemetry](https://opentelemetry.io/): CPU usage, memory, total execution time, job success
+metrics. These metrics/traces can be helpful during the debugging process or when deciding on the
+appropriate cloud [instance size](./sizing-guidance.md).
 
 Metrics/traces:
 
@@ -13,6 +13,15 @@ Metrics/traces:
     rounded to the nearest 10th (e.g. 12% rounded to 10%) and reported max to 90%.
 -   Total execution time (in seconds): time spent in worker processing from the time job is picked
     for processing to its completion. This is generated per job.
+-   Job success metrics - Track the success and failure rates of jobs using two counters:
+    -   **Job success counter:**
+        -   A counter that increments each time a job completes successfully.
+        -   This metric is emitted per job and can be used to track the overall success rate of jobs
+            processed by the worker.
+    -   **Job failure counter:**
+        -   A counter that increments each time a job fails to complete.
+        -   This metric is emitted per job and, along with the success counter, can be used to
+            calculate the job failure rate.
 
 Memory and CPU usage are tracked for each environment. For debugging purposes only, we recommend
 setting the following in your terraform variables file (`{name}.auto.tfvars`) to debug issues with a
@@ -32,23 +41,24 @@ The metrics and traces collection is disabled by default. To enable it, please a
 want to export in your terraform variables file (`{name}.auto.tfvars`) as shown here:
 
 ```sh
-allowed_otel_metrics = ["cpu_usage", "memory", "total_execution_time"]
+allowed_otel_metrics = ["cpu_usage", "memory", "total_execution_time", "job_success_metrics"]
 ```
 
-In this case, "cpu_usage", "memory" and "total_execution_time" would be exported.
+In this case, "cpu_usage", "memory", "total_execution_time", and the job success metrics (which
+include "job_success_counter" and "job_fail_counter") would be exported.
 
 ## Where to find the metrics/traces:
 
 The env_name here is the same as what was set in your Aggregation Service deployment terraform.
 
 -   AWS
-    -   "cpu_usage" and "memory" graphs can be found in Cloudwatch > all metrics > {env_name} >
-        OTelLib.
+    -   "cpu_usage", "memory", "job_success_counter", and "job_fail_counter" graphs can be found in
+        Cloudwatch > all metrics > {env_name} > OTelLib.
     -   "total_execution_time" is exported to "Traces" in Cloudwatch. You can run a query with
         `annotation.job_id = {job_id}` to get traces for a specific job.
 -   GCP
-    -   "cpu_usage" and "memory" graphs can be found in Monitoring > Metric explorer > Generic
-        Node > Process. You can put `custom_namespace={env_name}` in the filter to see the metrics
-        from a specific environment.
+    -   "cpu_usage", "memory", "job_success_counter", and "job_fail_counter" graphs can be found in
+        Monitoring > Metric explorer > Generic Node > Process. You can put
+        `custom_namespace={env_name}` in the filter to see the metrics from a specific environment.
     -   "total_execution_time" is exported to "Trace Explorer". You can set `job-id: {job_id}` in
         the filter to get traces for a specific job.
