@@ -360,10 +360,10 @@ Intermediates generate the summary reports per filtering ID.
 
 ```console
 Aggregation(job_type = 'aggregation',
-input_location = "ei_day1_24h_loc/n",
-      filtering_ids = n,
-      output_location = "summary_report_day1_filteringid_n/",
-            output_domain = "50M_output_domain/")
+    input_location = "ei_day1_24h_loc/n",
+    filtering_ids = n,
+    output_location = "summary_report_day1_filteringid_n/",
+    output_domain = "50M_output_domain/")
 Output: [Noised Summary Reports] #50M rows
 ```
 
