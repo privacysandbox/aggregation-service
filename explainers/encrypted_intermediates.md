@@ -328,7 +328,7 @@ Aggregation(job_type = 'intermediate',
 input_location = "raw_reports_location_12_hours",
       filtering_ids = [1,0],
       output_location = "ei_day1_12h_loc",
-            output_domain = "50M_output_domain/")
+      output_domain = "50M_output_domain/")
 Output: [EI Reports]
                |
                +---> ei_day1_12h_loc/0/ # for filtering ID = 0, 50M rows
@@ -346,7 +346,7 @@ Aggregation(job_type = 'intermediate',
 input_location = "raw_reports_location_12-24_hours/, ei_day1_12h_loc/",
       filtering_ids = [0,1],
       output_location = "ei_day1_24h_loc",
-            output_domain = "50M_output_domain/")
+      output_domain = "50M_output_domain/")
 Output: [EI Reports]
                |
                +---> ei_day1_24h_loc/0/ # for filtering ID = 0, 50M rows
