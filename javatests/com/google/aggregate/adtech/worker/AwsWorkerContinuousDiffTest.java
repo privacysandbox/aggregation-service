@@ -23,7 +23,7 @@ import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.r
 import static com.google.aggregate.adtech.worker.AwsWorkerContinuousTestHelper.submitJobAndWaitForResult;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
-import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
+import static com.google.aggregate.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
@@ -37,7 +37,7 @@ import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.PartialRequestBufferSize;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3UsePartialRequests;
-import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
+import com.google.aggregate.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.math.BigInteger;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;

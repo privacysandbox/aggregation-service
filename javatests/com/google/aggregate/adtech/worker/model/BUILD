@@ -21,9 +21,9 @@ java_test(
     srcs = ["DecryptionValidationResultTest.java"],
     deps = [
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/shared/model",
         "//java/com/google/aggregate/adtech/worker/testing:fake_report_generator",
-        "//java/external:operator_protos",
-        "//java/external:shared_model",
+        "//protos/shared/backend:java_proto",
     ],
 )
 

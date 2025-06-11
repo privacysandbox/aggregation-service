@@ -33,7 +33,7 @@ java_test(
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",
-        "//java/external:operator_protos",
+        "//protos/shared/backend:java_proto",
     ],
 )
 
@@ -52,7 +52,7 @@ java_test(
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",
-        "//java/external:operator_protos",
+        "//protos/shared/backend:java_proto",
     ],
 )
 
@@ -70,7 +70,7 @@ java_test(
         "//java/external:google_truth",
         "//java/external:guava",
         "//java/external:guice",
-        "//java/external:operator_protos",
+        "//protos/shared/backend:java_proto",
     ],
 )
 

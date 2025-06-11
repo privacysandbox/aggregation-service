@@ -17,8 +17,8 @@
 package com.google.aggregate.adtech.worker;
 
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
-import com.google.scp.operator.cpio.jobclient.model.Job;
-import com.google.scp.operator.cpio.jobclient.model.JobResult;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.JobResult;
 import java.util.concurrent.ExecutionException;
 
 /** Interface for consuming jobs pulled from the pubsub */

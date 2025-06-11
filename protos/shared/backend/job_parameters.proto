@@ -1,0 +1,52 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.aggregate.protos.shared.backend;
+
+option java_outer_classname = "JobParametersProto";
+option java_package = "com.google.aggregate.protos.shared.backend";
+
+/**
+ * The job parameters for the job requested by the operator.
+ *
+ * <p><b>Important:</b> Add conversion logic for the new field's type in
+ *   {@link AttributeConverterUtils}.
+ */
+message JobParameters {
+  // For a single domain file, it's a file path in the bucket. For multiple
+  //   domain files, it's a prefix in the file path.
+  optional string output_domain_blob_prefix = 1;
+  // Domain file bucket.
+  optional string output_domain_bucket_name = 2;
+  // Reporting URL which should be same as the reporting_origin
+  //   present in the reports' shared_info.
+  optional string attribution_report_to = 3;
+  // reporting site that is onboarded to aggregation service.
+  optional string reporting_site = 4;
+  // Differential privacy epsilon value to be used for this job.
+  optional double debug_privacy_epsilon = 5;
+  // The percentage of reports, if excluded from aggregation
+  //   due to an error, will fail the job.
+  optional double report_error_threshold_percentage = 6;
+  // Total number of reports provided as input data for this job.
+  optional int64 input_report_count = 7;
+  // A list of unsigned filtering IDs separated by comma.
+  optional string filtering_ids = 8;
+  // When executing a debug run, noised and unnoised debug summary
+  //   report and annotations are added to indicate which keys are present in the
+  //   domain input and/or reports.
+  optional bool debug_run = 9;
+}

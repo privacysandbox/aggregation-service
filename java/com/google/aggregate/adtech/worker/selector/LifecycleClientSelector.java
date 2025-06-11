@@ -17,9 +17,9 @@
 package com.google.aggregate.adtech.worker.selector;
 
 import com.google.inject.Module;
-import com.google.scp.operator.cpio.lifecycleclient.aws.AwsLifecycleModule;
-import com.google.scp.operator.cpio.lifecycleclient.gcp.GcpLifecycleModule;
-import com.google.scp.operator.cpio.lifecycleclient.local.LocalLifecycleModule;
+import com.google.aggregate.adtech.worker.lifecycleclient.aws.AwsLifecycleModule;
+import com.google.aggregate.adtech.worker.lifecycleclient.gcp.GcpLifecycleModule;
+import com.google.aggregate.adtech.worker.lifecycleclient.local.LocalLifecycleModule;
 
 /** CLI enum to select the lifecycle implementation */
 public enum LifecycleClientSelector {

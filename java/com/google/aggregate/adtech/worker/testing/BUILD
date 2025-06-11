@@ -22,13 +22,13 @@ java_library(
     srcs = ["FakeJobResultGenerator.java"],
     javacopts = ["-Xep:Var"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker/jobclient:model",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/shared/model",
         "//java/external:clients_blobstorageclient_model",
-        "//java/external:clients_jobclient_model",
         "//java/external:guava",
-        "//java/external:operator_protos",
         "//java/external:scp_shared_proto",
-        "//java/external:shared_model",
+        "//protos/shared/backend:java_proto",
     ],
 )
 
@@ -40,8 +40,8 @@ java_library(
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/exceptions",
+        "//java/com/google/aggregate/adtech/worker/jobclient:model",
         "//java/com/google/aggregate/adtech/worker/model",
-        "//java/external:clients_jobclient_model",
     ],
 )
 
@@ -54,7 +54,6 @@ java_library(
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/external:clients_blobstorageclient_model",
-        "//java/external:clients_jobclient_model",
         "//java/external:guava",
     ],
 )
@@ -116,11 +115,11 @@ java_library(
     javacopts = ["-Xep:Var"],
     deps = [
         "//java/com/google/aggregate/adtech/worker",
+        "//java/com/google/aggregate/adtech/worker/jobclient:model",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/shared/model",
         "//java/com/google/aggregate/adtech/worker/validation",
-        "//java/external:clients_jobclient_model",
-        "//java/external:operator_protos",
-        "//java/external:shared_model",
+        "//protos/shared/backend:java_proto",
     ],
 )
 
@@ -149,12 +148,12 @@ java_library(
     deps = [
         "//java/com/google/aggregate/adtech/worker",
         "//java/com/google/aggregate/adtech/worker/exceptions",
+        "//java/com/google/aggregate/adtech/worker/jobclient:model",
         "//java/com/google/aggregate/adtech/worker/model",
         "//java/com/google/aggregate/adtech/worker/model:privacy_budget_debugging_model",
         "//java/com/google/aggregate/adtech/worker/model/serdes",
         "//java/com/google/aggregate/privacy/noise/model",
         "//java/external:clients_blobstorageclient_model",
-        "//java/external:clients_jobclient_model",
         "//java/external:guava",
         "//java/external:javax_inject",
     ],

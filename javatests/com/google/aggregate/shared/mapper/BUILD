@@ -20,8 +20,8 @@ java_test(
     name = "TimeObjectMapperTest",
     srcs = ["TimeObjectMapperTest.java"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker/frontend/testing",
         "//java/com/google/aggregate/shared/mapper",
-        "//java/external:frontend_testing",
         "//java/external:google_truth",
         "//java/external:jackson_core",
     ],

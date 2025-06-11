@@ -16,7 +16,7 @@
 
 package com.google.aggregate.adtech.worker.util;
 
-import com.google.scp.operator.cpio.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 

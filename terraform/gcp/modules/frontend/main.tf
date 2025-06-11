@@ -45,7 +45,7 @@ resource "google_cloudfunctions2_function" "frontend_service_cloudfunction" {
 
   build_config {
     runtime     = "java17"
-    entry_point = "com.google.scp.operator.frontend.service.gcp.FrontendServiceHttpFunction"
+    entry_point = "com.google.aggregate.adtech.worker.frontend.service.gcp.FrontendServiceHttpFunction"
     source {
       storage_source {
         bucket = var.operator_package_bucket_name

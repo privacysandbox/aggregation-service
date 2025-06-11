@@ -14,7 +14,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_pkg//:pkg.bzl", "pkg_tar")
-load("@shared_libraries//operator/worker/aws/build_defs:deploy.bzl", "worker_aws_deployment")
+load("//build_defs/worker/aws:deploy.bzl", "worker_aws_deployment")
 
 package(default_visibility = ["//visibility:public"])
 

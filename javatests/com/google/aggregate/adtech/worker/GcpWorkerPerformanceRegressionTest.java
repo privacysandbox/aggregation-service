@@ -36,7 +36,7 @@ import com.google.cloud.storage.StorageOptions;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.GcsBlobStorageClient;
-import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
+import com.google.aggregate.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;

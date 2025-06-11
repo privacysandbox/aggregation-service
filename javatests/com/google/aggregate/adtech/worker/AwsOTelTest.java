@@ -51,7 +51,7 @@ import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.PartialRequestBufferSize;
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClientModule.S3UsePartialRequests;
-import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
+import com.google.aggregate.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -87,7 +87,7 @@ public class AwsOTelTest {
 
   private static final String DEFAULT_TEST_DATA_BUCKET = "aggregation-service-testing";
   private static final String TEST_DATA_S3_KEY_PREFIX = "generated-test-data";
-  private static final String ENVIRONMENT_NAME = "continuous-mp";
+  private static final String ENVIRONMENT_NAME = System.getenv("ENVIRONMENT_NAME");
   private static final Duration COMPLETION_TIMEOUT = Duration.of(10, ChronoUnit.MINUTES);
   // Time period for Cloudwatch metric fetch request accounting for job runtime, metric upload and
   // cloudwatch sync delays. Using a rough time window of 35 minutes to accommodate for job runtime,
@@ -357,6 +357,7 @@ public class AwsOTelTest {
             .withEndTime(Date.from(Instant.now()));
 
     GetMetricDataResult getMetricDataResult = amazonCloudWatch.getMetricData(getMetricDataRequest);
+    System.out.println("Metric data check : " + metricName + " " + ENVIRONMENT_NAME);
 
     if (getMetricDataResult.getMetricDataResults().isEmpty()) {
       System.out.println("Metric data is empty for : " + metricName);

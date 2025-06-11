@@ -44,7 +44,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
+import com.google.aggregate.protos.shared.backend.RequestInfoProto.RequestInfo;
 import java.math.BigInteger;
 import java.util.function.Supplier;
 import org.junit.Before;

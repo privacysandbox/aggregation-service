@@ -25,7 +25,7 @@ import static com.google.aggregate.adtech.worker.AggregationWorkerReturnCode.SUC
 import static com.google.aggregate.adtech.worker.util.JobResultHelper.RESULT_REPORTS_WITH_ERRORS_EXCEEDED_THRESHOLD_MESSAGE;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BLOB_PREFIX;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_DOMAIN_BUCKET_NAME;
-import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
+import static com.google.aggregate.adtech.worker.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.AggregationWorkerReturnCode;
 import com.google.aggregate.adtech.worker.Annotations.DontConsumeBudgetInDebugRunEnabled;
@@ -65,9 +65,9 @@ import com.google.privacysandbox.otel.OTelConfiguration;
 import com.google.privacysandbox.otel.Timer;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
-import com.google.scp.operator.cpio.jobclient.model.Job;
-import com.google.scp.operator.cpio.jobclient.model.JobResult;
-import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.JobResult;
+import com.google.aggregate.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Optional;

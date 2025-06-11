@@ -21,9 +21,9 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.aggregate.adtech.worker.testing.NoopJobProcessor.ExceptionToThrow;
-import com.google.scp.operator.cpio.jobclient.model.Job;
-import com.google.scp.operator.cpio.jobclient.model.JobResult;
-import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.JobResult;
+import com.google.aggregate.adtech.worker.jobclient.testing.FakeJobGenerator;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;

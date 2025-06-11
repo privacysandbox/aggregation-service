@@ -1,0 +1,12 @@
+diff --git a/operator/worker/aws/aggregation_worker_ami.pkr.hcl b/operator/worker/aws/aggregation_worker_ami.pkr.hcl
+index 70ca947f1..7f034d65e 100644
+--- a/operator/worker/aws/aggregation_worker_ami.pkr.hcl
++++ b/operator/worker/aws/aggregation_worker_ami.pkr.hcl
+@@ -54,6 +54,7 @@ source "amazon-ebs" "sample-ami" {
+   launch_block_device_mappings {
+     device_name = "/dev/xvda"
+     volume_size = 8
++    delete_on_termination = true
+   }
+   ssh_username = "ec2-user"
+   ssh_timeout = "15m"

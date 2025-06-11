@@ -45,8 +45,8 @@ module "vpc" {
 }
 
 locals {
-  frontend_service_jar    = var.frontend_service_jar != "" ? var.frontend_service_jar : "${module.bazel.bazel_bin}/external/shared_libraries/java/com/google/scp/operator/frontend/service/gcp/FrontendServiceHttpCloudFunction_deploy.jar"
-  worker_scale_in_jar     = var.worker_scale_in_jar != "" ? var.worker_scale_in_jar : "${module.bazel.bazel_bin}/external/shared_libraries/java/com/google/scp/operator/autoscaling/app/gcp/WorkerScaleInCloudFunction_deploy.jar"
+  frontend_service_jar    = var.frontend_service_jar != "" ? var.frontend_service_jar : "${module.bazel.bazel_bin}/java/com/google/aggregate/adtech/worker/frontend/service/gcp/FrontendServiceHttpCloudFunction_deploy.jar"
+  worker_scale_in_jar     = var.worker_scale_in_jar != "" ? var.worker_scale_in_jar : "${module.bazel.bazel_bin}/java/com/google/aggregate/adtech/worker/autoscaling/app/gcp/WorkerScaleInCloudFunction_deploy.jar"
   notification_channel_id = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
 }
 

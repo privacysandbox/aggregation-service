@@ -38,6 +38,7 @@ java_library(
     ],
     javacopts = ["-Xep:Var"],
     deps = [
+        "//java/com/google/aggregate/adtech/worker/shared/model",
         "//java/com/google/aggregate/adtech/worker/util:numerical_conversions_utils",
         "//java/com/google/aggregate/protocol/avro:avro_report",
         "//java/external:autovalue",
@@ -47,8 +48,7 @@ java_library(
         "//java/external:jackson_annotations",
         "//java/external:jackson_core",
         "//java/external:jackson_databind",
-        "//java/external:operator_protos",
-        "//java/external:shared_model",
+        "//protos/shared/backend:java_proto",
     ],
 )
 

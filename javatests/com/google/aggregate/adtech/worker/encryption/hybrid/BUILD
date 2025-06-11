@@ -25,9 +25,9 @@ java_test(
         "//java/com/google/aggregate/adtech/worker/encryption",
         "//java/com/google/aggregate/adtech/worker/encryption/hybrid",
         "//java/com/google/aggregate/adtech/worker/model",
+        "//java/com/google/aggregate/adtech/worker/shared/testing",
         "//java/external:google_truth",
         "//java/external:guava",
-        "//java/external:shared_testing",
         "//java/external:tink",
     ],
 )

@@ -148,12 +148,12 @@ module "frontend" {
   frontend_api_name                    = "${var.environment}-${var.region}-frontend-api"
   lambda_package_storage_bucket_prefix = "${var.environment}-frontend-"
 
-  change_handler_lambda_local_jar = var.change_handler_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/scp/operator/frontend/service/aws/AwsChangeHandlerLambda_deploy.jar" : var.change_handler_lambda
+  change_handler_lambda_local_jar = var.change_handler_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/aggregate/adtech/worker/frontend/service/aws/AwsChangeHandlerLambda_deploy.jar" : var.change_handler_lambda
   change_handler_lambda_name      = "${var.environment}-ChangeHandler"
   change_handler_lambda_role_name = "${var.environment}-ChangeHandlerRole"
   change_handler_dlq_sqs_name     = "${var.environment}-ChangeHandlerDeadLetter"
 
-  frontend_lambda_local_jar = var.frontend_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/scp/operator/frontend/AwsApigatewayFrontend_deploy.jar" : var.frontend_lambda
+  frontend_lambda_local_jar = var.frontend_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/aggregate/adtech/worker/frontend/AwsApigatewayFrontend_deploy.jar" : var.frontend_lambda
   frontend_lambda_role_name = "${var.environment}-FrontendRole"
   get_job_lambda_name       = "${var.environment}-get-job"
   create_job_lambda_name    = "${var.environment}-create-job"
@@ -165,7 +165,7 @@ module "frontend" {
   jobqueue_sqs_url = module.job_queue.jobqueue_sqs_url
   jobqueue_sqs_arn = module.job_queue.jobqueue_sqs_arn
 
-  cleanup_lambda_local_jar = var.sqs_write_failure_cleanup_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/scp/operator/frontend/service/aws/AwsFrontendCleanupLambda_deploy.jar" : var.sqs_write_failure_cleanup_lambda
+  cleanup_lambda_local_jar = var.sqs_write_failure_cleanup_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/aggregate/adtech/worker/frontend/service/aws/AwsFrontendCleanupLambda_deploy.jar" : var.sqs_write_failure_cleanup_lambda
   cleanup_lambda_name      = "${var.environment}-DeadLetterCleanup"
   cleanup_lambda_role_name = "${var.environment}-DeadLetterCleanupRole"
 
@@ -265,11 +265,11 @@ module "worker_autoscaling" {
 
   lambda_package_storage_bucket_prefix = "${var.environment}-worker-"
 
-  asg_capacity_handler_lambda_local_jar = var.asg_capacity_handler_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/scp/operator/autoscaling/app/aws/AsgCapacityHandlerLambda_deploy.jar" : var.asg_capacity_handler_lambda
+  asg_capacity_handler_lambda_local_jar = var.asg_capacity_handler_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/aggregate/adtech/worker/autoscaling/app/aws/AsgCapacityHandlerLambda_deploy.jar" : var.asg_capacity_handler_lambda
   asg_capacity_handler_lambda_name      = "${var.environment}-AsgCapacityHandler"
   asg_capacity_lambda_role_name         = "${var.environment}-AsgCapacityLambdaRole"
 
-  terminated_instance_handler_lambda_local_jar = var.terminated_instance_handler_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/scp/operator/autoscaling/app/aws/TerminatedInstanceHandlerLambda_deploy.jar" : var.terminated_instance_handler_lambda
+  terminated_instance_handler_lambda_local_jar = var.terminated_instance_handler_lambda == "" ? "${module.bazel.bazel_bin}/java/com/google/aggregate/adtech/worker/autoscaling/app/aws/TerminatedInstanceHandlerLambda_deploy.jar" : var.terminated_instance_handler_lambda
   terminated_instance_handler_lambda_name      = "${var.environment}-TerminatedInstanceHandler"
   terminated_instance_lambda_role_name         = "${var.environment}-TerminatedInstanceLambdaRole"
   asginstances_db_table_name                   = module.asginstances_db.asginstances_db_table_name

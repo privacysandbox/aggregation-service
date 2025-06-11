@@ -28,27 +28,27 @@ pkg_files(
 
 alias(
     name = "frontendLambdaDeployable",
-    actual = "@shared_libraries//java/com/google/scp/operator/frontend:AwsApiGatewayFrontendDeploy",
+    actual = "//java/com/google/aggregate/adtech/worker/frontend:AwsApiGatewayFrontendDeploy",
 )
 
 alias(
     name = "changeHandlerLambdaDeployable",
-    actual = "@shared_libraries//java/com/google/scp/operator/frontend/service/aws:AwsChangeHandlerLambdaDeploy",
+    actual = "//java/com/google/aggregate/adtech/worker/frontend/service/aws:AwsChangeHandlerLambdaDeploy",
 )
 
 alias(
     name = "sqsWriteCleanupLambdaDeployable",
-    actual = "@shared_libraries//java/com/google/scp/operator/frontend/service/aws:AwsFrontendCleanupLambdaDeploy",
+    actual = "//java/com/google/aggregate/adtech/worker/frontend/service/aws:AwsFrontendCleanupLambdaDeploy",
 )
 
 alias(
     name = "asgCapacityLambdaDeployable",
-    actual = "@shared_libraries//java/com/google/scp/operator/autoscaling/app/aws:AsgCapacityHandlerLambdaDeploy",
+    actual = "//java/com/google/aggregate/adtech/worker/autoscaling/app/aws:AsgCapacityHandlerLambdaDeploy",
 )
 
 alias(
     name = "terminatedInstanceLambdaDeployable",
-    actual = "@shared_libraries//java/com/google/scp/operator/autoscaling/app/aws:TerminatedInstanceHandlerLambdaDeploy",
+    actual = "//java/com/google/aggregate/adtech/worker/autoscaling/app/aws:TerminatedInstanceHandlerLambdaDeploy",
 )
 
 string_flag(

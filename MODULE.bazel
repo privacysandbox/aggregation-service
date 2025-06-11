@@ -18,7 +18,7 @@ Bazel module.
 
 module(
     name = "privacy_sandbox_aggregation_service",
-    version = "2.12.0",
+    version = "2.14.0",
 )
 
 bazel_dep(name = "gazelle", version = "0.42.0", repo_name = "bazel_gazelle")
@@ -98,10 +98,10 @@ bazel_dep(name = "privacy_sandbox_coordinator_services_and_shared_libraries", re
 #     path = "<local path to coordinator_services_and_shared_libraries>"
 # )
 
-# Version updated on 2025-03-12
-COORDINATOR_VERSION = "v1.19.0-rc01"
+# Version updated on 2025-05-28
+COORDINATOR_VERSION = "v1.24.0-rc01"
 
-COORDINATOR_COMMIT_HASH = "1fb28e43af9c7ef3c29b1137ba3e710083947d10"
+COORDINATOR_COMMIT_HASH = "0e6d1584199a6f9cda271dd29beb7031d9af2b64"
 
 git_override(
     module_name = "privacy_sandbox_coordinator_services_and_shared_libraries",
@@ -112,7 +112,6 @@ git_override(
         "//build_defs/shared_libraries:emulator_container.patch",
         "//build_defs/shared_libraries:golang.patch",
         "//build_defs/shared_libraries:rules_docker.patch",
-        "//build_defs/shared_libraries:tmp_build.patch",
         "//build_defs/shared_libraries:workspace.patch",
     ],
     remote = "https://github.com/privacysandbox/coordinator-services-and-shared-libraries",
@@ -174,7 +173,7 @@ use_repo(
 )
 
 # IMPORTANT: If you added dependencies and/or updated dependency versions below, run
-# `$ bazel run @unpinned_maven//:pin` and include `maven_install_bzlmod.json` in your change.
+# `$ bazel run @maven//:pin` and include `maven_install_bzlmod.json` in your change.
 
 PROTOBUF_CORE_VERSION = "28.3"
 
@@ -192,7 +191,7 @@ AWS_JAVA_SDK_VERSION = "1.12.772"
 
 GOOGLE_GAX_VERSION = "2.38.0"
 
-AUTO_SERVICE_VERSION = "1.1.1"
+AUTO_SERVICE_VERSION = "1.0"
 
 OTEL_VERSION = "1.43.0"
 
@@ -279,8 +278,8 @@ maven.install(
         "com.google.api.grpc:proto-google-cloud-monitoring-v3:3.35.0",
         "com.google.protobuf:protobuf-java:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
         "com.google.protobuf:protobuf-java-util:" + PROTOBUF_JAVA_VERSION_PREFIX + PROTOBUF_CORE_VERSION,
-        "com.google.guava:guava:33.0.0-jre",
-        "com.google.guava:guava-testlib:33.0.0-jre",
+        "com.google.guava:guava:33.4.8-jre",
+        "com.google.guava:guava-testlib:33.4.8-jre",
         "com.google.jimfs:jimfs:1.3.0",
         "com.google.testparameterinjector:test-parameter-injector:1.15",
         "com.google.truth.extensions:truth-java8-extension:1.3.0",
@@ -310,7 +309,7 @@ maven.install(
         "org.slf4j:slf4j-api:2.0.11",
         "org.slf4j:slf4j-simple:2.0.11",
         "org.slf4j:slf4j-log4j12:1.7.33",
-        "org.testcontainers:testcontainers:1.19.3",
+        "org.testcontainers:testcontainers:1.21.1",
         "org.testcontainers:localstack:1.19.3",
         "software.amazon.awssdk:aws-sdk-java:" + AWS_SDK_VERSION,
         "software.amazon.awssdk:dynamodb-enhanced:" + AWS_SDK_VERSION,
@@ -343,3 +342,22 @@ maven.install(
     ],
 )
 use_repo(maven, "maven")
+maven.install(
+    name = "maven_yaml",
+    artifacts = [
+        "org.yaml:snakeyaml:1.27",
+    ],
+    repositories = [
+        "https://repo1.maven.org/maven2",
+    ],
+    # Pin the working version for snakeyaml.
+    version_conflict_policy = "pinned",
+)
+use_repo(maven, "maven_yaml")
+
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    ignore_root_user_error = True,
+    is_default = True,
+    python_version = "3.8",
+)

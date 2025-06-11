@@ -58,7 +58,7 @@ java_library(
         "//java/external:autovalue",
         "//java/external:autovalue_annotations",
         "//java/external:guice",
-        "//java/external:operator_protos",
         "//java/external:slf4j",
+        "//protos/shared/backend:java_proto",
     ],
 )

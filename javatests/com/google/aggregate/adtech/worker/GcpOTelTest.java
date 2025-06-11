@@ -24,7 +24,7 @@ import static com.google.aggregate.adtech.worker.SmokeTestBase.getTestServiceAcc
 import static com.google.aggregate.adtech.worker.SmokeTestBase.readResultsFromCloud;
 import static com.google.aggregate.adtech.worker.SmokeTestBase.submitJobAndWaitForResult;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
+import static com.google.aggregate.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
@@ -56,7 +56,7 @@ import com.google.monitoring.v3.TimeInterval;
 import com.google.monitoring.v3.TimeSeries;
 import com.google.protobuf.util.Timestamps;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.GcsBlobStorageClient;
-import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
+import com.google.aggregate.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.io.IOException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -350,8 +350,8 @@ public final class GcpOTelTest {
     // Wait 2 min for metrics to be uploaded.
     Thread.sleep(120000);
     try (MetricServiceClient metricServiceClient = MetricServiceClient.create()) {
-      // Restrict time to last 20 minutes.
-      long startMillis = System.currentTimeMillis() - ((60 * 20) * 1000);
+      // Restrict time to last 30 minutes.
+      long startMillis = System.currentTimeMillis() - ((60 * 30) * 1000);
       TimeInterval interval =
           TimeInterval.newBuilder()
               .setStartTime(Timestamps.fromMillis(startMillis))

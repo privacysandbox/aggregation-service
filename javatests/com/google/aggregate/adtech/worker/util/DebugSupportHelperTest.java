@@ -22,9 +22,9 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.scp.operator.cpio.jobclient.model.Job;
-import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
-import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.testing.FakeJobGenerator;
+import com.google.aggregate.protos.shared.backend.RequestInfoProto.RequestInfo;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;

@@ -1,0 +1,32 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.aggregate.protos.frontend.api.v1;
+
+option java_outer_classname = "JobKeyProto";
+option java_package = "com.google.aggregate.protos.frontend.api.v1";
+
+/**
+ * Unique identifier for the job, used for identifying entries in the DB and PubSub. Both the
+ * jobRequestId and the attributionReportTo are needed to identify a job as multiple ad-tech's might
+ * be using the same aggregation service instance.
+ */
+message JobKey {
+  /** ID for request tracking. */
+  string job_request_id = 1;
+  /** Domain of the ad-tech, used to identify the ad-tech. */
+  string attribution_report_to = 2;
+}

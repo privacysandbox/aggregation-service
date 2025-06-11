@@ -18,7 +18,7 @@ package com.google.aggregate.adtech.worker.model;
 
 import static com.google.aggregate.adtech.worker.model.SharedInfo.SUPPORTED_MAJOR_VERSIONS;
 
-import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
+import com.google.aggregate.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 
 /**
  * Describes a category of error message, used to distinguish between processing or validation

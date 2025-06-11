@@ -40,8 +40,8 @@ string_flag(
 pkg_files(
     name = "dist_jars",
     srcs = [
-        "@shared_libraries//java/com/google/scp/operator/autoscaling/app/gcp:WorkerScaleInCloudFunctionDeploy",
-        "@shared_libraries//java/com/google/scp/operator/frontend/service/gcp:FrontendServiceHttpCloudFunctionDeploy",
+        "//java/com/google/aggregate/adtech/worker/autoscaling/app/gcp:WorkerScaleInCloudFunctionDeploy",
+        "//java/com/google/aggregate/adtech/worker/frontend/service/gcp:FrontendServiceHttpCloudFunctionDeploy",
     ],
     prefix = "jars",
 )
@@ -49,8 +49,8 @@ pkg_files(
 gcs_jar_release(
     name = "worker_scale_in_cloud_function_release",
     artifact_base_name = "WorkerScaleInCloudFunction_{VERSION}.jar",
-    jar_target = "@shared_libraries//java/com/google/scp/operator/autoscaling/app/gcp:WorkerScaleInCloudFunctionDeploy",
-    licenses = "//licenses:licenses_tar",
+    jar_target = "//java/com/google/aggregate/adtech/worker/autoscaling/app/gcp:WorkerScaleInCloudFunctionDeploy",
+    licenses = "//licenses/THIRD_PARTY_NOTICES/gcp_worker_scale_in_cloud_function_release:licenses_tar",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
@@ -58,8 +58,8 @@ gcs_jar_release(
 gcs_jar_release(
     name = "frontend_service_http_cloud_function_release",
     artifact_base_name = "FrontendServiceHttpCloudFunction_{VERSION}.jar",
-    jar_target = "@shared_libraries//java/com/google/scp/operator/frontend/service/gcp:FrontendServiceHttpCloudFunctionDeploy",
-    licenses = "//licenses:licenses_tar",
+    jar_target = "//java/com/google/aggregate/adtech/worker/frontend/service/gcp:FrontendServiceHttpCloudFunctionDeploy",
+    licenses = "//licenses/THIRD_PARTY_NOTICES/gcp_frontend_service_http_cloud_function_release:licenses_tar",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
@@ -68,7 +68,7 @@ gcs_jar_release(
     name = "local_testing_tool_release",
     artifact_base_name = "LocalTestingTool_{VERSION}.jar",
     jar_target = "//java/com/google/aggregate/adtech/worker:LocalTestingToolDeploy",
-    licenses = "//licenses:licenses_tar",
+    licenses = "//licenses/THIRD_PARTY_NOTICES/gcp_local_testing_tool_release:licenses_tar",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )
@@ -77,7 +77,7 @@ gcs_jar_release(
     name = "privacy_budget_unit_extraction_tool_release",
     artifact_base_name = "PrivacyBudgetUnitExtractionTool_{VERSION}.jar",
     jar_target = "//java/com/google/aggregate/tools/privacybudgetutil/gcp:GcpPrivacyBudgetUnitExtractionDeploy",
-    licenses = "//licenses:licenses_tar",
+    licenses = "//licenses/THIRD_PARTY_NOTICES/gcp_privacy_budget_unit_extraction_tool_release:licenses_tar",
     release_bucket = ":bucket_flag",
     release_key = ":bucket_path_flag",
 )

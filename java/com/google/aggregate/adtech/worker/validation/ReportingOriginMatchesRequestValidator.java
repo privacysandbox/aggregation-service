@@ -23,7 +23,7 @@ import static com.google.aggregate.adtech.worker.model.ErrorCounter.REPORTING_SI
 
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
-import com.google.scp.operator.cpio.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
 import java.util.Optional;
 import com.google.aggregate.adtech.worker.util.ReportingOriginUtils;
 import com.google.aggregate.adtech.worker.util.ReportingOriginUtils.InvalidReportingOriginException;
