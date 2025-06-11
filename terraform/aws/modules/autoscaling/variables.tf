@@ -86,7 +86,7 @@ variable "asg_capacity_handler_lambda_name" {
 
 variable "asg_capacity_handler_method" {
   type        = string
-  default     = "com.google.scp.operator.autoscaling.app.aws.AsgCapacityHandler"
+  default     = "com.google.aggregate.adtech.worker.autoscaling.app.aws.AsgCapacityHandler"
   description = "Fully qualified method the ASG capacity handler lambda is called with"
 }
 
@@ -147,7 +147,7 @@ variable "terminated_instance_handler_lambda_name" {
 
 variable "terminated_instance_handler_method" {
   type        = string
-  default     = "com.google.scp.operator.autoscaling.app.aws.TerminatedInstanceHandler"
+  default     = "com.google.aggregate.adtech.worker.autoscaling.app.aws.TerminatedInstanceHandler"
   description = "Fully qualified method the terminated instance handler lambda is called with"
 }
 

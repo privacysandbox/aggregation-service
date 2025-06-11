@@ -36,7 +36,7 @@ import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStor
 import com.google.scp.operator.cpio.blobstorageclient.aws.S3BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
-import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
+import com.google.aggregate.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -504,6 +504,7 @@ public class AwsWorkerContinuousTestHelper {
 
     Path tempResultFile = Files.createTempFile(/* prefix= */ "results", /* suffix= */ "avro");
 
+    System.out.println(String.format("Reading output from location s3://%s/%s", bucket, key));
     try (InputStream resultStream =
             s3BlobStorageClient.getBlob(
                 DataLocation.ofBlobStoreDataLocation(BlobStoreDataLocation.create(bucket, key)));

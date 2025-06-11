@@ -25,11 +25,11 @@ import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_OUTPUT_
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORTING_SITE;
 import static com.google.aggregate.adtech.worker.util.JobUtils.JOB_PARAM_REPORT_ERROR_THRESHOLD_PERCENTAGE;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
+import static com.google.aggregate.adtech.worker.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.util.NumericConversions;
 import com.google.common.primitives.Longs;
-import com.google.scp.operator.cpio.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
 import java.util.Map;
 import java.util.Optional;
 

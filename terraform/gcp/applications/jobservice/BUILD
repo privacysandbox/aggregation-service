@@ -27,10 +27,10 @@ pkg_files(
 
 alias(
     name = "frontendCloudFunctionDeploy",
-    actual = "@shared_libraries//java/com/google/scp/operator/frontend/service/gcp:FrontendServiceHttpCloudFunctionDeploy",
+    actual = "//java/com/google/aggregate/adtech/worker/frontend/service/gcp:FrontendServiceHttpCloudFunctionDeploy",
 )
 
 alias(
     name = "workerScaleInCloudFunctionDeploy",
-    actual = "@shared_libraries//java/com/google/scp/operator/autoscaling/app/gcp:WorkerScaleInCloudFunctionDeploy",
+    actual = "//java/com/google/aggregate/adtech/worker/autoscaling/app/gcp:WorkerScaleInCloudFunctionDeploy",
 )

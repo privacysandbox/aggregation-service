@@ -16,7 +16,7 @@
 
 package com.google.aggregate.adtech.worker.aggregation.concurrent;
 
-import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
+import static com.google.aggregate.adtech.worker.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.Annotations;
 import com.google.aggregate.adtech.worker.ErrorSummaryAggregator;
@@ -32,8 +32,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.privacysandbox.otel.OTelConfiguration;
 import com.google.privacysandbox.otel.Timer;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
-import com.google.scp.operator.cpio.jobclient.model.Job;
-import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
+import com.google.aggregate.protos.shared.backend.RequestInfoProto.RequestInfo;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.schedulers.Schedulers;

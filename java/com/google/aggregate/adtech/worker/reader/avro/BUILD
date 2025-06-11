@@ -34,7 +34,6 @@ java_library(
         "//java/external:aws_s3",
         "//java/external:clients_blobstorageclient",
         "//java/external:clients_blobstorageclient_model",
-        "//java/external:clients_jobclient_model",
         "//java/external:guava",
         "//java/external:guice",
         "//java/external:javax_inject",

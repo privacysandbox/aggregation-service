@@ -53,3 +53,12 @@ resource "aws_s3_bucket_policy" "lambda_package_storage_bucket_deny_non_ssl_requ
 }
 EOF
 }
+
+resource "aws_s3_bucket_public_access_block" "block_public_access" {
+  bucket = aws_s3_bucket.lambda_package_storage.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}

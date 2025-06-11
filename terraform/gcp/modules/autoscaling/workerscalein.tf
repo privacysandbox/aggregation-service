@@ -38,7 +38,7 @@ resource "google_cloudfunctions2_function" "worker_scale_in_cloudfunction" {
 
   build_config {
     runtime     = "java17"
-    entry_point = "com.google.scp.operator.autoscaling.app.gcp.WorkerScaleInHttpFunction"
+    entry_point = "com.google.aggregate.adtech.worker.autoscaling.app.gcp.WorkerScaleInHttpFunction"
     source {
       storage_source {
         bucket = var.operator_package_bucket_name

@@ -18,7 +18,7 @@ package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
 import static com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.getDataLocation;
-import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
+import static com.google.aggregate.adtech.worker.shared.model.BackendModelUtil.toJobKeyString;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.PARAMETER;
@@ -46,7 +46,7 @@ import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
-import com.google.scp.operator.cpio.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
 import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;

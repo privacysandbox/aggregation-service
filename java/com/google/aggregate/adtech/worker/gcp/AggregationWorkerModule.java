@@ -92,16 +92,13 @@ import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPr
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorAPrivacyBudgetServiceBaseUrl;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorBPrivacyBudgetServiceAuthEndpoint;
 import com.google.scp.operator.cpio.distributedprivacybudgetclient.DistributedPrivacyBudgetClientModule.CoordinatorBPrivacyBudgetServiceBaseUrl;
-import com.google.scp.operator.cpio.jobclient.gcp.GcpJobHandlerConfig;
-import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerPath;
-import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerResultPath;
-import com.google.scp.operator.cpio.jobclient.local.LocalFileJobHandlerModule.LocalFileJobParameters;
-import com.google.scp.operator.worker.decryption.hybrid.HybridDecryptionModule;
-import com.google.scp.operator.worker.decryption.hybrid.HybridDeserializingReportDecrypter;
-import com.google.scp.operator.worker.model.serdes.ReportSerdes;
-import com.google.scp.operator.worker.model.serdes.proto.ProtoReportSerdes;
-import com.google.scp.operator.worker.reader.RecordReaderFactory;
-import com.google.scp.operator.worker.reader.avro.LocalNioPathAvroReaderFactory;
+import com.google.aggregate.adtech.worker.jobclient.gcp.GcpJobHandlerConfig;
+import com.google.aggregate.adtech.worker.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerPath;
+import com.google.aggregate.adtech.worker.jobclient.local.LocalFileJobHandlerModule.LocalFileJobHandlerResultPath;
+import com.google.aggregate.adtech.worker.jobclient.local.LocalFileJobHandlerModule.LocalFileJobParameters;
+import com.google.aggregate.adtech.worker.decryption.hybrid.HybridDecryptionModule;
+import com.google.aggregate.adtech.worker.RecordReaderFactory;
+import com.google.aggregate.adtech.worker.reader.avro.LocalNioPathAvroReaderFactory;
 import com.google.scp.shared.clients.configclient.ParameterClient;
 import com.google.scp.shared.clients.configclient.ParameterClient.ParameterClientException;
 import com.google.scp.shared.clients.configclient.gcp.Annotations.GcpInstanceIdOverride;
@@ -245,9 +242,6 @@ public final class AggregationWorkerModule extends AbstractModule {
         .toInstance(args.getSecondaryEncryptionKeyServiceBaseUrl());
 
     install(new HybridDecryptionModule());
-    bind(ReportSerdes.class).to(ProtoReportSerdes.class);
-    bind(com.google.scp.operator.worker.decryption.RecordDecrypter.class)
-        .to(HybridDeserializingReportDecrypter.class);
 
     // determines how/where to read the decryption key.
     GcpKmsDecryptionKeyServiceConfig.Builder decryptionConfigBuilder =

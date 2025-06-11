@@ -29,7 +29,7 @@ import static com.google.aggregate.adtech.worker.SmokeTestBase.submitJobAndWaitF
 import static com.google.aggregate.adtech.worker.aggregation.concurrent.ConcurrentAggregationProcessor.PRIVACY_BUDGET_EXHAUSTED_DEBUGGING_INFO_FILENAME_PREFIX;
 import static com.google.aggregate.adtech.worker.util.DebugSupportHelper.getDebugFilePrefix;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.operator.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
+import static com.google.aggregate.protos.frontend.api.v1.ReturnCodeProto.ReturnCode.SUCCESS;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.acai.Acai;
@@ -48,7 +48,7 @@ import com.google.errorprone.annotations.Var;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.gcp.GcsBlobStorageClient;
-import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
+import com.google.aggregate.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;

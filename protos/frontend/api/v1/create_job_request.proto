@@ -1,0 +1,49 @@
+// Copyright 2025 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package google.aggregate.protos.frontend.api.v1;
+
+option java_outer_classname = "CreateJobRequestProto";
+option java_package = "com.google.aggregate.protos.frontend.api.v1";
+
+// TODO: Add link to spec once public.
+/**
+ * The request object for the AggregationService Frontend API that allows ad-techs to request
+ * aggregation reports for conversion data.
+ *
+ * NOTE: Classes exist that mirror this, please update those classes if you are adding fields to
+ * this class.
+ */
+message CreateJobRequest {
+  /** Unique identifier provided by the ad-tech. */
+  string job_request_id = 1;
+  /** URL to the input prefix data file. */
+  string input_data_blob_prefix = 2;
+  /** URL to the input bucket data file. */
+  string input_data_bucket_name = 3;
+  /** URL to the output prefix data file. */
+  string output_data_blob_prefix = 4;
+  /** URL to the output bucket data file. */
+  string output_data_bucket_name = 5;
+  /** URL to notify the result. */
+  string postback_url = 6;
+  /** Data plane application specific parameters. */
+  map<string, string> job_parameters = 7;
+  /** The caller identity (email or service account in GCP). */
+  string account_identity = 8;
+  /** List of URLs to the input prefix data files. */
+  repeated string input_data_blob_prefixes = 9;
+}

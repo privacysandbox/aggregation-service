@@ -259,16 +259,16 @@ Make the following adjustments in the `<repository_root>/terraform/gcp/environme
     Apply complete! Resources: 54 added, 0 changed, 0 destroyed.
 
     Outputs:
-    frontend_service_cloudfunction_url = "https://<environment>-us-central1-frontend-service-<cloud-function-id>-uc.a.run.app"
+    frontend_service_cloudfunction_url = "https://<environment>-us-central1-frontend-service-<cloud-function-id>-<region>.a.run.app"
     vpc_network = "https://www.googleapis.com/compute/v1/projects/<project>/global/networks/<environment>-network"
     ```
 
     The Terraform scripts create `createJob` and `getJob` API endpoints:
 
     -   Create Job Endpoint:
-        `https://<environment>-<region>-frontend-service-<cloud-funtion-id>-uc.a.run.app/v1alpha/createJob`
+        `https://<environment>-<region>-frontend-service-<cloud-funtion-id>-<region>.a.run.app/v1alpha/createJob`
     -   Get Job Endpoint:
-        `https://<environment>-<region>-frontend-service-<cloud-funtion-id>-uc.a.run.app/v1alpha/getJob`
+        `https://<environment>-<region>-frontend-service-<cloud-funtion-id>-<region>.a.run.app/v1alpha/getJob`
 
     These are authenticated endpoints, refer to the [Testing the System](#testing-the-system)
     section to learn how to use them.
@@ -406,3 +406,28 @@ Message: Permission 'iam.serviceAccounts.getOpenIdToken' denied on resource (or 
 It points to an incomplete Service Account (SA) onboarding. If you encounter this situation, verify
 that your SA onboarding was successfully completed and that your deployment is using the onboarded
 SA account.
+
+-   The following error message points to an issue with Bazel's output when running `terraform plan`
+    or `terraform apply`. The most common cause for this specific error is an incorrect Bazel
+    version being used. Check the required version in the repository's `.bazelversion` file (e.g.,
+    `cat .bazelversion`). Verify your installed version using `bazel --version`. If your version
+    does not match, install the correct version (e.g., using
+    [Bazelisk](https://bazel.build/install/bazelisk)).
+
+    ```txt
+    Error: Unexpected External Program Results
+
+        with module.job_service.module.bazel.data.external.bazel_bin, on ../../coordinator-services-and-
+        shared-libraries/operator/terraform/gcp/modules/bazel/main.tf line 20, in data "external" "bazel_bin":
+        program = ["bash", "-c", "echo -n '{\"path\":\"'$(bazel info bazel-bin)'\"}'"]
+
+        The data source received unexpected results after executing the program.
+
+        Program output must be a JSON encoded map of string keys and string values.
+
+        If the error is unclear, the output can be viewed by enabling Terraform's logging at TRACE level.
+        Terraform documentation on logging: https://www.terraform.io/internals/debugging
+
+        Program: /usr/bin/bash
+        Result Error: invalid character '\x1b' in string literal
+    ```

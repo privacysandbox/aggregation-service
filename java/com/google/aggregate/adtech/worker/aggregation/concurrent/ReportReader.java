@@ -29,7 +29,7 @@ import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
-import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
+import com.google.aggregate.protos.shared.backend.RequestInfoProto.RequestInfo;
 import io.reactivex.rxjava3.core.Flowable;
 import java.io.IOException;
 import java.io.InputStream;

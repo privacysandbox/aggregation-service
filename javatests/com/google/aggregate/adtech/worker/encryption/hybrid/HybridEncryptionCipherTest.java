@@ -28,7 +28,7 @@ import com.google.crypto.tink.HybridDecrypt;
 import com.google.crypto.tink.KeysetHandle;
 import com.google.crypto.tink.hybrid.EciesAeadHkdfPrivateKeyManager;
 import com.google.crypto.tink.hybrid.HybridConfig;
-import com.google.scp.operator.shared.testing.StringToByteSourceConverter;
+import com.google.aggregate.adtech.worker.shared.testing.StringToByteSourceConverter;
 import java.security.GeneralSecurityException;
 import org.junit.Before;
 import org.junit.Test;

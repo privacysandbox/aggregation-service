@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.UnsignedLong;
 import com.google.errorprone.annotations.Var;
 import com.google.inject.Inject;
-import com.google.scp.operator.cpio.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
 import java.util.Optional;
 
 /** Validates that the Report's SharedInfo can generate valid Privacy Budget Key. */

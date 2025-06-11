@@ -19,7 +19,7 @@ package com.google.aggregate.shared.mapper;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.google.scp.operator.frontend.testing.TestSerializedObject;
+import com.google.aggregate.adtech.worker.frontend.testing.TestSerializedObject;
 import java.time.Instant;
 import org.junit.Before;
 import org.junit.Test;

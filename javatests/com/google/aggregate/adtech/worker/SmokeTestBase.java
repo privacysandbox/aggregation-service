@@ -37,7 +37,7 @@ import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient;
 import com.google.scp.operator.cpio.blobstorageclient.BlobStorageClient.BlobStorageClientException;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation.BlobStoreDataLocation;
-import com.google.scp.operator.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
+import com.google.aggregate.protos.frontend.api.v1.CreateJobRequestProto.CreateJobRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

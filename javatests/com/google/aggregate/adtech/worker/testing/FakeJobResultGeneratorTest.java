@@ -17,13 +17,13 @@
 package com.google.aggregate.adtech.worker.testing;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.scp.operator.protos.shared.backend.ReturnCodeProto.ReturnCode.SUCCESS;
+import static com.google.aggregate.protos.shared.backend.ReturnCodeProto.ReturnCode.SUCCESS;
 
-import com.google.scp.operator.cpio.jobclient.model.Job;
-import com.google.scp.operator.cpio.jobclient.model.JobResult;
-import com.google.scp.operator.cpio.jobclient.testing.FakeJobGenerator;
-import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
-import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.JobResult;
+import com.google.aggregate.adtech.worker.jobclient.testing.FakeJobGenerator;
+import com.google.aggregate.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
+import com.google.aggregate.protos.shared.backend.ResultInfoProto.ResultInfo;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.time.Instant;
 import org.junit.Test;

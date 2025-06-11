@@ -19,7 +19,7 @@ package com.google.aggregate.adtech.worker.util;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.UnsignedLong;
 import com.google.errorprone.annotations.Var;
-import com.google.scp.operator.cpio.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;

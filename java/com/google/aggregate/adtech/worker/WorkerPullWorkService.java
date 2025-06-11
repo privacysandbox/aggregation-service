@@ -17,7 +17,7 @@
 package com.google.aggregate.adtech.worker;
 
 import static com.google.aggregate.adtech.worker.util.OutputShardFileHelper.setOutputShardFileSizeBytes;
-import static com.google.scp.operator.shared.model.BackendModelUtil.toJobKeyString;
+import static com.google.aggregate.adtech.worker.shared.model.BackendModelUtil.toJobKeyString;
 
 import com.google.aggregate.adtech.worker.Annotations.BenchmarkMode;
 import com.google.aggregate.adtech.worker.Annotations.BlockingThreadPool;
@@ -36,13 +36,13 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.privacysandbox.otel.OTelConfiguration;
 import com.google.privacysandbox.otel.Timer;
 import com.google.privacysandbox.otel.TimerUnit;
-import com.google.scp.operator.cpio.jobclient.JobClient;
-import com.google.scp.operator.cpio.jobclient.model.Job;
-import com.google.scp.operator.cpio.jobclient.model.JobResult;
+import com.google.aggregate.adtech.worker.jobclient.JobClient;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.JobResult;
 import com.google.scp.operator.cpio.metricclient.MetricClient;
 import com.google.scp.operator.cpio.metricclient.MetricClient.MetricClientException;
 import com.google.scp.operator.cpio.metricclient.model.CustomMetric;
-import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
+import com.google.aggregate.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
 import io.opentelemetry.api.logs.Severity;
 import io.opentelemetry.api.metrics.LongCounter;
 import java.util.Optional;

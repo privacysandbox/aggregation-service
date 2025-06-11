@@ -21,10 +21,10 @@ import com.google.aggregate.adtech.worker.Annotations.EnableStackTraceInResponse
 import com.google.aggregate.adtech.worker.Annotations.MaxDepthOfStackTrace;
 import com.google.aggregate.adtech.worker.exceptions.AggregationJobProcessException;
 import com.google.common.base.Throwables;
-import com.google.scp.operator.cpio.jobclient.model.Job;
-import com.google.scp.operator.cpio.jobclient.model.JobResult;
-import com.google.scp.operator.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
-import com.google.scp.operator.protos.shared.backend.ResultInfoProto.ResultInfo;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.JobResult;
+import com.google.aggregate.protos.shared.backend.ErrorSummaryProto.ErrorSummary;
+import com.google.aggregate.protos.shared.backend.ResultInfoProto.ResultInfo;
 import com.google.scp.shared.proto.ProtoUtil;
 import java.time.Clock;
 import java.time.Instant;

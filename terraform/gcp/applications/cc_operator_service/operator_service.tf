@@ -45,7 +45,7 @@ module "vpc" {
 }
 
 locals {
-  frontend_service_jar    = var.frontend_service_jar == null ? "${module.bazel.bazel_bin}/external/shared_libraries/java/com/google/scp/operator/frontend/service/gcp/FrontendServiceHttpCloudFunction_deploy.jar" : var.frontend_service_jar
+  frontend_service_jar    = var.frontend_service_jar == null ? "${module.bazel.bazel_bin}/java/com/google/aggregate/adtech/worker/frontend/service/gcp/FrontendServiceHttpCloudFunction_deploy.jar" : var.frontend_service_jar
   notification_channel_id = var.alarms_enabled ? google_monitoring_notification_channel.alarm_email[0].id : null
 }
 

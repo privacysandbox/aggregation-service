@@ -47,7 +47,7 @@ variable "change_handler_lambda_local_jar" {
 
 variable "change_handler_method" {
   type        = string
-  default     = "com.google.scp.operator.frontend.service.aws.DynamoStreamsJobMetadataHandler"
+  default     = "com.google.aggregate.adtech.worker.frontend.service.aws.DynamoStreamsJobMetadataHandler"
   description = "Fully qualified method the change handler lambda is called with"
 }
 
@@ -119,7 +119,7 @@ variable "cleanup_lambda_role_name" {
 
 variable "cleanup_lambda_method" {
   type        = string
-  default     = "com.google.scp.operator.frontend.service.aws.AwsFailedJobQueueWriteCleanup"
+  default     = "com.google.aggregate.adtech.worker.frontend.service.aws.AwsFailedJobQueueWriteCleanup"
   description = "Fully qualified method the cleanup lambda is called with"
 }
 
@@ -178,7 +178,7 @@ variable "get_job_lambda_name" {
 }
 
 variable "get_job_lambda_handler" {
-  default     = "com.google.scp.operator.frontend.service.aws.GetJobApiGatewayHandler"
+  default     = "com.google.aggregate.adtech.worker.frontend.service.aws.GetJobApiGatewayHandler"
   description = "Full location to lambda handler"
 }
 
@@ -188,7 +188,7 @@ variable "create_job_lambda_name" {
 }
 
 variable "create_job_lambda_handler" {
-  default     = "com.google.scp.operator.frontend.service.aws.CreateJobApiGatewayHandler"
+  default     = "com.google.aggregate.adtech.worker.frontend.service.aws.CreateJobApiGatewayHandler"
   description = "Full location to lambda handler"
 }
 

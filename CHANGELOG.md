@@ -1,23 +1,35 @@
 # Changelog
 
+# [2.14.0](https://github.com/privacysandbox/aggregation-service/compare/v2.13.0...v2.14.0) (2025-06-11)
+
+-   Migrated Java files from
+    [coordinator-services-and-shared-libraries](https://github.com/privacysandbox/coordinator-services-and-shared-libraries)
+    repository into [aggregation-service](https://github.com/privacysandbox/aggregation-service)
+    repository.
+-   [AWS] Enabled AWS EBS volume delete_on_terminate flag to delete EBS volumes when EC2 Worker
+    instances are deleted.
+-   [AWS] Migrated AWS Packer file from
+    [coordinator-services-and-shared-libraries](https://github.com/privacysandbox/coordinator-services-and-shared-libraries)
+    repository into [aggregation-service](https://github.com/privacysandbox/aggregation-service)
+    repository.
+
 # [2.13.0](https://github.com/privacysandbox/aggregation-service/compare/v2.12.0...v2.13.0) (2025-03-25)
 
--   Migrated of Terraform Files into AgS.
--   Updated adtech terraform setup instructions.
--   Updated register link to use PS console.
--   Upgraded AWS provider in CodeBuild terraform module to 5.86.0 version and rightsized EC2 for
-    Aggregation Service CodeBuild.
+-   Migrated Terraform files from
+    [coordinator-services-and-shared-libraries](https://github.com/privacysandbox/coordinator-services-and-shared-libraries)
+    repository into [aggregation-service](https://github.com/privacysandbox/aggregation-service)
+    repository.
+-   Updated adtech terraform setup and upgrade instructions with new upgrade instructions for
+    -   [AWS upgrade instructions](https://github.com/privacysandbox/aggregation-service/blob/main/docs/aws-aggregation-service.md#updating-the-system).
+    -   [GCP upgrade instructions](https://github.com/privacysandbox/aggregation-service/blob/main/docs/gcp-aggregation-service.md#upgrade-environment).
+-   Updated the onboarding and enrollment flow link to point to the official Privacy Sandbox
+    Console.
 -   Updated LocalTestRunner to output debug results in json if --json_output is specified.
--   Update. build dependencies to point to the newly spun out numerical_conversions_utils where
-    applicable.
--   Made Aggregation Service AMI and EBS snapshot publicly available under the make_ami_public flag.
 -   Added job success metrics. See
     [telemetry.md](https://github.com/privacysandbox/aggregation-service/blob/main/docs/telemetry.md)
     for usage guide.
 -   [AWS] Added support for
-    [cross-cloud coorindators](https://github.com/privacysandbox/protected-auction-services-docs/blob/main/cross_cloud_coordinators.md).
--   [AWS link to new upgrade instructions](https://github.com/privacysandbox/aggregation-service/blob/main/docs/aws-aggregation-service.md#updating-the-system)
--   [GCP link to new upgrade instructions](https://github.com/privacysandbox/aggregation-service/blob/main/docs/gcp-aggregation-service.md#upgrade-environment)
+    [cross-cloud coordinators](https://github.com/privacysandbox/protected-auction-services-docs/blob/main/cross_cloud_coordinators.md).
 
 # [2.12.0](https://github.com/privacysandbox/aggregation-service/compare/v2.11.0...v2.12.0) (2025-02-24)
 

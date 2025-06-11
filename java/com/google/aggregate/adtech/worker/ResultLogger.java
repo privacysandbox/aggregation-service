@@ -21,7 +21,7 @@ import com.google.aggregate.adtech.worker.model.AggregatedFact;
 import com.google.aggregate.adtech.worker.model.PrivacyBudgetExhaustedInfo;
 import com.google.aggregate.privacy.noise.model.SummaryReportAvro;
 import com.google.common.collect.ImmutableList;
-import com.google.scp.operator.cpio.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
 
 /** Interface for storing the results of the aggregation worker */
 public interface ResultLogger {

@@ -31,15 +31,14 @@ java_library(
         "//java/com/google/aggregate/adtech/worker:annotations",
         "//java/com/google/aggregate/adtech/worker:return_code",
         "//java/com/google/aggregate/adtech/worker/exceptions",
-        "//java/external:clients_jobclient_model",
+        "//java/com/google/aggregate/adtech/worker/jobclient:model",
+        "//java/com/google/aggregate/adtech/worker/shared/model",
         "//java/external:error_prone_anntotations",
         "//java/external:guava",
         "//java/external:javax_inject",
-        "//java/external:operator_protos",
         "//java/external:scp_shared_proto",
         "//java/external:slf4j",
-        "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:model",
-        "@shared_libraries//java/com/google/scp/operator/shared/model",
+        "//protos/shared/backend:java_proto",
     ],
 )
 

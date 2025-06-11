@@ -22,7 +22,7 @@ import static com.google.aggregate.adtech.worker.validation.ValidatorHelper.crea
 import com.google.aggregate.adtech.worker.model.ErrorMessage;
 import com.google.aggregate.adtech.worker.model.Report;
 import com.google.aggregate.adtech.worker.util.DebugSupportHelper;
-import com.google.scp.operator.cpio.jobclient.model.Job;
+import com.google.aggregate.adtech.worker.jobclient.model.Job;
 import java.util.Optional;
 
 /** Validates that the report's debugMode is enabled. */

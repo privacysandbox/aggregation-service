@@ -41,7 +41,7 @@ import com.google.inject.Inject;
 import com.google.scp.operator.cpio.blobstorageclient.model.DataLocation;
 import com.google.scp.operator.cpio.blobstorageclient.testing.FSBlobStorageClientModule;
 import com.google.scp.operator.cpio.cryptoclient.DecryptionKeyService;
-import com.google.scp.operator.protos.shared.backend.RequestInfoProto.RequestInfo;
+import com.google.aggregate.protos.shared.backend.RequestInfoProto.RequestInfo;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;

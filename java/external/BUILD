@@ -34,6 +34,11 @@ alias(
 )
 
 alias(
+    name = "guice-testlib",
+    actual = "@maven//:com_google_inject_extensions_guice_testlib",
+)
+
+alias(
     name = "autoservice_processor",
     actual = "@maven//:com_google_auto_service_auto_service",
 )
@@ -315,6 +320,11 @@ alias(
 )
 
 alias(
+    name = "aws_pricing",
+    actual = "@maven//:software_amazon_awssdk_pricing",
+)
+
+alias(
     name = "slf4j",
     actual = "@maven//:org_slf4j_slf4j_api",
 )
@@ -326,7 +336,7 @@ alias(
 
 alias(
     name = "slf4j_log4j",
-    actual = "@maven//:org_slf4j_slf4j_log4j12",
+    actual = "@maven//:org_slf4j_slf4j_reload4j",
     # log4j is only used in tests.
     visibility = ["//javatests:__subpackages__"],
 )
@@ -376,38 +386,8 @@ alias(
 )
 
 alias(
-    name = "jobqueue_gcp",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/gcp:gcp",
-)
-
-alias(
     name = "shared_dao_gcp",
     actual = "@shared_libraries//java/com/google/scp/coordinator/keymanagement/shared/dao/gcp:gcp",
-)
-
-alias(
-    name = "clients_jobclient",
-    actual = "@shared_libraries//java/com/google/scp/operator/cpio/jobclient",
-)
-
-alias(
-    name = "clients_jobclient_model",
-    actual = "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:model",
-)
-
-alias(
-    name = "clients_jobclient_aws",
-    actual = "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:aws",
-)
-
-alias(
-    name = "clients_lifecycleclient_aws",
-    actual = "@shared_libraries//java/com/google/scp/operator/cpio/lifecycleclient:aws",
-)
-
-alias(
-    name = "clients_lifecycleclient_local",
-    actual = "@shared_libraries//java/com/google/scp/operator/cpio/lifecycleclient:local",
 )
 
 alias(
@@ -456,86 +436,6 @@ alias(
 )
 
 alias(
-    name = "dao_metadatadb_aws_model",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/aws/model",
-)
-
-alias(
-    name = "dao_metadatadb_aws_model_converter",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/aws/model/converter",
-)
-
-alias(
-    name = "dao_metadatadb_aws",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/aws",
-)
-
-alias(
-    name = "dao_metadatadb_gcp",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/gcp",
-)
-
-alias(
-    name = "dao_metadatadb_common",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/common",
-)
-
-alias(
-    name = "dao_metadatadb_testing_jobgenerator",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/testing:job_generator",
-)
-
-alias(
-    name = "dao_metadatadb_testing_fakemetadatadb",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/metadatadb/testing:fake_metadata_db",
-)
-
-alias(
-    name = "dao_jobqueue_aws",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/aws",
-)
-
-alias(
-    name = "dao_jobqueue_common",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/common",
-)
-
-alias(
-    name = "dao_jobqueue_gcp",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/gcp",
-)
-
-alias(
-    name = "dao_jobqueue_testing",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/dao/jobqueue/testing",
-)
-
-alias(
-    name = "frontend_testing",
-    actual = "@shared_libraries//java/com/google/scp/operator/frontend/testing",
-)
-
-alias(
-    name = "frontend_testing_fake_jobmetadata_change_handler",
-    actual = "@shared_libraries//java/com/google/scp/operator/frontend/testing:fake_jobmetadata_change_handler",
-)
-
-alias(
-    name = "frontend_validation",
-    actual = "@shared_libraries//java/com/google/scp/operator/frontend/tasks/validation",
-)
-
-alias(
-    name = "frontend_java_proto",
-    actual = "@shared_libraries//operator/protos/frontend/api/v1:java_proto",
-)
-
-alias(
-    name = "shared_model",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/model",
-)
-
-alias(
     name = "clients_configclient",
     actual = "@shared_libraries//java/com/google/scp/shared/clients/configclient",
 )
@@ -543,11 +443,6 @@ alias(
 alias(
     name = "clients_configclient_operator",
     actual = "@shared_libraries//java/com/google/scp/operator/cpio/configclient",
-)
-
-alias(
-    name = "shared_testing",
-    actual = "@shared_libraries//java/com/google/scp/operator/shared/testing",
 )
 
 alias(
@@ -581,11 +476,6 @@ alias(
 )
 
 alias(
-    name = "clients_jobclient_gcp",
-    actual = "@shared_libraries//java/com/google/scp/operator/cpio/jobclient:gcp",
-)
-
-alias(
     name = "clients_metricclient_gcp",
     actual = "@shared_libraries//java/com/google/scp/operator/cpio/metricclient:gcp",
 )
@@ -606,43 +496,8 @@ alias(
 )
 
 alias(
-    name = "worker_decryption",
-    actual = "@shared_libraries//java/com/google/scp/operator/worker/decryption",
-)
-
-alias(
-    name = "worker_hybrid_decryption",
-    actual = "@shared_libraries//java/com/google/scp/operator/worker/decryption/hybrid",
-)
-
-alias(
-    name = "operator_worker_reader",
-    actual = "@shared_libraries//java/com/google/scp/operator/worker/reader",
-)
-
-alias(
-    name = "operator_worker_reader_avro",
-    actual = "@shared_libraries//java/com/google/scp/operator/worker/reader/avro",
-)
-
-alias(
-    name = "operator_report_serdes",
-    actual = "@shared_libraries//java/com/google/scp/operator/worker/model/serdes",
-)
-
-alias(
-    name = "operator_report_serdes_proto",
-    actual = "@shared_libraries//java/com/google/scp/operator/worker/model/serdes/proto:report_serdes",
-)
-
-alias(
     name = "shared_mapper",
     actual = "@shared_libraries//java/com/google/scp/shared/mapper",
-)
-
-alias(
-    name = "clients_lifecycleclient_gcp",
-    actual = "@shared_libraries//java/com/google/scp/operator/cpio/lifecycleclient:gcp",
 )
 
 alias(
@@ -759,6 +614,21 @@ alias(
 )
 
 alias(
+    name = "google_oauth_client",
+    actual = "@maven//:com_google_oauth_client_google_oauth_client",
+)
+
+alias(
+    name = "google_http_client_gson",
+    actual = "@maven//:com_google_http_client_google_http_client_gson",
+)
+
+alias(
+    name = "google_api_client",
+    actual = "@maven//:com_google_api_client_google_api_client",
+)
+
+alias(
     name = "localstack_containers",
     actual = "@maven//:org_testcontainers_localstack",
 )
@@ -856,6 +726,11 @@ alias(
 )
 
 alias(
+    name = "gcp_cloud_function",
+    actual = "@maven//:com_google_cloud_functions_functions_framework_api",
+)
+
+alias(
     name = "gcp_gax_grpc",
     actual = "@maven//:com_google_api_gax_grpc",
 )
@@ -924,16 +799,6 @@ alias(
 alias(
     name = "keymanagement_shared_proto",
     actual = "@shared_libraries//coordinator/protos/keymanagement/shared/backend:proto",
-)
-
-alias(
-    name = "operator_protos",
-    actual = "@shared_libraries//operator/protos/shared/backend:java_proto",
-)
-
-alias(
-    name = "operator_metadatadb_protos",
-    actual = "@shared_libraries//operator/protos/shared/backend/metadatadb:java_proto",
 )
 
 alias(
@@ -1029,4 +894,19 @@ alias(
 alias(
     name = "gcp_log_proto",
     actual = "@maven//:com_google_api_grpc_proto_google_cloud_logging_v2",
+)
+
+alias(
+    name = "tink-gcpkms",
+    actual = "@maven//:com_google_crypto_tink_tink_gcpkms",
+)
+
+alias(
+    name = "snakeyaml",
+    actual = "@maven_yaml//:org_yaml_snakeyaml",
+)
+
+alias(
+    name = "gcp_function_invoker",
+    actual = "@maven//:com_google_cloud_functions_invoker_java_function_invoker",
 )
