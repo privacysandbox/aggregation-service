@@ -123,7 +123,7 @@ report accounting.
 
 Private Aggregation does not have an attribution_destination field, which is the advertiser. It is
 recommended to batch by advertiser, meaning to include reports belonging to a single advertiser in
-the same batch, to avoid hitting the aggregatable report account limit for each batch. Advertiser is
+the same batch, to avoid hitting the shared ID limit for each batch. Advertiser is
 a field considered in sharedID generation, so reports with the same advertiser could also have the
 same sharedID, which would require them to be in the same batch to avoid errors.
 
