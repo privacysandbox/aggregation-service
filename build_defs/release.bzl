@@ -171,13 +171,13 @@ fi
 artifact_name=$(echo $artifact_base_name | sed -e "s/{{VERSION}}/$version/g")
 # upload artifact to gcs
 echo "Preparing release jar to gcs"
-gsutil --version
+gcloud -v
 echo "bazel working directory:"
 pwd
 echo "-------------------------"
 outputfile=$(mktemp)
 jar uf {jar_file} {licenses}
-gsutil cp {jar_file} gs://{release_bucket}/{release_key}/$version/$artifact_name 2>&1 | tee $outputfile
+gcloud storage cp {jar_file} gs://{release_bucket}/{release_key}/$version/$artifact_name 2>&1 | tee $outputfile
 if grep -q "Skipping" "$outputfile"; then
   echo "ERROR: Artifact already exists"
   exit 1
@@ -244,7 +244,7 @@ def gcs_jar_release(
     is specified by the gcs bucket name, key, artifact base name, and version. The naming convention is as below:
     `gs://bucket/key/VERSION/name_of_artifact_VERSION.tgz`
     targets:
-      1. '%s_script.sh': script for running gsutil cli to copy code package to gcs.
+      1. '%s_script.sh': script for running gcloud storage cli to copy code package to gcs.
       2. artifact file: the package file being uploaded to gcs. This is built from the
         specified build target (e.g. a `pkg_tar` target).
     Args:

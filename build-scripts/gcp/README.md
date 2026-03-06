@@ -40,12 +40,12 @@ The build can take several minutes. You can check the status at
 
 ## Download artifacts
 
-To download the artifacts you can use the `gsutil` command. Download the artifacts to
+To download the artifacts you can use the `gcloud storage` command. Download the artifacts to
 `<repository_root>/terraform/gcp/jars`. Run the following in `<repository_root>/terraform/gcp`
 
 ```sh
 mkdir -p jars
-gsutil cp -r gs://<YourArtifactsOutputBucketName>/aggregation-service/$(cat ../../VERSION)/ jars/
+gcloud storage cp --recursive gs://<YourArtifactsOutputBucketName>/aggregation-service/$(cat ../../VERSION)/ jars/
 ```
 
 ### Fetch Aggregation Service Terraform

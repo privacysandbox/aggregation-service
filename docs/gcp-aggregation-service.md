@@ -46,7 +46,7 @@ bucket. Create a Google Cloud Storage bucket via the console/cli, which we'll re
 versions and set appropriate policies for this bucket to prevent accidental changes and deletion.
 
 ```sh
-gsutil mb gs://<tf_state_bucket_name>
+gcloud storage buckets create gs://<tf_state_bucket_name>
 ```
 
 [Authenticate](https://cloud.google.com/sdk/docs/authorizing#adc) gcloud cli for terraform.
